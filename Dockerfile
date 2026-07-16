@@ -11,4 +11,4 @@ RUN apt-get update && apt-get install -y libpq-dev gcc && \
 
 COPY . .
 
-CMD ["uv", "run", "src/main.py"]
+CMD ["uv", "run", "uvicorn", "src.main:app", "--reload"]
