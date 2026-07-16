@@ -1,0 +1,41 @@
+{
+    "tasks": [
+        {
+            "label": "Docker: Run app container with build",
+            "type": "shell",
+            "command": "docker compose up --build app",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Docker: Run app container cached",
+            "type": "shell",
+            "command": "docker compose up app",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Docker: Run test environment",
+            "type": "shell",
+            "command": "docker compose run --build --rm test",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        }
+    ],
+    "version": "2.0.0"
+}

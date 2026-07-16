@@ -10,3 +10,6 @@ wheels/
 .venv
 .local_mount
 *.env
+
+# Block .vscode from editing
+.vscode
