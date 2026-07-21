@@ -12,4 +12,4 @@ wheels/
 *.env
 
 # Block .vscode from editing
-# .vscode
+.vscode
