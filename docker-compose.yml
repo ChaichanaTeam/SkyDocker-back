@@ -12,7 +12,7 @@ services:
       DATABASE_UPASSWORD: ${DATABASE_UPASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - ./init_db:/docker-entrypoint-initdb.d
       - pgdata:/var/lib/postgresql/data
