@@ -40,7 +40,7 @@ services:
     build: .
     command: uv run --group dev pytest -v --capture=tee-sys
     environment:
-      DATABASE_LINK: ${DATABASE_LINK}
+      DATABASE_URL: ${DATABASE_URL}
     volumes:
       - ./.local_mount:/app/.local_mount:ro
     depends_on:
