@@ -16,7 +16,7 @@ create type user_activity as enum (
     'ua3'
 );
 
-create type flying_previleges as enum (
+create type flying_privileges as enum (
     'fp1',
     'fp2',
     'fp3'
@@ -43,7 +43,8 @@ create type verification_document_type as enum (
 
 create type mission_category as enum (
     'open',
-    'special'
+    'specific',
+    'certified'
 );
 
 create type mission_flight_goal as enum (

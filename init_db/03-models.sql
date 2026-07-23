@@ -184,17 +184,17 @@ CREATE TABLE geo_zone_to_atc (
 COMMENT ON TABLE public.drone IS 'Many-to-Many relation. Used to bind ATC responsibility to zones';
 
 
-CREATE TABLE user_to_flying_previleges (
+CREATE TABLE user_to_flying_privileges (
     id                  bigserial PRIMARY KEY,
     
     pilot_id            bigint NOT NULL,
-    flying_previlege    flying_previleges NOT NULL,
+    flying_privilege    flying_privileges NOT NULL,
 
     FOREIGN KEY (pilot_id) REFERENCES pilot(id)
 );
 
-COMMENT ON TABLE  public.user_to_flying_previleges IS 'Many-to-Many relation. Pilots can have many privileges';
-COMMENT ON COLUMN public.user_to_flying_previleges.flying_previlege IS 'Type of privelege which pilot gained through his training';
+COMMENT ON TABLE  public.user_to_flying_privileges IS 'Many-to-Many relation. Pilots can have many privileges';
+COMMENT ON COLUMN public.user_to_flying_privileges.flying_privilege IS 'Type of privelege which pilot gained through his training';
 
 
 CREATE TABLE verification_request (
@@ -213,7 +213,7 @@ CREATE TABLE verification_request (
     FOREIGN KEY (verified_by) REFERENCES verification_admin(id)
 );
 
-COMMENT ON TABLE  public.verification_request IS 'Request which pilot submitting to get verification and previleges.
+COMMENT ON TABLE  public.verification_request IS 'Request which pilot submitting to get verification and privileges.
                                             If status is verified, user becomes full-fledged pilot with appropriate priveleges and access';
 COMMENT ON COLUMN public.verification_request.status IS 'If status is in complete state [rejected, apporoved] the request will be deleted with associated documents';
 COMMENT ON COLUMN public.verification_request.reason IS 'Optional field. If status is obligated to be precised, like _rejected_, so will be a reason';
@@ -231,7 +231,7 @@ CREATE TABLE verification_document (
     FOREIGN KEY (request_id) REFERENCES verification_request(id)
 );
 
-COMMENT ON TABLE  public.verification_document IS 'Temporary table for documents which confirms user previleges to be verified pilot';
+COMMENT ON TABLE  public.verification_document IS 'Temporary table for documents which confirms user privileges to be verified pilot';
 COMMENT ON COLUMN public.verification_document.document_path IS 'Path for document to which admin need to get access in CDN';
 COMMENT ON COLUMN public.verification_document.document_type IS 'Enum to identify document, such as _drone pilot exam_ and _drone operator registration_';
 
@@ -245,7 +245,7 @@ CREATE TABLE mission (
     category                mission_category NOT NULL,
     flight_goal             mission_flight_goal,
     description             TEXT,
-    flying_previlege        flying_previleges NOT NULL,
+    flying_privilege        flying_privileges NOT NULL,
     
     h3_index                h3index NOT NULL,
     country_id              smallint NOT NULL,
@@ -277,7 +277,7 @@ COMMENT ON TABLE  public.mission IS 'Table for creation and pre-verification fly
 COMMENT ON COLUMN public.mission.category IS 'Category of flight (open/special)';
 COMMENT ON COLUMN public.mission.description IS 'Descrition of mission, will be sended to ATC';
 COMMENT ON COLUMN public.mission.drone_id IS 'Identification of which drone pilot used for flight';
-COMMENT ON COLUMN public.mission.flying_previlege IS 'Previleges which pilots uses for flight';
+COMMENT ON COLUMN public.mission.flying_privilege IS 'Privileges which pilots uses for flight';
 COMMENT ON COLUMN public.mission.h3_index IS 'Uber H3 index used for efficiency';
 COMMENT ON COLUMN public.mission.country_id IS 'Filter column. Used for efficiency';
 COMMENT ON COLUMN public.mission.home_point IS 'Center of mission position circle. Only position of drones take off and land';
@@ -295,7 +295,7 @@ CREATE TABLE checkin (
     pilot_id                bigint NOT NULL,
     mission_id              bigint,
     
-    flying_previlege        flying_previleges NOT NULL,
+    flying_privilege        flying_privileges NOT NULL,
     flight_goal             mission_flight_goal,
     description             TEXT,
     
@@ -321,7 +321,7 @@ CREATE TABLE checkin (
 );
 
 COMMENT ON TABLE  public.checkin IS 'The pilot must notify if he wants to take off. Check-in is the method of notification on-time, especially if zone is open';
-COMMENT ON COLUMN public.checkin.flying_previlege IS 'Previleges which pilots uses for flight';
+COMMENT ON COLUMN public.checkin.flying_privilege IS 'Privileges which pilots uses for flight';
 COMMENT ON COLUMN public.checkin.h3_index IS 'Uber H3 index used for efficiency';
 COMMENT ON COLUMN public.checkin.country_id IS 'Filter column. Used for efficiency';
 COMMENT ON COLUMN public.checkin.home_point IS 'Center of check-in position circle. Only position of drones take off and land';
