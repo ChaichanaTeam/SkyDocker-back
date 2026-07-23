@@ -23,7 +23,7 @@ create type flying_previleges as enum (
 );
 
 create type verification_request_status as enum (
-    'pending'
+    'pending',
     'vrs1',
     'vrs2',
     'vrs3'
@@ -35,16 +35,15 @@ create type verification_document_type as enum (
     'vdt3'
 );
 
-create type mission_operation_time as enum (
-    'mot1',
-    'mot2',
-    'mot3'
-);
+-- create type mission_operation_type as enum (
+--     'mot1',
+--     'mot2',
+--     'mot3'
+-- );
 
 create type mission_category as enum (
-    'mc1',
-    'mc2',
-    'mc3'
+    'open',
+    'special'
 );
 
 create type mission_flight_goal as enum (
@@ -58,6 +57,6 @@ create type mission_status as enum (
     'pending',
     'accepted',
     'active',
-    'late'
+    'late',
     'loss_of_control'
 );

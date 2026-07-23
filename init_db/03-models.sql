@@ -9,6 +9,7 @@ COMMENT ON TABLE  public.country             IS 'Table discrabing country implem
 COMMENT ON COLUMN public.country.name        IS 'Country name normalized';
 COMMENT ON COLUMN public.country.country_tag IS '2 symbol country code standardized with ISO 3166-1 alpha-2';
 
+
 CREATE TABLE model (
     id                      serial PRIMARY KEY,
     
@@ -18,17 +19,17 @@ CREATE TABLE model (
     speed                   integer NOT NULL,
     weight                  integer NOT NULL,
     max_height              integer NOT NULL,
-    max_range               integer NOT NULL,
+    max_range               integer NOT NULL
 );
-
 
 COMMENT ON TABLE  public.model              IS 'Table discrabing models which pilots can use to describe their drone';
 COMMENT ON COLUMN public.model.manufacturer IS 'Manufacturer enum value of drone';
 COMMENT ON COLUMN public.model.model_name   IS 'Normalized model full name';
-COMMENT ON COLUMN public.model.speed        IS 'Speed of drone in {units}';
-COMMENT ON COLUMN public.model.weight       IS 'Weight of drone in {units}';
-COMMENT ON COLUMN public.model.max_height   IS 'Maximum height of drone in {units}';
-COMMENT ON COLUMN public.model.max_range    IS 'Maximum range of drone in {units}';
+COMMENT ON COLUMN public.model.speed        IS 'Speed of drone in m/s';
+COMMENT ON COLUMN public.model.weight       IS 'Weight of drone in grams';
+COMMENT ON COLUMN public.model.max_height   IS 'Maximum height of drone in meters';
+COMMENT ON COLUMN public.model.max_range    IS 'Maximum range of drone in meters';
+
 
 CREATE TABLE verification_admin (
     id              serial PRIMARY KEY,
@@ -62,9 +63,9 @@ CREATE TABLE atc_admin (
     FOREIGN KEY (country_id) REFERENCES country(id)
 );
 
-COMMENT ON TABLE  public.atc_admin IS 'Table containing credentials and contact information of ATC operators responsible maintaining their affilated geozones';
+COMMENT ON TABLE  public.atc_admin IS 'Table containing credentials and contact information of ATC operators responsible maintaining their geozones';
 COMMENT ON COLUMN public.atc_admin.email IS 'Method of contact with ATC';
-COMMENT ON COLUMN public.atc_admin.affilation IS 'ICAO';
+COMMENT ON COLUMN public.atc_admin.affiliation IS 'ICAO';
 COMMENT ON COLUMN public.atc_admin.api_key IS 'Hashed API key used for gaining access to geozones and missions/check-ins';
 COMMENT ON COLUMN public.atc_admin.revoke_reason IS 'Reason for revoking API key';
 COMMENT ON COLUMN public.atc_admin.expires_at IS 'After expiring - API key revokes automatically. Automatically refreshes if ATC performed operation within time period';
@@ -156,7 +157,6 @@ COMMENT ON COLUMN public.pilot.dronepark_hash IS 'Used to synchronization local 
 COMMENT ON COLUMN public.pilot.verified IS 'Verification of pilot status';
 
 
-
 CREATE TABLE drone (
     id                  bigserial PRIMARY KEY,
     pilot_id            bigint NOT NULL,
@@ -240,11 +240,11 @@ CREATE TABLE mission (
     id                      bigserial PRIMARY KEY,
     pilot_id                bigint NOT NULL,
     
-    operation_type          mission_operation_time NOT NULL,
+    -- operation_type          mission_operation_type NOT NULL,
     drone_id                bigint NOT NULL,
     category                mission_category NOT NULL,
     flight_goal             mission_flight_goal,
-    description             TEXT NOT NULL,
+    description             TEXT,
     flying_previlege        flying_previleges NOT NULL,
     
     h3_index                h3index NOT NULL,
@@ -272,18 +272,17 @@ CREATE TABLE mission (
     FOREIGN KEY (verified_by) REFERENCES verification_admin(id)
 );
 
-COMMENT ON TABLE  public.mission IS '';
-COMMENT ON COLUMN public.mission.operation_type IS '';
-COMMENT ON COLUMN public.mission.category IS '';
-COMMENT ON COLUMN public.mission.flight_goal IS '';
-COMMENT ON COLUMN public.mission.description IS '';
+COMMENT ON TABLE  public.mission IS 'Table for creation and pre-verification flying mission which summbitted to ATC';
+-- COMMENT ON COLUMN public.mission.operation_type IS '';
+COMMENT ON COLUMN public.mission.category IS 'Category of flight (open/special)';
+COMMENT ON COLUMN public.mission.description IS 'Descrition of mission, will be sended to ATC';
 COMMENT ON COLUMN public.mission.drone_id IS 'Identification of which drone pilot used for flight';
 COMMENT ON COLUMN public.mission.flying_previlege IS 'Previleges which pilots uses for flight';
 COMMENT ON COLUMN public.mission.h3_index IS 'Uber H3 index used for efficiency';
 COMMENT ON COLUMN public.mission.country_id IS 'Filter column. Used for efficiency';
 COMMENT ON COLUMN public.mission.home_point IS 'Center of mission position circle. Only position of drones take off and land';
 COMMENT ON COLUMN public.mission.height IS 'Maximum documented height in mission in meters';
-COMMENT ON COLUMN public.mission.range IS 'Maximum documented range in mission in {units}';
+COMMENT ON COLUMN public.mission.range IS 'Maximum documented range in mission in meters';
 COMMENT ON COLUMN public.mission.time IS 'Telemetry. Could have feature';
 COMMENT ON COLUMN public.mission.spotter_first_name IS 'The person who is obligated to have drone in their field of view during mission';
 COMMENT ON COLUMN public.mission.spotter_last_name IS 'The person who is obligated to have drone in their field of view during mission';
@@ -322,13 +321,11 @@ CREATE TABLE checkin (
 );
 
 COMMENT ON TABLE  public.checkin IS 'The pilot must notify if he wants to take off. Check-in is the method of notification on-time, especially if zone is open';
-COMMENT ON COLUMN public.checkin.flight_goal IS '';
-COMMENT ON COLUMN public.checkin.description IS '';
 COMMENT ON COLUMN public.checkin.flying_previlege IS 'Previleges which pilots uses for flight';
 COMMENT ON COLUMN public.checkin.h3_index IS 'Uber H3 index used for efficiency';
 COMMENT ON COLUMN public.checkin.country_id IS 'Filter column. Used for efficiency';
 COMMENT ON COLUMN public.checkin.home_point IS 'Center of check-in position circle. Only position of drones take off and land';
 COMMENT ON COLUMN public.checkin.height IS 'Maximum documented height in check-in in meters';
-COMMENT ON COLUMN public.checkin.range IS 'Maximum documented range in check-in in {units}';
+COMMENT ON COLUMN public.checkin.range IS 'Maximum documented range in check-in in meters';
 COMMENT ON COLUMN public.checkin.time IS 'Telemetry. Could have feature';
 COMMENT ON COLUMN public.checkin.status IS 'If check-in is in controversial zone it needs to be verified by authorities';
