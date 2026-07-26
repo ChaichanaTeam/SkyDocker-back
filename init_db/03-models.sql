@@ -256,6 +256,8 @@ CREATE TABLE mission (
     ends_at                 timestamptz(0) NOT NULL,
     time                    integer NOT NULL,
     
+    status                  mission_status DEFAULT 'created' NOT NULL,
+
     spotter_first_name      character varying(255),
     spotter_last_name       character varying(255),
     spotter_phone           character varying(15),
@@ -303,6 +305,8 @@ CREATE TABLE checkin (
     ends_at                 timestamptz(0) NOT NULL,
     time                    integer NOT NULL,
 
+    status                  mission_status DEFAULT 'created' NOT NULL,
+
     created_at              timestamptz(0) DEFAULT now() NOT NULL,
 
     FOREIGN KEY (pilot_id) REFERENCES pilot(id),
@@ -327,7 +331,7 @@ CREATE TABLE mission_atc_approval (
     mission_id          bigint NOT NULL,
     atc_admin_id        integer NOT NULL,
     
-    status              mission_status DEFAULT 'created' NOT NULL,
+    status              atc_decision DEFAULT 'pending' NOT NULL,
     decided_at          timestamptz(0),
 
     FOREIGN KEY (mission_id) REFERENCES mission(id),
