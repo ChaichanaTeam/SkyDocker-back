@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT
+    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
@@ -14,7 +14,7 @@ from .enum import (
     GeoZoneType,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
-    MissionCategory, MissionFlightGoal, MissionStatus
+    MissionCategory, MissionFlightGoal, MissionStatus, AtcDecision
 )
 
 
@@ -144,7 +144,7 @@ class Pilot(Base):
             unknown_value=UserActivity.UNKNOWN
         )
     )
-    flight_time: Mapped[int]                                    = mapped_column(INTEGER, server_default="0")
+    flight_time: Mapped[int]                                    = mapped_column(INTEGER, server_default=FetchedValue())
     dronepark_hash: Mapped[Optional[str]]                       = mapped_column(VARCHAR(255))
 
     verified: Mapped[bool]                                      = mapped_column(Boolean, server_default="false")
@@ -268,6 +268,15 @@ class Mission(Base):
     spotter_last_name: Mapped[Optional[str]]                = mapped_column(VARCHAR(255))   
     spotter_phone: Mapped[Optional[str]]                    = mapped_column(VARCHAR(15))
 
+    status: Mapped[MissionStatus]                           = mapped_column(
+        EnumWithUnknown(
+            MissionStatus,
+            name="mission_status",
+            unknown_value=MissionStatus.UNKNOWN
+        ),
+        server_default=FetchedValue()
+    )
+
     created_at: Mapped[datetime]                            = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -304,6 +313,15 @@ class Checkin(Base):
     ends_at: Mapped[datetime]                   = mapped_column(DateTime(timezone=True), nullable=False)
     time: Mapped[int]                           = mapped_column(INTEGER, nullable=False)
 
+    status: Mapped[MissionStatus]               = mapped_column(
+        EnumWithUnknown(
+           MissionStatus,
+           name="mission_status",
+           unknown_value=MissionStatus.UNKNOWN
+        ),
+        server_default=FetchedValue()
+    )
+
     created_at: Mapped[datetime]                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -315,11 +333,12 @@ class MissionAtcApproval(Base):
     mission_id: Mapped[int]                     = mapped_column(BIGINT, ForeignKey("mission.id"), nullable=False)
     atc_admin_id: Mapped[int]                   = mapped_column(INTEGER, ForeignKey("atc_admin.id"), nullable=False)
 
-    status: Mapped[MissionStatus]               = mapped_column(
+    status: Mapped[AtcDecision]               = mapped_column(
         EnumWithUnknown(
-           MissionStatus,
-           name="mission_status",
-           unknown_value=MissionStatus.unknown
+           AtcDecision,
+           name="atc_decision",
+           unknown_value=AtcDecision.UNKNOWN
         ),
-        server_default="created"
+        server_default="pending"
     )
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=FetchedValue())
