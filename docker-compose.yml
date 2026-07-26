@@ -11,6 +11,12 @@ services:
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_UPASSWORD: ${DATABASE_UPASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
