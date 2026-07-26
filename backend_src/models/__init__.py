@@ -3,14 +3,13 @@ __all__ = [ "Country" ]
 from .model import (
     Country, 
     AtcAdmin, GeoZone, GeoZoneH3, GeoZoneToAtc, ActivityTime,
-    Pilot, Model, Drone, UserToFlyingPrivileges,
-    VerificationAdmin, VerificationRequest, VerificationDocument,
+    Pilot, Drone, UserToFlyingPrivileges,
+    AfdModerator, VerificationRequest, VerificationDocument, Model,
     Mission, Checkin
 )
 from .enum import (
-    ModelManufacturer,
     GeoZoneType,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
-    MissionCategory, MissionFlightGoal, MissionStatus
+    MissionCategory, MissionFlightGoal, MissionStatus, AtcDecision
 )
