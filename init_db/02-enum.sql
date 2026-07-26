@@ -49,6 +49,7 @@ create type mission_flight_goal as enum (
 
 create type mission_status as enum (
     'created',
+    'cancelled',
     'pending',
     'accepted',
     'active',
@@ -56,4 +57,10 @@ create type mission_status as enum (
     'loss_of_control',
     'ended_intime',
     'late_end'
+);
+
+create type atc_decision as enum (
+    'pending',
+    'approved',
+    'rejected'
 );

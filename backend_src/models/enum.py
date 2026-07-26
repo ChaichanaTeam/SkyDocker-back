@@ -39,11 +39,18 @@ class MissionFlightGoal(StrEnum):
 
 class MissionStatus(StrEnum):
     UNKNOWN = "unknown"
-    created = 'created'
-    pending = 'pending'
-    accepted = 'accepted'
-    active = 'active'
-    late = 'late'
-    loss_of_control = 'loss_of_control'
-    ended_intime = 'ended_intime'
-    late_end = 'late_end'
+    created = "created"
+    cancelled = "cancelled"
+    pending = "pending"
+    accepted = "accepted"
+    active = "active"
+    late = "late"
+    loss_of_control = "loss_of_control"
+    ended_intime = "ended_intime"
+    late_end = "late_end"
+
+class AtcDecision(StrEnum):
+    UNKNOWN = "unknown"
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
