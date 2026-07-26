@@ -15,6 +15,9 @@ CREATE TABLE model (
     
     manufacturer            character varying(255) NOT NULL,
     model_name              character varying(255) NOT NULL,
+
+    is_model_verified       boolean DEFAULT false NOT NULL,
+    created_at              timestamptz(0) DEFAULT now() NOT NULL,
     
     speed                   integer NOT NULL,
     weight                  integer NOT NULL,
