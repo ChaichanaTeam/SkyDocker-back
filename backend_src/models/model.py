@@ -10,7 +10,6 @@ from shapely.geometry import Polygon, Point
 from backend_src.db.base import Base
 from backend_src.db.types import EnumWithUnknown, H3Index
 from .enum import (
-    ModelManufacturer,
     GeoZoneType,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
@@ -41,8 +40,8 @@ class Model(Base):
     max_range: Mapped[int]      = mapped_column(Integer, nullable=False)
 
 
-class VerificationAdmin(Base):
-    __tablename__ = "verification_admin"
+class AFDModerator(Base):
+    __tablename__ = "afd_moderator"
 
     id: Mapped[int]                     = mapped_column(primary_key=True)
 
@@ -194,7 +193,7 @@ class VerificationRequest(Base):
         server_default="pending"
     )
     reason: Mapped[Optional[str]]                                                = mapped_column(TEXT)
-    verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("verification_admin.id)"))
+    verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("afd_moderator.id)"))
     verified_at: Mapped[Optional[datetime]]                                      = mapped_column(DateTime(timezone=True))
     
     created_at: Mapped[datetime]                                                 = mapped_column(DateTime(timezone=True))
