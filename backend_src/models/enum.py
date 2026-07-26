@@ -48,3 +48,5 @@ class MissionStatus(StrEnum):
     active = 'active'
     late = 'late'
     loss_of_control = 'loss_of_control'
+    ended_intime = 'ended_intime'
+    late_end = 'late_end'
