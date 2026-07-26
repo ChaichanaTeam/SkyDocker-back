@@ -10,7 +10,6 @@ from shapely.geometry import Polygon, Point
 from backend_src.db.base import Base
 from backend_src.db.types import EnumWithUnknown, H3Index
 from .enum import (
-    ModelManufacturer,
     GeoZoneType,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
@@ -30,26 +29,22 @@ class Country(Base):
 class Model(Base):
     __tablename__ = "model"
 
-    id: Mapped[int]             = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    manufacturer: Mapped[ModelManufacturer] = mapped_column(
-        EnumWithUnknown(
-            ModelManufacturer,
-            name="model_manufacturer",
-            unknown_value=ModelManufacturer.UNKNOWN
-        )
-    )
+    manufacturer: Mapped[str]       = mapped_column(VARCHAR(255), nullable=False)
+    model_name: Mapped[str]         = mapped_column(VARCHAR(255), nullable=False)
 
-    model_name: Mapped[str]     = mapped_column(VARCHAR(255), nullable=False)
+    is_model_verified: Mapped[bool] = mapped_column(Boolean, server_default=False, nullable=False)
+    created_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    speed: Mapped[int]          = mapped_column(Integer, nullable=False)
-    weight: Mapped[int]         = mapped_column(Integer, nullable=False)
-    max_height: Mapped[int]     = mapped_column(Integer, nullable=False)
-    max_range: Mapped[int]      = mapped_column(Integer, nullable=False)
+    speed: Mapped[int]              = mapped_column(Integer, nullable=False)
+    weight: Mapped[int]             = mapped_column(Integer, nullable=False)
+    max_height: Mapped[int]         = mapped_column(Integer, nullable=False)
+    max_range: Mapped[int]          = mapped_column(Integer, nullable=False)
 
 
-class VerificationAdmin(Base):
-    __tablename__ = "verification_admin"
+class AFDModerator(Base):
+    __tablename__ = "afd_moderator"
 
     id: Mapped[int]                     = mapped_column(primary_key=True)
 
@@ -201,7 +196,7 @@ class VerificationRequest(Base):
         server_default="pending"
     )
     reason: Mapped[Optional[str]]                                                = mapped_column(TEXT)
-    verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("verification_admin.id)"))
+    verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("afd_moderator.id)"))
     verified_at: Mapped[Optional[datetime]]                                      = mapped_column(DateTime(timezone=True))
     
     created_at: Mapped[datetime]                                                 = mapped_column(DateTime(timezone=True))

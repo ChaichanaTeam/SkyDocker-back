@@ -13,8 +13,11 @@ COMMENT ON COLUMN public.country.country_tag IS '2 symbol country code standardi
 CREATE TABLE model (
     id                      serial PRIMARY KEY,
     
-    manufacturer            model_manufacturer NOT NULL,
+    manufacturer            character varying(255) NOT NULL,
     model_name              character varying(255) NOT NULL,
+
+    is_model_verified       boolean DEFAULT false NOT NULL,
+    created_at              timestamptz(0) DEFAULT now() NOT NULL,
     
     speed                   integer NOT NULL,
     weight                  integer NOT NULL,
@@ -23,7 +26,6 @@ CREATE TABLE model (
 );
 
 COMMENT ON TABLE  public.model              IS 'Table discrabing models which pilots can use to describe their drone';
-COMMENT ON COLUMN public.model.manufacturer IS 'Manufacturer enum value of drone';
 COMMENT ON COLUMN public.model.model_name   IS 'Normalized model full name';
 COMMENT ON COLUMN public.model.speed        IS 'Speed of drone in m/s';
 COMMENT ON COLUMN public.model.weight       IS 'Weight of drone in grams';
@@ -31,7 +33,7 @@ COMMENT ON COLUMN public.model.max_height   IS 'Maximum height of drone in meter
 COMMENT ON COLUMN public.model.max_range    IS 'Maximum range of drone in meters';
 
 
-CREATE TABLE verification_admin (
+CREATE TABLE afd_moderator (
     id              serial PRIMARY KEY,
 
     first_name      character varying(255) NOT NULL,
@@ -42,7 +44,7 @@ CREATE TABLE verification_admin (
     created_at      timestamptz(0) DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE public.verification_admin IS 'Table containing credentials of admins responsible for document verification';
+COMMENT ON TABLE public.afd_moderator IS 'Table containing credentials of admins responsible for document verification and adding new drone manufacturers';
 
 
 CREATE TABLE atc_admin (
@@ -210,7 +212,7 @@ CREATE TABLE verification_request (
     created_at      timestamptz(0) DEFAULT now() NOT NULL,
 
     FOREIGN KEY (pilot_id) REFERENCES pilot(id),
-    FOREIGN KEY (verified_by) REFERENCES verification_admin(id)
+    FOREIGN KEY (verified_by) REFERENCES afd_moderator(id)
 );
 
 COMMENT ON TABLE  public.verification_request IS 'Request which pilot submitting to get verification and privileges.
