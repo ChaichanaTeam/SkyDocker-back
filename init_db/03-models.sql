@@ -259,17 +259,12 @@ CREATE TABLE mission (
     spotter_first_name      character varying(255),
     spotter_last_name       character varying(255),
     spotter_phone           character varying(15),
-    
-    verified_by             integer,
-    verified_at             timestamptz(0),
-    status                  mission_status DEFAULT 'created' NOT NULL,
 
     created_at              timestamptz(0) DEFAULT now() NOT NULL,
 
     FOREIGN KEY (pilot_id) REFERENCES pilot(id),
     FOREIGN KEY (drone_id) REFERENCES drone(id),
-    FOREIGN KEY (country_id) REFERENCES country(id),
-    FOREIGN KEY (verified_by) REFERENCES verification_admin(id)
+    FOREIGN KEY (country_id) REFERENCES country(id)
 );
 
 COMMENT ON TABLE  public.mission IS 'Table for creation and pre-verification flying mission which summbitted to ATC';
@@ -307,17 +302,12 @@ CREATE TABLE checkin (
     starts_at               timestamptz(0) NOT NULL,
     ends_at                 timestamptz(0) NOT NULL,
     time                    integer NOT NULL,
-    
-    verified_by             integer,
-    verified_at             timestamptz(0),
-    status                  mission_status NOT NULL,
 
     created_at              timestamptz(0) DEFAULT now() NOT NULL,
 
     FOREIGN KEY (pilot_id) REFERENCES pilot(id),
     FOREIGN KEY (mission_id) REFERENCES mission(id),
-    FOREIGN KEY (country_id) REFERENCES country(id),
-    FOREIGN KEY (verified_by) REFERENCES verification_admin(id)
+    FOREIGN KEY (country_id) REFERENCES country(id)
 );
 
 COMMENT ON TABLE  public.checkin IS 'The pilot must notify if he wants to take off. Check-in is the method of notification on-time, especially if zone is open';
@@ -329,3 +319,19 @@ COMMENT ON COLUMN public.checkin.height IS 'Maximum documented height in check-i
 COMMENT ON COLUMN public.checkin.range IS 'Maximum documented range in check-in in meters';
 COMMENT ON COLUMN public.checkin.time IS 'Telemetry. Could have feature';
 COMMENT ON COLUMN public.checkin.status IS 'If check-in is in controversial zone it needs to be verified by authorities';
+
+
+CREATE TABLE mission_atc_approval (
+    id                  bigserial PRIMARY KEY,
+
+    mission_id          bigint NOT NULL,
+    atc_admin_id        integer NOT NULL,
+    
+    status              mission_status DEFAULT 'created' NOT NULL,
+    decided_at          timestamptz(0),
+
+    FOREIGN KEY (mission_id) REFERENCES mission(id),
+    FOREIGN KEY (atc_admin_id) REFERENCES atc_admin(id)
+);
+
+COMMENT ON TABLE public.mission_atc_approval IS 'More than one ATC must approve, if more than one ATC are affiliated with geo-zone';

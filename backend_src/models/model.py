@@ -193,10 +193,13 @@ class VerificationRequest(Base):
     pilot_id: Mapped[int]                                                       = mapped_column(BIGINT, ForeignKey("pilot.id"))
 
     status: Mapped[VerificationRequestStatus]                                   = mapped_column(
-        EnumWithUnknown(VerificationRequestStatus,
-                         name="verification_request_status",
-                           unknown_value=VerificationRequestStatus.UNKNOWN),
-                             server_default="pending")
+        EnumWithUnknown(
+            VerificationRequestStatus,
+            name="verification_request_status",
+            unknown_value=VerificationRequestStatus.UNKNOWN
+        ),
+        server_default="pending"
+    )
     reason: Mapped[Optional[str]]                                                = mapped_column(TEXT)
     verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("verification_admin.id)"))
     verified_at: Mapped[Optional[datetime]]                                      = mapped_column(DateTime(timezone=True))
@@ -216,7 +219,8 @@ class VerificationDocument(Base):
             VerificationDocumentType,
             name="verification_document_type",
             unknown_value=VerificationDocumentType.UNKNOWN
-        ))
+        )
+    )
 
     created_at: Mapped[datetime]                                            = mapped_column(DateTime(timezone=True))
 
@@ -264,14 +268,6 @@ class Mission(Base):
     spotter_last_name: Mapped[Optional[str]]                = mapped_column(VARCHAR(255))   
     spotter_phone: Mapped[Optional[str]]                    = mapped_column(VARCHAR(15))
 
-    verified_by: Mapped[Optional[int]]                      = mapped_column(INTEGER, ForeignKey("verification_admin.id"))
-    verified_at: Mapped[Optional[datetime]]                 = mapped_column(DateTime(timezone=True))
-    status: Mapped[MissionStatus]                           = mapped_column(EnumWithUnknown(
-       MissionStatus,
-       name="mission_status",
-       unknown_value=MissionStatus.UNKNOWN
-    ))   
-
     created_at: Mapped[datetime]                            = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -308,7 +304,22 @@ class Checkin(Base):
     ends_at: Mapped[datetime]                   = mapped_column(DateTime(timezone=True), nullable=False)
     time: Mapped[int]                           = mapped_column(INTEGER, nullable=False)
 
-    verified_by: Mapped[Optional[int]]          = mapped_column(INTEGER, ForeignKey("verification_admin.id"))
-    verified_at: Mapped[Optional[datetime]]     = mapped_column(DateTime(timezone=True))
-
     created_at: Mapped[datetime]                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class MissionAtcApproval(Base):
+    __tablename__ = "mission_atc_approval"
+
+    id: Mapped[int]                             = mapped_column(BIGINT, primary_key=True)
+    
+    mission_id: Mapped[int]                     = mapped_column(BIGINT, ForeignKey("mission.id"), nullable=False)
+    atc_admin_id: Mapped[int]                   = mapped_column(INTEGER, ForeignKey("atc_admin.id"), nullable=False)
+
+    status: Mapped[MissionStatus]               = mapped_column(
+        EnumWithUnknown(
+           MissionStatus,
+           name="mission_status",
+           unknown_value=MissionStatus.unknown
+        ),
+        server_default=MissionStatus.created
+    )

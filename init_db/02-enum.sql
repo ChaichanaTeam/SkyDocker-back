@@ -59,5 +59,7 @@ create type mission_status as enum (
     'accepted',
     'active',
     'late',
-    'loss_of_control'
+    'loss_of_control',
+    'ended_intime',
+    'late_end'
 );
