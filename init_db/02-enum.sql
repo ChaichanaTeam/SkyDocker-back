@@ -1,9 +1,3 @@
-create type model_manufacturer as enum (
-    'dm1',
-    'dm2',
-    'dm3'
-);
-
 create type geo_zone_type as enum (
     'gzt1',
     'gzt2',

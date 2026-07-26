@@ -32,14 +32,7 @@ class Model(Base):
 
     id: Mapped[int]             = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    manufacturer: Mapped[ModelManufacturer] = mapped_column(
-        EnumWithUnknown(
-            ModelManufacturer,
-            name="model_manufacturer",
-            unknown_value=ModelManufacturer.UNKNOWN
-        )
-    )
-
+    manufacturer: Mapped[str]   = mapped_column(VARCHAR(255), nullable=False)
     model_name: Mapped[str]     = mapped_column(VARCHAR(255), nullable=False)
 
     speed: Mapped[int]          = mapped_column(Integer, nullable=False)

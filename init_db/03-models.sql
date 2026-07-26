@@ -13,7 +13,7 @@ COMMENT ON COLUMN public.country.country_tag IS '2 symbol country code standardi
 CREATE TABLE model (
     id                      serial PRIMARY KEY,
     
-    manufacturer            model_manufacturer NOT NULL,
+    manufacturer            character varying(255) NOT NULL,
     model_name              character varying(255) NOT NULL,
     
     speed                   integer NOT NULL,

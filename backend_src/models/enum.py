@@ -1,8 +1,5 @@
 from enum import Enum, StrEnum
 
-class ModelManufacturer(StrEnum):
-    UNKNOWN = "unknown"
-
 
 class GeoZoneType(StrEnum):
     UNKNOWN = "unknown"
