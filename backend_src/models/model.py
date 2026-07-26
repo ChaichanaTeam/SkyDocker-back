@@ -321,5 +321,5 @@ class MissionAtcApproval(Base):
            name="mission_status",
            unknown_value=MissionStatus.unknown
         ),
-        server_default=MissionStatus.created
+        server_default="created"
     )
