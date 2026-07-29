@@ -59,5 +59,14 @@
 			"class ${1:SchemaName}(BaseModel):",
 			"    pass"
 		]
+	},
+	"Router Pilot": {
+		"scope": "python",
+		"prefix": "@routerpilot",
+		"body": [
+			"@router.${1:router_method}(\"/${2:route}\", responce_model=${3:responce_model})",
+			"async def ${4:def_name}(data: ${5:data}, pilot: Pilot = Depends(get_current_pilot_cookie), db: AsyncSession = Depends(get_db)):",
+			"    return "
+		]
 	}
 }
