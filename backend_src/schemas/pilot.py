@@ -15,15 +15,8 @@ class PilotRegister(BaseModel):
 
     password: str = Field(min_length=8)
 
-    pilot_number: Optional[str] = None
-
     first_name: str = Field(min_length=1, max_length=255)
     last_name: str = Field(min_length=1, max_length=255)
-
-
-class PilotVerifyCode(BaseModel):
-    email: EmailStr
-    code: str = Field(min_length=6, max_length=6)
 
 
 class PilotRead(BaseModel):
@@ -73,4 +66,20 @@ class PilotPublicRead(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
+    new_password: str = Field(min_length=8)
+
+
+class RegisterVerifyOTP(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyResetTokenRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
