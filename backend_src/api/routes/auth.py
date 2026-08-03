@@ -36,7 +36,7 @@ async def register_verify_otp(data: RegisterVerifyOTP, pilot: Pilot = Depends(),
     pass
 
 
-@router.post("/forgot_password")
+@router.post("/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     pass
 
@@ -46,6 +46,6 @@ async def verify_reset_token(data: VerifyResetTokenRequest, pilot: Pilot = Depen
     pass
 
 
-@router.patch("/reset_password")
+@router.patch("/reset-password")
 async def reset_password(data: ResetPasswordRequest, pilot: Pilot = Depends(), db: AsyncSession = Depends(get_db)):
     pass
