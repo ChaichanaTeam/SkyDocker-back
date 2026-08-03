@@ -1,0 +1,3 @@
+user default on >${REDIS_SUPASSWORD} ~* +@all
+
+user ${REDIS_USER} on >${REDIS_UPASSWORD} ~* +@read +@write +@string +@hash -FLUSHALL -FLUSHDB -KEYS -CONFIG
