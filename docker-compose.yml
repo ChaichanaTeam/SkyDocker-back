@@ -18,7 +18,7 @@ services:
       - -c
       - cron.database_name=${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./init_db:/docker-entrypoint-initdb.d
       - pgdata:/var/lib/postgresql/data
@@ -55,10 +55,26 @@ services:
     container_name: skydocker_app
     restart: on-failure
     environment:
+      UVICORN_HOST: ${UVICORN_HOST}
+      UVICORN_PORT: ${UVICORN_PORT}
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      OTP_CODE: ${OTP_CODE}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
+      RESET_TOKEN_EXPIRE_MINUTES: ${RESET_TOKEN_EXPIRE_MINUTES}
+      VERIFY_TOKEN_EXPIRE_MINUTES: ${VERIFY_TOKEN_EXPIRE_MINUTES}
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "--fail", "http://${UVICORN_HOST}:${UVICORN_PORT}/health"]
+      interval: 1h
+      start_period: 5s
+      start_interval: 5s
+      timeout: 5s
+      retries: 5
     depends_on:
       db:
         condition: service_healthy
@@ -66,14 +82,19 @@ services:
         condition: service_healthy
 
   test:
-    build: .
-    command: uv run --group dev pytest -v --capture=tee-sys
+    build:
+      context: .
+      dockerfile: Dockerfile.test
     environment:
       DATABASE_URL: ${DATABASE_URL}
     volumes:
       - ./.local_mount:/app/.local_mount:ro
     depends_on:
       db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
         condition: service_healthy
 
 volumes:

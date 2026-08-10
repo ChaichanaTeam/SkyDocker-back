@@ -9,18 +9,27 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-
 RUN apt-get update && \
     apt-get install -y \
-        libpq-dev \
-        gcc && \
-        apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    uv sync --frozen --no-cache
+    libpq-dev \
+    gcc \
+    curl && \
+apt-get clean && \
+rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY ./pyproject.toml ./uv.lock /app/
+
+RUN uv sync --group backend --frozen --no-cache
+
+COPY ./backend_src /app/backend_src
+
+RUN chown -R app:app /app
+RUN chmod -R u+rwx /app
 
 USER app
 
-CMD ["uv", "run", "uvicorn", "backend_src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD [\
+    "uv", "run", "uvicorn", "backend_src.main:app", \
+    "--reload", \
+    "--log-config", "./backend_src/logging.json" \
+]
