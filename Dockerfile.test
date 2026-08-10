@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+RUN useradd -l -m app
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+RUN apt-get update && \
+        apt-get clean && \
+    rm -rf /var/lib/apt/lists/*    
+    
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --group test --frozen --no-cache
+
+COPY ./tests /app/
+
+RUN chown -R app:app /app
+RUN chmod -R u+rwx /app
+
+USER app
+    
+CMD ["uv", "run", "pytest", "-v", "--capture=tee-sys"]

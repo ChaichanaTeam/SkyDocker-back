@@ -3,13 +3,25 @@
         {
             "label": "Uvicorn: Run server app",
             "type": "shell",
-            "command": "uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload",
+            "command": "uv run uvicorn backend_src.main:app --host 0.0.0.0 --port 8000 --reload --log-config ./backend_src/logging.json",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
             "group": {
                 "kind": "build",
                 "isDefault": true
+            }
+        },
+        {
+            "label": "Pytest: Run tests",
+            "type": "shell",
+            "command": "uv run pytest -v --capture=tee-sys",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": false
             }
         },
         {

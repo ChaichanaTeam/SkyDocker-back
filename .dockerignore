@@ -5,3 +5,5 @@ __pycache__
 *.py[oc]
 .*
 .vscode
+*.pytest_cache
+logs

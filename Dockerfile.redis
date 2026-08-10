@@ -1,0 +1,18 @@
+FROM redis:7.2-alpine
+
+ARG REDIS_SUPASSWORD
+ARG REDIS_USER
+ARG REDIS_UPASSWORD
+
+RUN apk add --no-cache \
+    gettext
+
+COPY --chown=r:r ./init_redis/init.acl.template /etc/redis/init.acl.template
+
+RUN envsubst < /etc/redis/init.acl.template > /data/init.acl
+
+CMD [\
+    "redis-server", \
+    "--aclfile", "/data/init.acl", \
+    "--save 60 1", "--loglevel notice" \
+]

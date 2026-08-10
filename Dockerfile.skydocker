@@ -1,14 +1,35 @@
 FROM python:3.11-slim
 
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+RUN useradd -l -m app
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
+RUN apt-get update && \
+    apt-get install -y \
+    libpq-dev \
+    gcc \
+    curl && \
+apt-get clean && \
+rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y libpq-dev gcc && \
-    uv sync --frozen --no-cache
+COPY ./pyproject.toml ./uv.lock /app/
 
-COPY . .
+RUN uv sync --group backend --frozen --no-cache
 
-CMD ["uv", "run", "uvicorn", "backend_src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+COPY ./backend_src /app/backend_src
+
+RUN chown -R app:app /app
+RUN chmod -R u+rwx /app
+
+USER app
+
+CMD [\
+    "uv", "run", "uvicorn", "backend_src.main:app", \
+    "--reload", \
+    "--log-config", "./backend_src/logging.json" \
+]
