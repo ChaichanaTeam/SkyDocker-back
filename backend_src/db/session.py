@@ -5,7 +5,7 @@ from backend_src.core import Settings
 
 engine: Engine = create_async_engine(
     Settings.DATABASE_URL,
-    echo=True,
+    echo=Settings.DEBUG,
     pool_pre_ping=True
 )
 
