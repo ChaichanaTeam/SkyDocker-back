@@ -1,3 +1,3 @@
-from backend_src.core import BackendApp
+from backend_src.core import BackendApp, lifespan
 
-app = BackendApp()
+app = BackendApp(lifespan=lifespan)
