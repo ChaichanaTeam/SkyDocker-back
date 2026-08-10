@@ -69,9 +69,9 @@ services:
     ports:
       - "8000:8000"
     healthcheck:
-      test: ["CMD-SHELL", "curl", "--fail", "http://${UVICORN_HOST}:${UVICORN_PORT}/health"]
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
       interval: 1h
-      start_period: 5s
+      start_period: 10s
       start_interval: 5s
       timeout: 5s
       retries: 5
