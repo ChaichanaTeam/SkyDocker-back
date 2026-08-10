@@ -18,7 +18,7 @@ services:
       - -c
       - cron.database_name=${POSTGRES_DB}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - ./init_db:/docker-entrypoint-initdb.d
       - pgdata:/var/lib/postgresql/data
