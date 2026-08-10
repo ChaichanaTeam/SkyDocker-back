@@ -132,8 +132,6 @@ CREATE TABLE pilot (
     pilot_number                    character varying(255) NULL,
     
     password_hash                   character varying(255) NOT NULL,
-    verification_code_hash          character varying(255),
-    verification_code_created_at    timestamptz(0),
     
     country_id                      smallint NOT NULL,
     show_to_public                  boolean DEFAULT false NOT NULL,
@@ -150,8 +148,6 @@ CREATE TABLE pilot (
 
 COMMENT ON TABLE  public.pilot IS 'Pilots are the main users of application';
 COMMENT ON COLUMN public.pilot.pilot_number IS 'Unique personal indentification number, given by National Aviation Authority of users country. Described by EASA';
-COMMENT ON COLUMN public.pilot.verification_code_hash IS 'Backend returning hashed 6 digit code and sending its code to selected method by user';
-COMMENT ON COLUMN public.pilot.verification_code_created_at IS 'Used to calculate code expiration';
 COMMENT ON COLUMN public.pilot.show_to_public IS 'Could have feature';
 COMMENT ON COLUMN public.pilot.activity IS 'Could have feature';
 COMMENT ON COLUMN public.pilot.flight_time IS 'Telemetry. Could have feature';

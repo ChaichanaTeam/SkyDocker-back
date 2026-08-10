@@ -127,8 +127,6 @@ class Pilot(Base):
     pilot_number: Mapped[Optional[str]]                         = mapped_column(VARCHAR(255))
 
     password_hash: Mapped[str]                                  = mapped_column(VARCHAR(255), nullable=False)
-    verification_code_hash: Mapped[Optional[str]]               = mapped_column(VARCHAR(255))
-    verification_code_created_at: Mapped[Optional[datetime]]    = mapped_column(DateTime(timezone=True))
 
     country_id: Mapped[int]                                     = mapped_column(SMALLINT, ForeignKey("country.id"), nullable=False)
     show_to_public: Mapped[bool]                                = mapped_column(Boolean, server_default="false", nullable=False)
