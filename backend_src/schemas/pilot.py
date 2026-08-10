@@ -1,8 +1,13 @@
 from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
+from pydantic_extra_types.phone_numbers import PhoneNumber
 from typing import Optional
 from datetime import datetime
 
 from backend_src.models.enum import UserActivity
+
+
+PhoneNumber.phone_format = 'E164'
+
 
 class PilotLogin(BaseModel):
     email: EmailStr
@@ -11,7 +16,7 @@ class PilotLogin(BaseModel):
 
 class PilotRegister(BaseModel):
     email: EmailStr
-    phone_number: str = Field(min_length=1, max_length=15)
+    phone_number: PhoneNumber
 
     password: str = Field(min_length=8)
 
@@ -28,7 +33,7 @@ class PilotRead(BaseModel):
     last_name: str
 
     email: EmailStr
-    phone_number: str
+    phone_number: PhoneNumber
     pilot_number: Optional[str] = None
 
     country_id: int
@@ -44,7 +49,7 @@ class PilotUpdate(BaseModel):
     first_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     last_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
 
-    phone_number: Optional[str] = Field(default=None, min_length=1, max_length=15)
+    phone_number: Optional[PhoneNumber]
     pilot_number: Optional[str] = Field(default=None, max_length=255)
 
     country_id: Optional[int] = None
@@ -78,7 +83,7 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class VerifyResetTokenRequest(BaseModel):
-    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
 
 
 class ResetPasswordRequest(BaseModel):
