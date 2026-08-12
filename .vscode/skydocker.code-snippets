@@ -68,5 +68,19 @@
 			"async def ${4:def_name}(data: ${5:data}, pilot: Pilot = Depends(get_current_pilot_cookie), db: AsyncSession = Depends(get_db)):",
 			"    return "
 		]
+	},
+	"Endpoint documentation": {
+		"scope": "python",
+		"prefix": "docs",
+		"body": [
+			"${0:ENDPOINT} = {",
+			"    \"summary\": \"\",",
+			"    \"description\": \"\",",
+			"    \"response_description\": \"\",",
+			"    \"responses\": {",
+			"        400: { \"description\": \"\" }",
+			"    }",
+			"}"
+		]
 	}
 }
