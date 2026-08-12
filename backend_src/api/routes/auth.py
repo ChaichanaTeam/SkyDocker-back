@@ -30,6 +30,7 @@ from backend_src.schemas.pilot import (
 )
 from backend_src.db import Queries
 from backend_src.core.exceptions import APIExceptions
+from backend_src.api.docs import Auth
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -89,7 +90,7 @@ async def _check_otp(redis: AsyncRedisDep, purpose: str, pilot_id: int, code: st
     return stored_hash == _hash_token(code)
 
 
-@router.post("/login", response_model=TokenPair)
+@router.post("/login", **Auth.LOGIN)
 async def login(data: PilotLogin, db: AsyncDBDep, redis: AsyncRedisDep):
     result = await Queries.Pilot.get_by_email(data.email, db)
     pilot = result.scalar_one_or_none()
@@ -105,7 +106,7 @@ async def login(data: PilotLogin, db: AsyncDBDep, redis: AsyncRedisDep):
     return _issue_token_pair(access, refresh)
 
 
-@router.post("/refresh", response_model=TokenPair)
+@router.post("/refresh", **Auth.REFRESH)
 async def refresh(data: RefreshTokenRequest, db: AsyncDBDep, redis: AsyncRedisDep):
     payload = decode_token(data.refresh_token)
     if payload is None or payload.get("type") != "refresh":
@@ -136,7 +137,7 @@ async def refresh(data: RefreshTokenRequest, db: AsyncDBDep, redis: AsyncRedisDe
     return _issue_token_pair(access, new_refresh)
 
 
-@router.post("/logout")
+@router.post("/logout", **Auth.LOGOUT)
 async def logout(data: RefreshTokenRequest, redis: AsyncRedisDep):
     payload = decode_token(data.refresh_token)
 
@@ -150,7 +151,7 @@ async def logout(data: RefreshTokenRequest, redis: AsyncRedisDep):
     return {"message": "Logged out"}
 
 
-@router.post("/register", response_model=BearerToken)
+@router.post("/register", **Auth.REGISTER)
 async def register(data: PilotRegister, db: AsyncDBDep, redis: AsyncRedisDep):
     result = await Queries.Pilot.get_by_email(data.email, db)
     if result.scalar_one_or_none() is not None:
@@ -174,7 +175,7 @@ async def register(data: PilotRegister, db: AsyncDBDep, redis: AsyncRedisDep):
     return BearerToken(token=verify.token)
 
 
-@router.post("/register/verify-otp", response_model=TokenPair)
+@router.post("/register/verify-otp", **Auth.VERIFY_OTP)
 async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisDep, pilot: VerifyPilot):
     if not await _check_otp(redis, "register", pilot.id, data.code):
         raise APIExceptions.bad_request("Invalid or expired code")
@@ -188,7 +189,7 @@ async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisDep, pil
     return _issue_token_pair(access, refresh)
 
 
-@router.post("/forgot-password", response_model=BearerToken)
+@router.post("/forgot-password", **Auth.FORGOT_PASSWORD)
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBDep, redis: AsyncRedisDep):
     result = await Queries.Pilot.get_by_email(data.email, db)
     pilot = result.scalar_one_or_none()
@@ -201,7 +202,7 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBDep, redis: As
     return BearerToken(token=verify.token)
 
 
-@router.post("/verify-reset-token", response_model=BearerToken)
+@router.post("/verify-reset-token", **Auth.VERIFY_RESET_TOKEN)
 async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisDep, pilot: VerifyPilot):
     if not await _check_otp(redis, "reset", pilot.id, data.code):
         raise APIExceptions.bad_request("Invalid or expired code")
@@ -210,7 +211,7 @@ async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisDep
     return BearerToken(token=reset.token)
 
 
-@router.patch("/reset-password", response_model=TokenPair)
+@router.patch("/reset-password", **Auth.RESET_PASSWORD)
 async def reset_password(data: ResetPasswordRequest, db: AsyncDBDep, redis: AsyncRedisDep, pilot: ResetPilot):
     pilot_id = pilot.id
     pilot.password_hash = hash_password(data.new_password)
