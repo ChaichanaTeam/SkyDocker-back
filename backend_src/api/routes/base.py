@@ -5,12 +5,13 @@ from redis_fastapi import AsyncRedisDep
 from backend_src.core.healthcheck import BackendHealthMixin
 from backend_src.db import AsyncDBDep
 from backend_src.models import Country
+from backend_src.api.docs import Base
 
 
 router = APIRouter(tags=["base"])
 
 
-@router.get("/health")
+@router.get("/health", **Base.HEALTH)
 async def health():
     status = BackendHealthMixin.get_health()
 
@@ -21,7 +22,7 @@ async def health():
 
     return response
 
-@router.get("/")
+@router.get("/", **Base.MAIN)
 async def main(redis: AsyncRedisDep, db: AsyncDBDep):
     country = Country(name="Poland", country_tag="PL")
     
