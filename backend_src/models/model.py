@@ -128,7 +128,7 @@ class Pilot(Base):
 
     password_hash: Mapped[str]                                  = mapped_column(VARCHAR(255), nullable=False)
 
-    country_id: Mapped[int]                                     = mapped_column(SMALLINT, ForeignKey("country.id"), nullable=False)
+    country_id: Mapped[Optional[int]]                           = mapped_column(SMALLINT, ForeignKey("country.id"))
     show_to_public: Mapped[bool]                                = mapped_column(Boolean, server_default="false", nullable=False)
     activity: Mapped[Optional[UserActivity]]                    = mapped_column(
         EnumWithUnknown(

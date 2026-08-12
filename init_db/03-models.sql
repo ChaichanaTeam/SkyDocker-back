@@ -133,7 +133,7 @@ CREATE TABLE pilot (
     
     password_hash                   character varying(255) NOT NULL,
     
-    country_id                      smallint NOT NULL,
+    country_id                      smallint,
     show_to_public                  boolean DEFAULT false NOT NULL,
     activity                        user_activity,
     flight_time                     integer DEFAULT 0 NOT NULL,
