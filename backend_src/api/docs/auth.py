@@ -35,28 +35,42 @@ LOGOUT = {
     }
 }
 
-REGISTER = {
-    "summary": "Register a new pilot",
-    "description": "Creates a pilot account and sends an OTP code for registration confirmation",
+REGISTER_REQUEST_OTP = {
+    "summary": "Request an OTP for registration",
+    "description": "Checks the email is free and sends an OTP code to start pilot registration",
     "response_description": "Temporary verify token for OTP confirmation",
     "response_model": BearerToken,
     "responses": {
-        200: { "description": "Account created, OTP sent" },
+        200: { "description": "OTP sent, verify token returned" },
         409: { "description": "Email is already registered" }
     }
 }
 
 VERIFY_OTP = {
-    "summary": "Confirm registration with OTP code",
+    "summary": "Confirm registration email with OTP code",
     "description": "Verifies the registration OTP code and on success "
-                    "issues an access/refresh token pair. "
+                    "issues a registration token for the final /auth/register step. "
+                    "Authorization header REQUIRED!",
+    "response_description": "Temporary registration token",
+    "response_model": BearerToken,
+    "responses": {
+        200: { "description": "OTP confirmed, registration token returned" },
+        400: { "description": "Invalid or expired confrimation code" },
+        401: { "description": "Invalid or expired verify token | Dev: forgot Authorization header or invalid"}
+    }
+}
+
+REGISTER = {
+    "summary": "Complete pilot registration",
+    "description": "Creates the pilot account using a validated registration token "
+                    "and immediately logs the pilot in. "
                     "Authorization header REQUIRED!",
     "response_description": "Access and refresh tokens",
     "response_model": TokenPair,
     "responses": {
-        200: { "description": "Registration confirmed, token pair returned" },
-        400: { "description": "Invalid or expired confrimation code" },
-        401: { "description": "Invalid or expired verify token | Dev: forgot Authorization header or invalid"}
+        200: { "description": "Account created, token pair returned" },
+        401: { "description": "Invalid or expired registration token | Dev: forgot Authorization header or invalid" },
+        409: { "description": "Email is already registered" }
     }
 }
 
