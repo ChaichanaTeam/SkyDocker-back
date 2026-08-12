@@ -11,8 +11,8 @@ Testing environment:
 
 ## Dependencies
 
-For local runs recommended to use `Docker`
-Backend application uses `uv` project manager
+For local runs recommended to use `Docker`      \
+Backend application uses `uv` project manager   \
 Install it before run in non-docker environment
 
 ```bash
