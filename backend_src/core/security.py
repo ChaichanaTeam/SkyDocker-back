@@ -17,6 +17,7 @@ class TokenType(str, Enum):
     REFRESH = "refresh"
     RESET = "reset"
     VERIFY = "verify"
+    REGISTER = "register"
 
 
 @dataclass(frozen=True)
@@ -51,35 +52,43 @@ def _create_token(subject: str, expires_delta: timedelta, token_type: TokenType)
     return IssuedToken(token=token, jti=jti, expires_at=exp)
 
 
-def create_access_token(pilot_id: int) -> IssuedToken:
+def create_access_token(subject: str) -> IssuedToken:
     return _create_token(
-        subject=str(pilot_id),
+        subject=subject,
         expires_delta=timedelta(minutes=Settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         token_type=TokenType.ACCESS,
     )
 
 
-def create_refresh_token(pilot_id: int) -> IssuedToken:
+def create_refresh_token(subject: str) -> IssuedToken:
     return _create_token(
-        subject=str(pilot_id),
+        subject=subject,
         expires_delta=timedelta(days=Settings.REFRESH_TOKEN_EXPIRE_DAYS),
         token_type=TokenType.REFRESH,
     )
 
 
-def create_reset_token(pilot_id: int) -> IssuedToken:
+def create_reset_token(subject: str) -> IssuedToken:
     return _create_token(
-        subject=str(pilot_id),
+        subject=subject,
         expires_delta=timedelta(minutes=Settings.RESET_TOKEN_EXPIRE_MINUTES),
         token_type=TokenType.RESET,
     )
 
 
-def create_verify_token(pilot_id: int) -> IssuedToken:
+def create_verify_token(subject: str) -> IssuedToken:
     return _create_token(
-        subject=str(pilot_id),
+        subject=subject,
         expires_delta=timedelta(minutes=Settings.VERIFY_TOKEN_EXPIRE_MINUTES),
         token_type=TokenType.VERIFY,
+    )
+
+
+def create_register_token(subject: str) -> IssuedToken:
+    return _create_token(
+        subject=subject,
+        expires_delta=timedelta(minutes=Settings.VERIFY_TOKEN_EXPIRE_MINUTES),
+        token_type=TokenType.REGISTER,
     )
 
 
