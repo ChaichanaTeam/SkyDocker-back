@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from redis_fastapi import AsyncRedisDep
 
+from backend_src.cache.client import AsyncRedisDep
 from backend_src.core.healthcheck import BackendHealthMixin
 from backend_src.db import AsyncDBDep
 from backend_src.models import Country
@@ -25,7 +25,7 @@ async def health():
 @router.get("/", **Base.MAIN)
 async def main(redis: AsyncRedisDep, db: AsyncDBDep):
     country = Country(name="Poland", country_tag="PL")
-    
+
     db.add(country)
     await db.commit()
     await db.refresh(country)
