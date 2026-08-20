@@ -1,8 +1,8 @@
 from loguru import logger
-from redis_fastapi import AsyncRedisDep
 
 from backend_src.core.config import Settings
 
+from .client import AsyncRedisDep
 from .keys import otp_key
 from .tokens import hash_token
 

@@ -1,8 +1,7 @@
-from redis_fastapi import AsyncRedisDep
-
 from backend_src.core.config import Settings
 from backend_src.core.security import IssuedToken
 
+from .client import AsyncRedisDep
 from .keys import refresh_key
 from .tokens import hash_token
 
@@ -18,7 +17,6 @@ async def store_refresh_session(redis: AsyncRedisDep, pilot_id: str, refresh: Is
 
 
 async def pop_refresh_session(redis: AsyncRedisDep, pilot_id: str, jti: str) -> str | None:
-    """Fetch-and-delete the stored hash for a refresh session (single use)."""
     stored_hash = await redis.getdel(refresh_key(pilot_id, jti))
     if stored_hash is None:
         return None

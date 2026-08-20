@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend_src.api import AuthRouter, PilotRouter, BaseRouter
-from backend_src.cache.client import init_redis
+from backend_src.cache import init_redis
 from .config import Settings
 from .healthcheck import BackendHealthMixin, HealthStatus
 from .logger import BackendLoggerMixin

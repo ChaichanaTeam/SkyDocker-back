@@ -1,11 +1,12 @@
 from fastapi import APIRouter
-from redis_fastapi import AsyncRedisDep
 
 from backend_src.api.dependencies import RegisterEmail, VerifyEmail, ResetPilot, VerifyPilot
 from backend_src.core.config import Settings
 from backend_src.core import security
-from backend_src.cache.otp import check_otp, issue_otp
-from backend_src.cache.sessions import (
+from backend_src.cache import (
+    AsyncRedisDep,
+    check_otp,
+    issue_otp,
     pop_refresh_session,
     revoke_refresh_session,
     store_refresh_session,

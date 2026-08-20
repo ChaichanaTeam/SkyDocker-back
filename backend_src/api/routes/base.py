@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from backend_src.cache.client import AsyncRedisDep
+from backend_src.cache import AsyncRedisDep
 from backend_src.core.healthcheck import BackendHealthMixin
 from backend_src.db import AsyncDBDep
 from backend_src.models import Country

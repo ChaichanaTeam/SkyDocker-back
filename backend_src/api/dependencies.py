@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from redis_fastapi import AsyncRedisDep
 from sqlalchemy import select
 
 from backend_src.core.security import TokenType, decode_token
