@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from backend_src.api.dependencies import RegisterEmail, VerifyEmail, ResetPilot, VerifyPilot
 from backend_src.core.config import Settings
@@ -11,6 +11,8 @@ from backend_src.cache import (
     revoke_refresh_session,
     store_refresh_session,
     verify_refresh_token,
+    rate_limit,
+    RateLimits,
 )
 from backend_src.db import AsyncDBDep
 from backend_src.models.model import Pilot
@@ -43,7 +45,7 @@ def _issue_token_pair(access: security.IssuedToken, refresh: security.IssuedToke
     )
 
 
-@router.post("/login", **Auth.LOGIN)
+@router.post("/login", dependencies=[Depends(rate_limit(RateLimits.LOGIN))], **Auth.LOGIN)
 async def login(data: PilotLogin, db: AsyncDBDep, redis: AsyncRedisDep):
     result = await Queries.Pilot.get_by_email(data.email, db)
     pilot = result.scalar_one_or_none()
@@ -59,7 +61,7 @@ async def login(data: PilotLogin, db: AsyncDBDep, redis: AsyncRedisDep):
     return _issue_token_pair(access, refresh)
 
 
-@router.post("/refresh", **Auth.REFRESH)
+@router.post("/refresh", dependencies=[Depends(rate_limit(RateLimits.REFRESH))], **Auth.REFRESH)
 async def refresh(data: RefreshTokenRequest, db: AsyncDBDep, redis: AsyncRedisDep):
     payload = security.decode_token(data.refresh_token)
     if payload is None or payload.get("type") != "refresh":
@@ -87,7 +89,7 @@ async def refresh(data: RefreshTokenRequest, db: AsyncDBDep, redis: AsyncRedisDe
     return _issue_token_pair(access, new_refresh)
 
 
-@router.post("/logout", **Auth.LOGOUT)
+@router.post("/logout", dependencies=[Depends(rate_limit(RateLimits.LOGOUT))], **Auth.LOGOUT)
 async def logout(data: RefreshTokenRequest, redis: AsyncRedisDep):
     payload = security.decode_token(data.refresh_token)
 
@@ -101,7 +103,7 @@ async def logout(data: RefreshTokenRequest, redis: AsyncRedisDep):
     return {"message": "Logged out"}
 
 
-@router.post("/register/request-otp", **Auth.REGISTER_REQUEST_OTP)
+@router.post("/register/request-otp", dependencies=[Depends(rate_limit(RateLimits.REGISTER_REQUEST_OTP))], **Auth.REGISTER_REQUEST_OTP)
 async def register_request_otp(data: RegisterRequestOTP, redis: AsyncRedisDep, db: AsyncDBDep):
     result = await Queries.Pilot.get_by_email(data.email, db)
     pilot = result.scalar_one_or_none()
@@ -114,7 +116,7 @@ async def register_request_otp(data: RegisterRequestOTP, redis: AsyncRedisDep, d
     return BearerToken(token=verify.token)
 
 
-@router.post("/register/verify-otp", **Auth.VERIFY_OTP)
+@router.post("/register/verify-otp", dependencies=[Depends(rate_limit(RateLimits.REGISTER_VERIFY_OTP))], **Auth.VERIFY_OTP)
 async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisDep, email: VerifyEmail):
     if not await check_otp(redis, "verify", email, data.code):
         raise APIExceptions.bad_request("Invalid or expired code")
@@ -124,7 +126,7 @@ async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisDep, ema
     return BearerToken(token=register.token)
 
 
-@router.post("/register", **Auth.REGISTER)
+@router.post("/register", dependencies=[Depends(rate_limit(RateLimits.REGISTER))], **Auth.REGISTER)
 async def register(data: PilotRegister, db: AsyncDBDep, redis: AsyncRedisDep, email: RegisterEmail):
     result = await Queries.Pilot.get_by_email(email, db)
     if result.scalar_one_or_none() is not None:
@@ -150,7 +152,7 @@ async def register(data: PilotRegister, db: AsyncDBDep, redis: AsyncRedisDep, em
     return _issue_token_pair(access, refresh)
 
 
-@router.post("/forgot-password", **Auth.FORGOT_PASSWORD)
+@router.post("/forgot-password", dependencies=[Depends(rate_limit(RateLimits.FORGOT_PASSWORD))], **Auth.FORGOT_PASSWORD)
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBDep, redis: AsyncRedisDep):
     result = await Queries.Pilot.get_by_email(data.email, db)
 
@@ -166,7 +168,7 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBDep, redis: As
     return BearerToken(token=verify.token)
 
 
-@router.post("/verify-reset-token", **Auth.VERIFY_RESET_TOKEN)
+@router.post("/verify-reset-token", dependencies=[Depends(rate_limit(RateLimits.VERIFY_RESET_TOKEN))], **Auth.VERIFY_RESET_TOKEN)
 async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisDep, pilot: VerifyPilot):
     pilot_id = str(pilot.id)
 
@@ -177,7 +179,7 @@ async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisDep
     return BearerToken(token=reset.token)
 
 
-@router.patch("/reset-password", **Auth.RESET_PASSWORD)
+@router.patch("/reset-password", dependencies=[Depends(rate_limit(RateLimits.RESET_PASSWORD))], **Auth.RESET_PASSWORD)
 async def reset_password(data: ResetPasswordRequest, db: AsyncDBDep, redis: AsyncRedisDep, pilot: ResetPilot):
     pilot_id = str(pilot.id)
 
