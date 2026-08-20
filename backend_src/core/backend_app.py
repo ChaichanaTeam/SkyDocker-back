@@ -2,10 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from redis_fastapi import FastAPIRedis
-import asyncio
 
 from backend_src.api import AuthRouter, PilotRouter, BaseRouter
+from backend_src.cache import init_redis
 from .config import Settings
 from .healthcheck import BackendHealthMixin, HealthStatus
 from .logger import BackendLoggerMixin
@@ -26,8 +25,7 @@ class BackendApp(FastAPI, BackendHealthMixin, BackendLoggerMixin):
 
         self.include_router(BaseRouter)
 
-        redis = FastAPIRedis(self)
-        redis.lifespan()
+        init_redis(self)
 
 
 @asynccontextmanager

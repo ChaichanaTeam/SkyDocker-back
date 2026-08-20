@@ -1,0 +1,6 @@
+def refresh_key(pilot_id: str, jti: str) -> str:
+    return f"refresh:{pilot_id}:{jti}"
+
+
+def otp_key(purpose: str, subject: str) -> str:
+    return f"otp:{purpose}:{subject}"
