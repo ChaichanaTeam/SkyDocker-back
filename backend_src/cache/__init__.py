@@ -7,6 +7,8 @@ __all__ = [
     "pop_refresh_session",
     "revoke_refresh_session",
     "verify_refresh_token",
+    "rate_limit",
+    "RateLimits",
 ]
 
 from .client import AsyncRedisDep, init_redis
@@ -17,3 +19,5 @@ from .sessions import (
     revoke_refresh_session,
     verify_refresh_token,
 )
+from .rate_limit import rate_limit
+from . import rate_limits as RateLimits
