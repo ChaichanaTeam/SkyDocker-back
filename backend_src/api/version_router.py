@@ -8,7 +8,7 @@ class VersionRouter(APIRouter):
     def __init__(self, api_module: ModuleType):
         self.router_name = api_module.__name__.rsplit('.', 1)[-1]
 
-        super().__init__(prefix=f"/{self.router_name}")
+        super().__init__(prefix=f"/api/{self.router_name}")
         self.business_routers: Optional[list[APIRouter]] = getattr(api_module, "BusinessRouters", None)
         self.base_router: Optional[APIRouter] = getattr(api_module, "BaseRouter", None)
 
