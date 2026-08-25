@@ -1,5 +1,4 @@
 __all__ = [
-    "AsyncRedisDep",
     "init_redis",
     "issue_otp",
     "check_otp",
@@ -8,10 +7,13 @@ __all__ = [
     "revoke_refresh_session",
     "verify_refresh_token",
     "rate_limit",
-    "RateLimits",
+    "AsyncRedisSession",
 ]
 
-from .client import AsyncRedisDep, init_redis
+
+from redis_fastapi import rate_limit
+
+from .client import init_redis, AsyncRedisSession
 from .otp import issue_otp, check_otp
 from .sessions import (
     store_refresh_session,
@@ -19,5 +21,3 @@ from .sessions import (
     revoke_refresh_session,
     verify_refresh_token,
 )
-from .rate_limit import rate_limit
-from . import rate_limits as RateLimits
