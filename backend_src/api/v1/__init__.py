@@ -8,4 +8,4 @@ from .geozone import GeoZoneRouter
 # from .checkin import CheckinRouter
 
 
-BusinessRouters = (AuthRouter, )
+BusinessRouters = (AuthRouter, GeoZoneRouter)
