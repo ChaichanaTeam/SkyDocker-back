@@ -1,6 +1,7 @@
-__all__ = [ "Base", "AsyncDBDep", "EnumWithUnknown", "H3Index", "Queries" ]
+__all__ = [ "Base", "AsyncDBSession", "EnumWithUnknown", "H3Index", "Queries", "AsyncSessionMaker" ]
 
 from .base import Base
-from .dependencies import AsyncDBDep
+from sqlalchemy.ext.asyncio import AsyncSession as AsyncDBSession
+from .session import AsyncSessionMaker
 from .types import EnumWithUnknown, H3Index
 from . import queries as Queries
