@@ -12,8 +12,10 @@ from backend_src.core import security
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from .schema import (
-    ForgotPasswordRequest, PilotLogin, PilotRegister, RefreshTokenRequest, RegisterRequestOTP, RegisterVerifyOTP, ResetPasswordRequest, TokenPair, BearerToken, VerifyResetTokenRequest
-    
+    ForgotPasswordRequest, PilotLogin, PilotRegister,
+    RefreshTokenRequest, RegisterRequestOTP, RegisterVerifyOTP,
+    ResetPasswordRequest, VerifyResetTokenRequest,
+    TokenPair, BearerToken
 )
 from backend_src.models import Pilot
 
@@ -140,6 +142,7 @@ async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisSes
 
 async def reset_password(data: ResetPasswordRequest, db: AsyncDBSession, redis: AsyncRedisSession, pilot: Pilot):
     pilot.password_hash = security.hash_password(data.new_password)
+    pilot_id = str(pilot.id)
     await db.commit()
 
-    return await issue_token_pair(str(pilot.id), redis)
+    return await issue_token_pair(pilot_id, redis)
