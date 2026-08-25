@@ -1,10 +1,12 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 from uuid import uuid4
 import jwt
 from passlib.context import CryptContext
+from pydantic import BaseModel, field_validator
 
 from .config import Settings
 
@@ -20,11 +22,37 @@ class TokenType(str, Enum):
     REGISTER = "register"
 
 
-@dataclass(frozen=True)
-class IssuedToken:
+class TokenPayload(BaseModel):
+    sub: str
+    jti: str
+    type:  TokenType
+    iat: Union[int, datetime]
+    exp: Union[int, datetime]
+
+    @classmethod
+    def from_token_string(cls, token: str) -> TokenPayload:
+        payload_dict = jwt.decode(token, Settings.SECRET_KEY, algorithms=[Settings.ALGORITHM])
+        return cls(**payload_dict)
+
+    @field_validator("iat", "exp", mode="before")
+    def validate_datetime(cls, time) -> int:
+        if isinstance(time, datetime):
+            return int(time.timestamp())
+        return time
+
+
+class IssuedToken(BaseModel):
     token: str
     jti: str
     expires_at: datetime
+
+    @classmethod
+    def from_payload(cls, payload: TokenPayload) -> IssuedToken:
+        return cls(
+            token=jwt.encode(payload.model_dump(), Settings.SECRET_KEY, algorithm=Settings.ALGORITHM),
+            jti=payload.jti,
+            expires_at=datetime.fromtimestamp(payload.exp, tz=timezone.utc) # type: ignore
+        )
 
 
 def hash_password(password: str) -> str:
@@ -40,16 +68,15 @@ def _create_token(subject: str, expires_delta: timedelta, token_type: TokenType)
     jti = uuid4().hex
     exp = now + expires_delta
 
-    payload = {
-        "sub": subject,
-        "jti": jti,
-        "type": token_type.value,
-        "iat": now,
-        "exp": exp,
-    }
+    payload = TokenPayload(
+        sub=subject,
+        jti=jti,
+        type=token_type,
+        iat=now,
+        exp=exp,
+    )
     
-    token = jwt.encode(payload, Settings.SECRET_KEY, algorithm=Settings.ALGORITHM)
-    return IssuedToken(token=token, jti=jti, expires_at=exp)
+    return IssuedToken.from_payload(payload)
 
 
 def create_access_token(subject: str) -> IssuedToken:
@@ -92,8 +119,9 @@ def create_register_token(subject: str) -> IssuedToken:
     )
 
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> Optional[TokenPayload]:
     try:
-        return jwt.decode(token, Settings.SECRET_KEY, algorithms=[Settings.ALGORITHM])
+        return TokenPayload.from_token_string(token)
+
     except jwt.PyJWTError:
         return None

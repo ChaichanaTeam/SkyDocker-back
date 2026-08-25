@@ -3,10 +3,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend_src.api import AuthRouter, PilotRouter, BaseRouter
-from backend_src.cache import init_redis
+from backend_src.api import (
+    MainAPIRouter,
+    DemoAPIRouter
+)
+from backend_src.cache.client import init_redis
 from .config import Settings
-from .healthcheck import BackendHealthMixin, HealthStatus
+from .healthcheck import BackendHealthMixin
 from .logger import BackendLoggerMixin
 
 
@@ -23,15 +26,21 @@ class BackendApp(FastAPI, BackendHealthMixin, BackendLoggerMixin):
             allow_headers=["*"],
         )
 
-        self.include_router(BaseRouter)
-
         init_redis(self)
 
 
 @asynccontextmanager
 async def lifespan(app: BackendApp):
-    if await app.healthcheck():
-        app.include_router(AuthRouter)
-        app.include_router(PilotRouter)
+    if Settings.DEBUG:
+        DemoAPIRouter.attach_base_router()
+        DemoAPIRouter.attach_business_routers()
+        app.include_router(DemoAPIRouter)
 
+    MainAPIRouter.attach_base_router()
+    
+    if await app.healthcheck():
+        MainAPIRouter.attach_business_routers()
+
+    app.include_router(MainAPIRouter)
+    
     yield
