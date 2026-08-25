@@ -6,7 +6,7 @@ from typing import Optional, Union
 from uuid import uuid4
 import jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationError, field_validator
 
 from .config import Settings
 
@@ -123,5 +123,5 @@ def decode_token(token: str) -> Optional[TokenPayload]:
     try:
         return TokenPayload.from_token_string(token)
 
-    except jwt.PyJWTError:
+    except (jwt.PyJWTError, ValidationError):
         return None
