@@ -1,14 +1,13 @@
 from sqlalchemy import (
     FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from typing import Optional
-from geoalchemy2.types import Geometry
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Point, Polygon
 
 from backend_src.db.base import Base
-from backend_src.db.types import EnumWithUnknown, H3Index
+from backend_src.db.types import EnumWithUnknown, H3Index, GeometryType
 from .enum import (
     GeoZoneType,
     UserActivity, FlyingPrivileges,
@@ -90,9 +89,11 @@ class GeoZone(Base):
         )
     tag: Mapped[str]                                            = mapped_column(VARCHAR(255), nullable=False)
     strength: Mapped[int]                                       = mapped_column(Integer, nullable=False)
-    zone_polygon: Mapped[Polygon]                               = mapped_column(Geometry(geometry_type="POLYGON", srid=4326), nullable=False)
+    zone_polygon: Mapped[Polygon]                               = mapped_column(GeometryType("POLYGON", 4326), nullable=False)
     height_agl: Mapped[Optional[int]]                           = mapped_column(Integer)
     height_amsl: Mapped[Optional[int]]                          = mapped_column(Integer)
+
+    country: Mapped["Country"] = relationship()
 
 
 class GeoZoneH3(Base):
@@ -255,7 +256,7 @@ class Mission(Base):
 
     h3_index: Mapped[str]                                   = mapped_column(H3Index, server_default=FetchedValue(), nullable=False)
     country_id: Mapped[int]                                 = mapped_column(SMALLINT, ForeignKey("country.id"), nullable=False)
-    home_point: Mapped[Point]                               = mapped_column(Geometry(geometry_type="POINT", srid=4326), nullable=False)
+    home_point: Mapped[Point]                               = mapped_column(GeometryType(geometry_type="POINT", srid=4326), nullable=False)
     height: Mapped[int]                                     = mapped_column(INTEGER, nullable=False)
     range: Mapped[int]                                      = mapped_column(INTEGER, nullable=False)
     starts_at: Mapped[datetime]                             = mapped_column(DateTime(timezone=True), nullable=False)
@@ -303,7 +304,7 @@ class Checkin(Base):
     )
     description: Mapped[Optional[str]]          = mapped_column(TEXT)
 
-    home_point: Mapped[Point]                   = mapped_column(Geometry(geometry_type="POINT", srid=4326), nullable=False)
+    home_point: Mapped[Point]                   = mapped_column(GeometryType(geometry_type="POINT", srid=4326), nullable=False)
     h3_index: Mapped[str]                       = mapped_column(H3Index, server_default=FetchedValue(), nullable=False)
     country_id: Mapped[int]                     = mapped_column(SMALLINT, ForeignKey("country.id"), nullable=False)
     height: Mapped[int]                         = mapped_column(INTEGER, nullable=False)
@@ -323,6 +324,10 @@ class Checkin(Base):
     )
 
     created_at: Mapped[datetime]                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    mission: Mapped["Mission"]                  = relationship()
+    pilot: Mapped["Pilot"]                      = relationship()
+    country: Mapped["Country"]                  = relationship()
 
 
 class MissionAtcApproval(Base):
