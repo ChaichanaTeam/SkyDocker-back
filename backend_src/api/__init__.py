@@ -1,5 +1,8 @@
-__all__ = [ "BaseRouter", "AuthRouter", "PilotRouter" ]
+__all__ = [ "MainAPIRouter", "DemoAPIRouter" ]
 
-from .routes.auth import router as AuthRouter
-from .routes.pilot import router as PilotRouter
-from .routes.base import router as BaseRouter
+
+from .version_router import VersionRouter
+from . import v1, demo
+
+MainAPIRouter = VersionRouter(v1)
+DemoAPIRouter = VersionRouter(demo)
