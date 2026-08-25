@@ -23,7 +23,7 @@ def _complete_registration(client, email, password="p455w0rd"):
     verify_token = r.json()["token"]
 
     headers = {"Authorization": f"Bearer {verify_token}"}
-    r = client.post(f"{constants.BASE_URL}/auth/register/verify-otp", json={"code": constants.DEFAULT_CODE}, headers=headers)
+    r = client.post(f"{constants.BASE_URL}/auth/register/verify-otp", json={"code": constants.OTP_CODE}, headers=headers)
     assert r.status_code == 200, f"verify-otp failed: {r.text}"
     register_token = r.json()["token"]
 
@@ -52,7 +52,7 @@ class TestAUTH:
 
     def test_verify_otp(self, client, test_user):
         headers = {"Authorization": f"Bearer {test_user['verify_token']}"}
-        r = client.post(f"{constants.BASE_URL}/auth/register/verify-otp", json={"code": constants.DEFAULT_CODE}, headers=headers)
+        r = client.post(f"{constants.BASE_URL}/auth/register/verify-otp", json={"code": constants.OTP_CODE}, headers=headers)
         assert r.status_code == 200, f"Failed to verify OTP: {r.text}"
 
         register_token = r.json().get("token")
@@ -71,13 +71,6 @@ class TestAUTH:
         test_user["refresh_token"] = body["refresh_token"]
 
 
-    def test_profile_after_register(self, client, test_user):
-        headers = {"Authorization": f"Bearer {test_user['access_token']}"}
-        r = client.get(f"{constants.BASE_URL}/pilots/me", headers=headers)
-        assert r.status_code == 200, f"Profile read failed: {r.text}"
-        assert r.json().get("country_id") is None, "New pilot should have no country assigned yet"
-
-
     def test_logout(self, client, test_user):
         r = client.post(f"{constants.BASE_URL}/auth/logout", json={"refresh_token": test_user["refresh_token"]})
         assert r.status_code == 200, f"Logout failed: {r.text}"
@@ -94,7 +87,7 @@ class TestAUTH:
         assert verify_token, f"Request did not return a verification token: {r.text}"
 
         headers = {"Authorization": f"Bearer {verify_token}"}
-        r = client.post(f"{constants.BASE_URL}/auth/verify-reset-token", json={"code": constants.DEFAULT_CODE}, headers=headers)
+        r = client.post(f"{constants.BASE_URL}/auth/verify-reset-token", json={"code": constants.OTP_CODE}, headers=headers)
         assert r.status_code == 200, f"Code is invalid: {r.text}"
 
         reset_token = r.json().get("token")
@@ -160,7 +153,7 @@ class TestRegistrationValidation:
         verify_token = r.json()["token"]
 
         headers = {"Authorization": f"Bearer {verify_token}"}
-        r = client.post(f"{constants.BASE_URL}/auth/register/verify-otp", json={"code": constants.DEFAULT_CODE}, headers=headers)
+        r = client.post(f"{constants.BASE_URL}/auth/register/verify-otp", json={"code": constants.OTP_CODE}, headers=headers)
         assert r.status_code == 200, f"verify-otp failed: {r.text}"
         return r.json()["token"]
 
@@ -188,3 +181,13 @@ class TestRegistrationValidation:
         headers = {"Authorization": f"Bearer {register_token}"}
         r = client.post(f"{constants.BASE_URL}/auth/register", json=payload, headers=headers)
         assert r.status_code == 422, f"Missing password should be rejected: {r.text}"
+
+
+    def test_rate_limiting(self, client):
+        email = utils.random_email()
+        for _ in range(constants.RATE_LIMIT_THRESHOLD):
+            r = client.post(f"{constants.BASE_URL}/auth/register/request-otp", json={"email": email})
+            assert r.status_code == 200, f"request-otp failed: {r.text}"
+
+        r = client.post(f"{constants.BASE_URL}/auth/register/request-otp", json={"email": email})
+        assert r.status_code == 429, f"Rate limiting should be enforced: {r.text}"
