@@ -1,14 +1,12 @@
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from backend_src.api.dependencies import CurrentPilot
-from backend_src.db import AsyncDBDep
+from backend_src.api.dependencies import CurrentPilot, AsyncDBDep
 from backend_src.models.model import Pilot
-from backend_src.schemas.pilot import (
+from .schema import (
     PilotRead,
     PilotPublicRead,
-    PilotUpdate,
-    ChangePasswordRequest,
+    PilotUpdate
 )
 
 
@@ -22,11 +20,6 @@ async def get_me(pilot: CurrentPilot, db: AsyncDBDep):
 
 @router.patch("/me", response_model=PilotRead)
 async def update_me(data: PilotUpdate, pilot: CurrentPilot, db: AsyncDBDep):
-    return pilot
-
-
-@router.patch("/me/change-password")
-async def change_password(data: ChangePasswordRequest, pilot: CurrentPilot, db: AsyncDBDep):
     return pilot
 
 

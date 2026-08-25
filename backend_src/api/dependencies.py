@@ -1,13 +1,12 @@
-from typing import Annotated
-
-from fastapi import Depends, Header
+from typing import Annotated, AsyncGenerator
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
+from redis_fastapi import AsyncRedisDep
 
+from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
 from backend_src.core.security import TokenType, decode_token
-from backend_src.db import AsyncDBDep
 from backend_src.models import Pilot
-from backend_src.core.exceptions import APIExceptions
+from backend_src.api.exceptions import APIExceptions
 
 
 bearer_scheme = HTTPBearer()
@@ -16,21 +15,31 @@ bearer_scheme = HTTPBearer()
 HeaderAuthorization = Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)]
 
 
+async def get_db() -> AsyncGenerator[AsyncDBSession, None]:
+    db: AsyncDBSession = AsyncSessionMaker()
+    try:
+        yield db
+    finally:
+        await db.close()
+
+AsyncDBDep = Annotated[AsyncDBSession, Depends(get_db)]
+
+
+
 async def _pilot_from_token(
-    db: AsyncDBDep,
+    db: AsyncDBSession,
     credentials: HTTPAuthorizationCredentials,
     expected_type: TokenType,
 ) -> Pilot:
     payload = decode_token(credentials.credentials)
-    if payload is None or payload.get("type") != expected_type.value:
+    if payload is None or payload.type != expected_type.value:
         raise APIExceptions.credentials_exception
 
-    pilot_id = payload.get("sub")
+    pilot_id = payload.sub
     if pilot_id is None:
         raise APIExceptions.credentials_exception
 
-    result = await db.execute(select(Pilot).where(Pilot.id == int(pilot_id)))
-    pilot = result.scalar_one_or_none()
+    pilot = await Queries.Pilot.get_by_id(int(pilot_id), db)
     if pilot is None:
         raise APIExceptions.credentials_exception
 
@@ -41,10 +50,10 @@ async def _email_from_token(
     expected_type: TokenType
 ) -> str:
     payload = decode_token(credentials.credentials)
-    if payload is None or payload.get("type") != expected_type.value:
+    if payload is None or payload.type != expected_type.value:
         raise APIExceptions.credentials_exception
 
-    email = payload.get("sub")
+    email = payload.sub
     if email is None:
         raise APIExceptions.credentials_exception
 
@@ -82,6 +91,7 @@ async def get_verify_email(
         credentials: HeaderAuthorization
 ) -> str:
     return await _email_from_token(credentials, TokenType.VERIFY)
+
 
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
 VerifyPilot = Annotated[Pilot, Depends(get_verify_pilot)]

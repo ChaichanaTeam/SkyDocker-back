@@ -1,8 +1,9 @@
-__all__ = [ "core", "db", "models", "api" ]
+__all__ = [ "core", "db", "models", "api", "cache" ]
 
 from . import (
     core,
     db,
     models,
-    api
+    api,
+    cache
 )
