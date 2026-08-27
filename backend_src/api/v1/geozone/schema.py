@@ -39,7 +39,7 @@ class GeozoneProperties(FeatureProperties):
     @model_validator(mode="after")
     def validate_height(self):
         is_heights_null = self.height_agl is None and self.height_amsl is None
-        is_geozone_forbidden = self.type == GeoZoneType.danger
+        is_geozone_forbidden = self.type == GeoZoneType.flight_prohibited
 
         if not is_geozone_forbidden and is_heights_null:
             raise ValueError("Atleast one height must be valid")

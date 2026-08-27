@@ -1,7 +1,7 @@
 create type geo_zone_type as enum (
-    'gzt1',
-    'gzt2',
-    'gzt3'
+    'Flight prohibited',
+    'flight restricted',
+    'flight allowed'
 );
 
 create type user_activity as enum (
