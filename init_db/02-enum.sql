@@ -11,9 +11,11 @@ create type user_activity as enum (
 );
 
 create type flying_privileges as enum (
-    'fp1',
-    'fp2',
-    'fp3'
+    'a1',
+    'a2',
+    'a3',
+    'sts01',
+    'sts02'
 );
 
 create type verification_request_status as enum (

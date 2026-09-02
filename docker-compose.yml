@@ -55,6 +55,7 @@ services:
     container_name: skydocker_app
     restart: on-failure
     environment:
+      DEBUG: ${DEBUG}
       UVICORN_HOST: ${UVICORN_HOST}
       UVICORN_PORT: ${UVICORN_PORT}
       DATABASE_URL: ${DATABASE_URL}
