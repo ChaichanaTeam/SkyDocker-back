@@ -9,4 +9,4 @@ router = APIRouter(prefix="/country", tags=["country"])
 
 @router.get("/")
 async def create(db: AsyncDBDep):
-    return await service.create_country(db)
+    return await service.create_countries(db)

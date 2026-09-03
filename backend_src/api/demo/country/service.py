@@ -1,27 +1,29 @@
-from collections.abc import AsyncGenerator
+from typing import Any
 
-from backend_src.api.exceptions import APIExceptions
+from sqlalchemy import select
+
 from backend_src.db import AsyncDBSession
 from backend_src.models import Country
 from .constants import COUNTRY_NAMES
 
 
-async def generate_country() -> AsyncGenerator[Country, None]:
-    for country_name, country_code in COUNTRY_NAMES:
-        country = Country(name=country_name, code=country_code)
-        yield country
+async def create_countries(db: AsyncDBSession) -> dict[str, Any]:
+    existing = set(
+        (await db.execute(select(Country.country_tag))).scalars().all()
+    )
 
+    name_by_tag = {tag: name for name, tag in COUNTRY_NAMES}
+    missing_tags = [tag for _, tag in COUNTRY_NAMES if tag not in existing]
 
-async def create_country(db: AsyncDBSession) -> dict[str, str]:
-    try:
-        country = await anext(generate_country())
-    except StopAsyncIteration:
-        raise APIExceptions.not_found("No country left")
-
-    db.add(country)
-    await db.commit()
-    await db.refresh(country)
+    if missing_tags:
+        db.add_all(
+            Country(name=name_by_tag[tag], country_tag=tag) for tag in missing_tags
+        )
+        await db.commit()
 
     return {
-        "message": f"Country {country.name} setted up"
+        "message": f"Created {len(missing_tags)} of {len(COUNTRY_NAMES)} countries",
+        "added": missing_tags,
+        "skipped": sorted(tag for tag in name_by_tag if tag in existing),
+        "total": len(COUNTRY_NAMES),
     }
