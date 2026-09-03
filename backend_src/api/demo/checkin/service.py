@@ -23,8 +23,9 @@ from .constants import (
 
 
 async def _resolve_country(db: AsyncDBSession, name: str, tag: str) -> Country:
-    country = (await db.execute(select(Country).where(Country.country_tag == tag))
-               ).scalar_one_or_none()
+    country = (
+        await db.execute(select(Country).where(Country.country_tag == tag))
+    ).scalar_one_or_none()
 
     if country is None:
         country = Country(name=name, country_tag=tag)
@@ -35,8 +36,9 @@ async def _resolve_country(db: AsyncDBSession, name: str, tag: str) -> Country:
 
 
 async def _resolve_demo_pilot(db: AsyncDBSession, country_id: int) -> Pilot:
-    pilot = (await db.execute(select(Pilot).where(Pilot.email == DEMO_PILOT_EMAIL))
-             ).scalar_one_or_none()
+    pilot = (
+        await db.execute(select(Pilot).where(Pilot.email == DEMO_PILOT_EMAIL))
+    ).scalar_one_or_none()
 
     if pilot is None:
         pilot = Pilot(
@@ -53,20 +55,10 @@ async def _resolve_demo_pilot(db: AsyncDBSession, country_id: int) -> Pilot:
     return pilot
 
 
-async def create_random_checkin(db: AsyncDBSession, reset: bool) -> dict[str, Any]:
-    country = await _resolve_country(db, DEMO_COUNTRY_NAME, DEMO_COUNTRY_TAG)
-    country_id = country.id
-
-    pilot = await _resolve_demo_pilot(db, country_id)
-    pilot_id = pilot.id
-
-    if reset:
-        await db.execute(delete(Checkin).where(Checkin.pilot_id == pilot_id))
-
+def _random_checkin(pilot_id: int, country_id: int, now: datetime) -> tuple[Checkin, tuple[float, float]]:
     min_lon, min_lat, max_lon, max_lat = WARSAW_BBOX
     lon = random.uniform(min_lon, max_lon)
     lat = random.uniform(min_lat, max_lat)
-    now = datetime.now(timezone.utc)
 
     checkin = Checkin(
         pilot_id=pilot_id,
@@ -81,15 +73,47 @@ async def create_random_checkin(db: AsyncDBSession, reset: bool) -> dict[str, An
         ends_at=now + timedelta(hours=1),
         time=random.randint(*TIME_RANGE),
     )
-    db.add(checkin)
+    return checkin, (lon, lat)
+
+
+async def create_random_checkins(db: AsyncDBSession, count: int, reset: bool) -> dict[str, Any]:
+    country = await _resolve_country(db, DEMO_COUNTRY_NAME, DEMO_COUNTRY_TAG)
+    country_id = country.id
+
+    pilot = await _resolve_demo_pilot(db, country_id)
+    pilot_id = pilot.id
+
+    if reset:
+        await db.execute(delete(Checkin).where(Checkin.pilot_id == pilot_id))
+
+    now = datetime.now(timezone.utc)
+    checkins: list[Checkin] = []
+    points: list[tuple[float, float]] = []
+    for _ in range(count):
+        checkin, point = _random_checkin(pilot_id, country_id, now)
+        checkins.append(checkin)
+        points.append(point)
+
+    db.add_all(checkins)
+    await db.flush()
+    ids = [c.id for c in checkins]
     await db.commit()
-    await db.refresh(checkin, attribute_names=["id", "h3_index"])
+
+    h3_by_id = dict(
+        (
+            await db.execute(
+                select(Checkin.id, Checkin.h3_index).where(Checkin.id.in_(ids))
+            )
+        ).all()
+    )
 
     return {
-        "message": f"Created check-in {checkin.id}",
-        "id": checkin.id,
+        "message": f"Created {len(ids)} check-in(s) for pilot {pilot_id}",
+        "created": len(ids),
         "pilot_id": pilot_id,
-        "point": [lon, lat],
-        "h3_index": checkin.h3_index,
         "reset": reset,
+        "checkins": [
+            {"id": cid, "point": [lon, lat], "h3_index": h3_by_id.get(cid)}
+            for cid, (lon, lat) in zip(ids, points)
+        ],
     }
