@@ -8,6 +8,7 @@ from sqlalchemy import delete, select
 from backend_src.db import AsyncDBSession
 from backend_src.models import Checkin, Country, Pilot
 from backend_src.models.enum import FlyingPrivileges
+from .schema import CheckinInput
 from .constants import (
     DEMO_COUNTRY_NAME,
     DEMO_COUNTRY_TAG,
@@ -74,6 +75,46 @@ def _random_checkin(pilot_id: int, country_id: int, now: datetime) -> tuple[Chec
         time=random.randint(*TIME_RANGE),
     )
     return checkin, (lon, lat)
+
+
+async def create_checkin(db: AsyncDBSession, data: CheckinInput) -> dict[str, Any]:
+    country = await _resolve_country(db, DEMO_COUNTRY_NAME, DEMO_COUNTRY_TAG)
+    country_id = country.id
+
+    pilot = await _resolve_demo_pilot(db, country_id)
+    pilot_id = pilot.id
+
+    starts_at = data.starts_at or datetime.now(timezone.utc)
+    ends_at = data.ends_at or (starts_at + timedelta(hours=1))
+
+    checkin = Checkin(
+        pilot_id=pilot_id,
+        country_id=country_id,
+        flying_privilege=data.flying_privilege,
+        home_point=Point(data.lon, data.lat),
+        height=data.height,
+        range=data.range,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        time=data.time,
+        description=data.description,
+    )
+    db.add(checkin)
+    await db.flush()
+    checkin_id = checkin.id
+    await db.commit()
+
+    h3_index = (
+        await db.execute(select(Checkin.h3_index).where(Checkin.id == checkin_id))
+    ).scalar_one()
+
+    return {
+        "message": f"Created check-in {checkin_id} for pilot {pilot_id}",
+        "id": checkin_id,
+        "pilot_id": pilot_id,
+        "point": [data.lon, data.lat],
+        "h3_index": h3_index,
+    }
 
 
 async def create_random_checkins(db: AsyncDBSession, count: int, reset: bool) -> dict[str, Any]:
