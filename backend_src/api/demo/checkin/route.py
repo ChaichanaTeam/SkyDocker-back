@@ -21,3 +21,8 @@ async def create_random_checkins(
     reset: bool = False,
 ):
     return await service.create_random_checkins(db, count, reset)
+
+
+@router.post("/{checkin_id}/end")
+async def end_checkin(checkin_id: int, db: AsyncDBDep):
+    return await service.end_checkin(db, checkin_id)

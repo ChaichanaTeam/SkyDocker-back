@@ -5,9 +5,10 @@ from typing import Any
 from shapely.geometry import Point
 from sqlalchemy import delete, select
 
+from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession
 from backend_src.models import Checkin, Country, Pilot
-from backend_src.models.enum import FlyingPrivileges
+from backend_src.models.enum import FlyingPrivileges, MissionStatus
 from .schema import CheckinInput
 from .constants import (
     DEMO_COUNTRY_NAME,
@@ -157,4 +158,44 @@ async def create_random_checkins(db: AsyncDBSession, count: int, reset: bool) ->
             {"id": cid, "point": [lon, lat], "h3_index": h3_by_id.get(cid)}
             for cid, (lon, lat) in zip(ids, points)
         ],
+    }
+
+
+_TERMINAL_STATUSES = {
+    MissionStatus.cancelled,
+    MissionStatus.loss_of_control,
+    MissionStatus.ended_intime,
+    MissionStatus.late_end,
+}
+
+
+async def end_checkin(db: AsyncDBSession, checkin_id: int) -> dict[str, Any]:
+    checkin = (
+        await db.execute(select(Checkin).where(Checkin.id == checkin_id))
+    ).scalar_one_or_none()
+
+    if checkin is None:
+        raise APIExceptions.not_found(f"Check-in {checkin_id} not found")
+
+    if checkin.status in _TERMINAL_STATUSES:
+        raise APIExceptions.conflict(
+            f"Check-in {checkin_id} is already {checkin.status}"
+        )
+
+    ends_at = checkin.ends_at
+    if ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=timezone.utc)
+
+    new_status = (
+        MissionStatus.ended_intime
+        if datetime.now(timezone.utc) <= ends_at
+        else MissionStatus.late_end
+    )
+    checkin.status = new_status
+    await db.commit()
+
+    return {
+        "message": f"Check-in {checkin_id} ended",
+        "id": checkin_id,
+        "status": new_status,
     }
