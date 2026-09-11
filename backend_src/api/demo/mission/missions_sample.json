@@ -1,0 +1,119 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.0122, 52.2297] },
+      "properties": {
+        "category": "open",
+        "flight_goal": "recreational",
+        "flying_privilege": "a1",
+        "height": 80,
+        "range": 300,
+        "time": 0,
+        "description": "Recreational flight over the city centre"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.0700, 52.2500] },
+      "properties": {
+        "category": "specific",
+        "flight_goal": "photography",
+        "flying_privilege": "a2",
+        "height": 120,
+        "range": 800,
+        "time": 0,
+        "description": "Aerial photography, Praga district"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [20.9200, 52.1900] },
+      "properties": {
+        "category": "specific",
+        "flight_goal": "inspection",
+        "flying_privilege": "a3",
+        "height": 100,
+        "range": 1200,
+        "time": 0,
+        "description": "Powerline inspection, southern outskirts",
+        "spotter_first_name": "Adam",
+        "spotter_last_name": "Nowak",
+        "spotter_phone": "+48555111222"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.1800, 52.3300] },
+      "properties": {
+        "category": "certified",
+        "flight_goal": "commercial",
+        "flying_privilege": "sts01",
+        "height": 150,
+        "range": 2500,
+        "time": 0,
+        "starts_at": "2026-09-15T08:00:00Z",
+        "ends_at": "2026-09-15T12:00:00Z",
+        "description": "Cargo delivery corridor test"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.2500, 52.1500] },
+      "properties": {
+        "category": "specific",
+        "flight_goal": "survey",
+        "flying_privilege": "a2",
+        "height": 110,
+        "range": 1500,
+        "time": 0,
+        "description": "Land survey grid, eastern edge"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [19.9450, 50.0647] },
+      "properties": {
+        "category": "open",
+        "flight_goal": "photography",
+        "flying_privilege": "a1",
+        "height": 90,
+        "range": 400,
+        "time": 0,
+        "description": "Krakow main square - outside the Warsaw bbox"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [18.6466, 54.3520] },
+      "properties": {
+        "category": "specific",
+        "flight_goal": "inspection",
+        "flying_privilege": "a3",
+        "height": 130,
+        "range": 1800,
+        "time": 0,
+        "description": "Port infrastructure inspection, Gdansk"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.0050, 52.2600] },
+      "properties": {
+        "category": "certified",
+        "flight_goal": "commercial",
+        "flying_privilege": "sts02",
+        "height": 140,
+        "range": 3000,
+        "time": 0,
+        "starts_at": "2026-09-20T06:30:00Z",
+        "ends_at": "2026-09-20T09:30:00Z",
+        "description": "BVLOS medical sample transport",
+        "spotter_first_name": "Ewa",
+        "spotter_last_name": "Kowalska",
+        "spotter_phone": "+48555333444"
+      }
+    }
+  ]
+}

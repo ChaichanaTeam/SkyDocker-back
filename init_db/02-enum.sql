@@ -44,9 +44,11 @@ create type mission_category as enum (
 );
 
 create type mission_flight_goal as enum (
-    'mfg1',
-    'mfg2',
-    'mfg3'
+    'recreational',
+    'photography',
+    'inspection',
+    'commercial',
+    'survey'
 );
 
 create type mission_status as enum (

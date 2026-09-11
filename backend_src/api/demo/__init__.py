@@ -6,6 +6,7 @@ from .country import CountryRouter
 from .redis import RedisRouter
 from .geozone import GeoZoneRouter
 from .checkin import CheckinRouter
+from .mission import MissionRouter
 
 
-BusinessRouters = (CountryRouter, RedisRouter, GeoZoneRouter, CheckinRouter)
+BusinessRouters = (CountryRouter, RedisRouter, GeoZoneRouter, CheckinRouter, MissionRouter)
