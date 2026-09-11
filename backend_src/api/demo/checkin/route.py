@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 
 from backend_src.api.dependencies import AsyncDBDep
+from backend_src.api.shared_schemas import BoundingBox
 from . import service
 from .schema import CheckinInput
 
@@ -26,3 +27,8 @@ async def create_random_checkins(
 @router.post("/{checkin_id}/end")
 async def end_checkin(checkin_id: int, db: AsyncDBDep):
     return await service.end_checkin(db, checkin_id)
+
+
+@router.get("/bbox")
+async def checkins_in_bbox(data: BoundingBox, db: AsyncDBDep):
+    return await service.checkins_in_bbox(data, db)

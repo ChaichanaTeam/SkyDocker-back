@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Query, UploadFile
 
 from backend_src.api.dependencies import AsyncDBDep
-from backend_src.api.shared_schemas import UserGeoData
+from backend_src.api.shared_schemas import BoundingBox
 from . import service
 
 
@@ -32,5 +32,5 @@ async def list_missions(
 
 
 @router.get("/bbox")
-async def missions_in_bbox(data: UserGeoData, db: AsyncDBDep):
+async def missions_in_bbox(data: BoundingBox, db: AsyncDBDep):
     return await service.missions_in_bbox(data, db)

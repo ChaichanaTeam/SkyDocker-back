@@ -2,11 +2,13 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from shapely.geometry import Point
+from shapely.geometry import Point, mapping
 from sqlalchemy import delete, select
 
 from backend_src.api.exceptions import APIExceptions
-from backend_src.db import AsyncDBSession
+from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
+from backend_src.api.v1.checkin.schema import CheckinProperties
+from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import Checkin, Country, Pilot
 from backend_src.models.enum import FlyingPrivileges, MissionStatus
 from .schema import CheckinInput
@@ -199,3 +201,17 @@ async def end_checkin(db: AsyncDBSession, checkin_id: int) -> dict[str, Any]:
         "id": checkin_id,
         "status": new_status,
     }
+
+
+async def checkins_in_bbox(bbox: BoundingBox, db: AsyncDBSession) -> GeoJson:
+    checkins = await Queries.Checkin.get_all_by_bbox(*bbox.unpack(), db)
+
+    features = [
+        GeoFeature(
+            geometry=mapping(ch.home_point),
+            properties=CheckinProperties.from_checkin(ch),
+        )
+        for ch in checkins
+    ]
+
+    return GeoJson(features=features)

@@ -7,7 +7,7 @@ from shapely.geometry import Point, mapping
 from sqlalchemy import delete, select, update
 
 from backend_src.api.exceptions import APIExceptions
-from backend_src.api.shared_schemas import GeoFeature, GeoJson, UserGeoData
+from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
 from backend_src.db import AsyncDBSession
 from backend_src.models import Checkin, Country, Drone, Mission, Model, Pilot
 from backend_src.models.enum import (
@@ -266,8 +266,8 @@ async def list_missions(db: AsyncDBSession, limit: int, offset: int) -> dict[str
     return {"count": len(missions), "missions": [_serialize(m) for m in missions]}
 
 
-async def missions_in_bbox(data: UserGeoData, db: AsyncDBSession) -> GeoJson:
-    x1, y1, x2, y2 = data.bounding_box.unpack()
+async def missions_in_bbox(bbox: BoundingBox, db: AsyncDBSession) -> GeoJson:
+    x1, y1, x2, y2 = bbox.unpack()
 
     missions = (
         await db.execute(
