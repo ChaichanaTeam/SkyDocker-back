@@ -13,6 +13,7 @@ RUN envsubst < /etc/redis/init.acl.template > /data/init.acl
 
 CMD [\
     "redis-server", \
+    "--maxmemory 2gb", "--maxmemory-policy", "allkeys-lru",\
     "--aclfile", "/data/init.acl", \
     "--save 60 1", "--loglevel notice" \
 ]
