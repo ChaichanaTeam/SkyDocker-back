@@ -1,7 +1,7 @@
 create type geo_zone_type as enum (
-    'gzt1',
-    'gzt2',
-    'gzt3'
+    'Flight prohibited',
+    'flight restricted',
+    'flight allowed'
 );
 
 create type user_activity as enum (
@@ -11,9 +11,11 @@ create type user_activity as enum (
 );
 
 create type flying_privileges as enum (
-    'fp1',
-    'fp2',
-    'fp3'
+    'a1',
+    'a2',
+    'a3',
+    'sts01',
+    'sts02'
 );
 
 create type verification_request_status as enum (
@@ -42,9 +44,11 @@ create type mission_category as enum (
 );
 
 create type mission_flight_goal as enum (
-    'mfg1',
-    'mfg2',
-    'mfg3'
+    'recreational',
+    'photography',
+    'inspection',
+    'commercial',
+    'survey'
 );
 
 create type mission_status as enum (

@@ -83,7 +83,8 @@ class GeoZone(Base):
             EnumWithUnknown(
                 GeoZoneType,
                 name="geo_zone_type",
-                unknown_value=GeoZoneType.UNKNOWN
+                unknown_value=GeoZoneType.UNKNOWN,
+                values_callable=lambda enum_cls: [member.value for member in enum_cls]
             ),
             nullable=False
         )

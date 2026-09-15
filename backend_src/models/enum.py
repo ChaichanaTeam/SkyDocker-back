@@ -3,14 +3,14 @@ from enum import Enum, StrEnum
 
 class GeoZoneType(StrEnum):
     UNKNOWN = "unknown"
-    gzt1 = "gzt1"
-    gzt2 = "gzt2"
-    gzt3 = "gzt3"
-    restricted = "restricted"
-    prohibited = "prohibited"
-    danger = "danger"
-    warning = "warning"
-    req_authorisation = "req_authorisation"
+    flight_prohibited = "Flight prohibited"
+    flight_restricted = "flight restricted"
+    flight_allowed = "flight allowed"
+    # restricted = "restricted"
+    # prohibited = "prohibited"
+    # danger = "danger"
+    # warning = "warning"
+    # req_authorisation = "req_authorisation"
 
 
 class UserActivity(StrEnum):
