@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 
+from fastapi import UploadFile
 from shapely.geometry import Polygon
 from sqlalchemy import delete, select
 
@@ -8,7 +9,7 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession
 from backend_src.models import Country, GeoZone
 from backend_src.models.enum import GeoZoneType
-from .constants import BUNDLED_GEOZONE_FILE, DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG
+from .constants import DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG
 
 
 def _load_feature_collection(raw: bytes) -> list[dict[str, Any]]:
@@ -58,8 +59,8 @@ async def _resolve_country(db: AsyncDBSession, name: str, tag: str) -> Country:
     return country
 
 
-async def import_geozones(db: AsyncDBSession, raw: bytes, reset: bool) -> dict[str, Any]:
-    features = _load_feature_collection(raw)
+async def import_geozones(db: AsyncDBSession, file: UploadFile, reset: bool) -> dict[str, Any]:
+    features = _load_feature_collection(await file.read())
     country = await _resolve_country(db, DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG)
     country_id = country.id
     country_name = country.name
@@ -105,7 +106,3 @@ async def import_geozones(db: AsyncDBSession, raw: bytes, reset: bool) -> dict[s
         "skipped": len(errors),
         "errors": errors[:20],
     }
-
-
-async def import_bundled_geozones(db: AsyncDBSession, reset: bool) -> dict[str, Any]:
-    return await import_geozones(db, BUNDLED_GEOZONE_FILE.read_bytes(), reset)
