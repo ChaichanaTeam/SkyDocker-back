@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, File, Query, UploadFile
 
 from backend_src.api.dependencies import AsyncDBDep
@@ -13,13 +11,10 @@ router = APIRouter(prefix="/mission", tags=["mission"])
 @router.post("/")
 async def import_missions(
     db: AsyncDBDep,
-    file: Optional[UploadFile] = File(default=None),
+    file: UploadFile = File(...),
     reset: bool = False,
 ):
-    if file is None:
-        return await service.import_bundled_missions(db, reset)
-
-    return await service.import_missions(db, await file.read(), reset)
+    return await service.import_missions(db, file, reset)
 
 
 @router.get("/")

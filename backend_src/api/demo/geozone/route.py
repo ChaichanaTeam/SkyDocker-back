@@ -13,4 +13,4 @@ async def import_geozones(
     file: UploadFile = File(...),
     reset: bool = False,
 ):
-    return await service.import_geozones(db, await file.read(), reset)
+    return await service.import_geozones(db, file, reset)

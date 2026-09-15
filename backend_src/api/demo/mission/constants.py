@@ -1,10 +1,5 @@
-from pathlib import Path
-
-BUNDLED_MISSION_FILE = Path(__file__).with_name("missions_sample.json")
-
 DEMO_COUNTRY_NAME = "Poland"
 DEMO_COUNTRY_TAG = "PL"
-
 
 IMPORT_PILOT_EMAIL = "missions.import@email.com"
 IMPORT_PILOT_FIRST_NAME = "Import"

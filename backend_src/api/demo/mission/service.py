@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from fastapi import UploadFile
 from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
 from shapely.geometry import Point, mapping
 from sqlalchemy import delete, select, update
@@ -19,7 +20,6 @@ from backend_src.models.enum import (
 from backend_src.models.model import MissionAtcApproval
 from .schema import MissionProperties
 from .constants import (
-    BUNDLED_MISSION_FILE,
     DEFAULT_WINDOW_HOURS,
     DEMO_COUNTRY_NAME,
     DEMO_COUNTRY_TAG,
@@ -204,8 +204,8 @@ def _serialize(mission: Mission) -> dict[str, Any]:
     }
 
 
-async def import_missions(db: AsyncDBSession, raw: bytes, reset: bool) -> dict[str, Any]:
-    features = _load_features(raw)
+async def import_missions(db: AsyncDBSession, file: UploadFile, reset: bool) -> dict[str, Any]:
+    features = _load_features(await file.read())
 
     country = await _resolve_country(db, DEMO_COUNTRY_NAME, DEMO_COUNTRY_TAG)
     model = await _resolve_import_model(db)
@@ -250,10 +250,6 @@ async def import_missions(db: AsyncDBSession, raw: bytes, reset: bool) -> dict[s
         "errors": errors[:20],
         "reset": reset,
     }
-
-
-async def import_bundled_missions(db: AsyncDBSession, reset: bool) -> dict[str, Any]:
-    return await import_missions(db, BUNDLED_MISSION_FILE.read_bytes(), reset)
 
 
 async def list_missions(db: AsyncDBSession, limit: int, offset: int) -> dict[str, Any]:
