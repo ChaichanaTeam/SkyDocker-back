@@ -14,7 +14,7 @@ class CheckinInput(BaseModel):
 
     height: int = Field(gt=0, description="meters")
     range: int = Field(gt=0, description="meters")
-    time: int = Field(ge=0)
+    time: int = Field(ge=0, description="seconds, added to pilot.flight_time by a trigger")
 
     starts_at: Optional[datetime] = Field(default=None, description="defaults to now")
     ends_at: Optional[datetime] = Field(default=None, description="defaults to starts_at + 1h")
