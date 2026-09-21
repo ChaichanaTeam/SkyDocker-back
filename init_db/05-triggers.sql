@@ -173,3 +173,40 @@ FOR EACH ROW
 EXECUTE FUNCTION aggregate_mission_status();
 
 
+
+
+CREATE OR REPLACE FUNCTION process_overdue_checkins()
+RETURNS integer AS $$
+DECLARE
+    v_late_count integer;
+    v_ended_count integer;
+BEGIN
+    UPDATE checkin
+    SET status = 'late'
+    WHERE
+        status NOT IN ('cancelled', 'loss_of_control', 'ended_intime', 'late_end', 'late')
+        AND ends_at <= NOW();
+
+    GET DIAGNOSTICS v_late_count = ROW_COUNT;
+
+    UPDATE checkin
+    SET status = 'late_end'
+    WHERE
+        status = 'late'
+        AND ends_at <= NOW() - interval '3 hours';
+
+    GET DIAGNOSTICS v_ended_count = ROW_COUNT;
+
+    IF v_late_count > 0 OR v_ended_count > 0 THEN
+        RAISE NOTICE 'Check-ins marked late: %, auto-ended: %', v_late_count, v_ended_count;
+    END IF;
+
+    RETURN v_late_count + v_ended_count;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT cron.schedule(
+    'process-overdue-checkins',
+    '* * * * *',
+    'SELECT process_overdue_checkins()'
+);

@@ -64,6 +64,8 @@ def _random_checkin(pilot_id: int, country_id: int, now: datetime) -> tuple[Chec
     lon = random.uniform(min_lon, max_lon)
     lat = random.uniform(min_lat, max_lat)
 
+    time = random.randint(*TIME_RANGE)
+
     checkin = Checkin(
         pilot_id=pilot_id,
         country_id=country_id,
@@ -74,8 +76,8 @@ def _random_checkin(pilot_id: int, country_id: int, now: datetime) -> tuple[Chec
         height=random.randint(*HEIGHT_RANGE),
         range=random.randint(*RANGE_RANGE),
         starts_at=now,
-        ends_at=now + timedelta(hours=1),
-        time=random.randint(*TIME_RANGE),
+        ends_at=now + timedelta(seconds=time),
+        time=time,
     )
     return checkin, (lon, lat)
 
@@ -88,7 +90,7 @@ async def create_checkin(db: AsyncDBSession, data: CheckinInput) -> dict[str, An
     pilot_id = pilot.id
 
     starts_at = data.starts_at or datetime.now(timezone.utc)
-    ends_at = data.ends_at or (starts_at + timedelta(hours=1))
+    ends_at = starts_at + timedelta(seconds=data.time)
 
     checkin = Checkin(
         pilot_id=pilot_id,
