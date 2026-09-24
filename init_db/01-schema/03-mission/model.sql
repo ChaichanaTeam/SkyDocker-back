@@ -1,16 +1,15 @@
 CREATE TABLE mission (
     id                      bigserial PRIMARY KEY,
     pilot_id                bigint NOT NULL,
-    
-    -- operation_type          mission_operation_type NOT NULL,
     drone_id                bigint NOT NULL,
-    category                mission_category NOT NULL,
+    
+    category                operational_category NOT NULL,
     flight_goal             mission_flight_goal,
     description             TEXT,
     flying_privilege        flying_privileges NOT NULL,
     
-    h3_index                h3index NOT NULL,
     country_id              smallint NOT NULL,
+    h3_index                h3index NOT NULL,
     home_point              GEOMETRY(Point, 4326) NOT NULL,
     height                  integer NOT NULL,
     range                   integer NOT NULL,
@@ -32,7 +31,6 @@ CREATE TABLE mission (
 );
 
 COMMENT ON TABLE  public.mission IS 'Table for creation and pre-verification flying mission which summbitted to ATC';
--- COMMENT ON COLUMN public.mission.operation_type IS '';
 COMMENT ON COLUMN public.mission.category IS 'Category of flight (open/special)';
 COMMENT ON COLUMN public.mission.description IS 'Descrition of mission, will be sended to ATC';
 COMMENT ON COLUMN public.mission.drone_id IS 'Identification of which drone pilot used for flight';
