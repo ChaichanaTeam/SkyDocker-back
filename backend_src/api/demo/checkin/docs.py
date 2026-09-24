@@ -9,7 +9,8 @@ CREATE_CHECKIN = {
     "summary": "Create a check-in",
     "description": "Creates one check-in from the request body, attached to the demo pilot.\n\n"
                     "The demo pilot and the demo country (Poland) are created on first use.\n\n"
-                    "starts_at defaults to now, ends_at defaults to starts_at + 1h. "
+                    "starts_at defaults to now and the window ends at starts_at + `time` seconds - "
+                    "ends_at is not accepted. "
                     "h3_index is filled by a database trigger.",
     "response_description": "Created check-in id, its point and h3 index",
     "responses": {
@@ -21,6 +22,7 @@ CREATE_RANDOM_CHECKINS = {
     "summary": "Create random check-ins",
     "description": "Creates `count` check-ins with random position, height, range and time "
                     "inside the Warsaw bounding box, attached to the demo pilot.\n\n"
+                    "Each window ends at starts_at + the generated `time`.\n\n"
                     "Pass `?reset=true` to first delete the demo pilot's existing check-ins "
                     "(the pilot row and its flight_time are kept).",
     "response_description": "Created check-ins with their points and h3 indexes",
@@ -32,7 +34,10 @@ CREATE_RANDOM_CHECKINS = {
 END_CHECKIN = {
     "summary": "End a check-in",
     "description": "Ends a check-in by id.\n\n"
-                    "The status becomes `ended_intime` if ended before ends_at, otherwise `late_end`.",
+                    "The status becomes `ended_intime` if ended before ends_at, otherwise `late_end`.\n\n"
+                    "A check-in left open past ends_at is marked `late` by a scheduled job and stays "
+                    "`late` until it is ended; once it has been overdue for more than 3 hours "
+                    "the job ends it as `late_end`.",
     "response_description": "Check-in id and its new status",
     "responses": {
         200: { "description": "Check-in ended" },
