@@ -11,6 +11,7 @@ services:
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_UPASSWORD: ${DATABASE_UPASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      H3_RESOLUTION: ${H3_RESOLUTION}
     deploy:
       resources:
         limits:
