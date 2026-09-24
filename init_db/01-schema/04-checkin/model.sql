@@ -1,15 +1,16 @@
 CREATE TABLE checkin (
     id                      bigserial PRIMARY KEY,
     pilot_id                bigint NOT NULL,
+    drone_id                bigint NOT NULL,
     mission_id              bigint,
     
-    flying_privilege        flying_privileges NOT NULL,
     flight_goal             mission_flight_goal,
     description             TEXT,
+    flying_privilege        flying_privileges NOT NULL,
     
-    home_point              GEOMETRY(Point, 4326) NOT NULL,
-    h3_index                h3index NOT NULL,
     country_id              smallint NOT NULL,
+    h3_index                h3index NOT NULL,
+    home_point              GEOMETRY(Point, 4326) NOT NULL,
     height                  integer NOT NULL,
     range                   integer NOT NULL,
     starts_at               timestamptz(0) NOT NULL,
@@ -22,7 +23,8 @@ CREATE TABLE checkin (
 
     FOREIGN KEY (pilot_id) REFERENCES pilot(id),
     FOREIGN KEY (mission_id) REFERENCES mission(id),
-    FOREIGN KEY (country_id) REFERENCES country(id)
+    FOREIGN KEY (country_id) REFERENCES country(id),
+    FOREIGN KEY (drone_id) REFERENCES drone(id)
 );
 
 COMMENT ON TABLE  public.checkin IS 'The pilot must notify if he wants to take off. Check-in is the method of notification on-time, especially if zone is open';
