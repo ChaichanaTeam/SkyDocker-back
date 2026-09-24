@@ -7,6 +7,13 @@ create type flying_privileges as enum (
 );
 
 
+create type operational_category as enum (
+    'open',
+    'specific',
+    'certified'
+);
+
+
 create type mission_status as enum (
     'created',
     'cancelled',
