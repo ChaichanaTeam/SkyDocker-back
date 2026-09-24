@@ -28,6 +28,9 @@ backend = [
     "sqlalchemy>=2.0.51",
     "uvicorn>=0.51.0",
     "pydantic-extra-types[phonenumbers]>=2.11.1",
+    "alembic>=1.20.0",
+    "greenlet>=3.5.3",
+    "sqlacodegen>=4.0.4",
 ]
 
 test = [
@@ -59,4 +62,7 @@ all = [
     "pytest-order>=1.5.0",
     "httpx>=0.28.1",
     "pydantic-extra-types[phonenumbers]>=2.11.1",
+    "alembic>=1.20.0",
+    "greenlet>=3.5.3",
+    "sqlacodegen>=4.0.4",
 ]
