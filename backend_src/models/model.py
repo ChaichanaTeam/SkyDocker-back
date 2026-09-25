@@ -1,8 +1,8 @@
 from sqlalchemy import (
-    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT
+    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, Time, func, Boolean, ForeignKey, TEXT
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional
 from shapely.geometry import Point, Polygon
 
@@ -12,7 +12,7 @@ from .enum import (
     GeoZoneType,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
-    MissionCategory, MissionFlightGoal, MissionStatus, AtcDecision
+    OperationalCategory, MissionFlightGoal, MissionStatus, DroneCategory
 )
 
 
@@ -28,18 +28,27 @@ class Country(Base):
 class Model(Base):
     __tablename__ = "model"
 
-    id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int]                         = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    manufacturer: Mapped[str]       = mapped_column(VARCHAR(255), nullable=False)
-    model_name: Mapped[str]         = mapped_column(VARCHAR(255), nullable=False)
+    manufacturer: Mapped[str]               = mapped_column(VARCHAR(255), nullable=False)
+    model_name: Mapped[str]                 = mapped_column(VARCHAR(255), nullable=False)
+    category: Mapped[OperationalCategory]   = mapped_column(
+        EnumWithUnknown(
+            OperationalCategory,
+            name="operational_category",
+            unknown_value=OperationalCategory.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
+        ),
+        nullable=False
+    )
 
-    is_model_verified: Mapped[bool] = mapped_column(Boolean, server_default="false", nullable=False)
-    created_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    is_model_verified: Mapped[bool]         = mapped_column(Boolean, server_default="false", nullable=False)
+    created_at: Mapped[datetime]            = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    speed: Mapped[int]              = mapped_column(Integer, nullable=False)
-    weight: Mapped[int]             = mapped_column(Integer, nullable=False)
-    max_height: Mapped[int]         = mapped_column(Integer, nullable=False)
-    max_range: Mapped[int]          = mapped_column(Integer, nullable=False)
+    speed: Mapped[int]                      = mapped_column(Integer, nullable=False)
+    mtom: Mapped[int]                       = mapped_column(Integer, nullable=False)
+    max_height: Mapped[int]                 = mapped_column(Integer, nullable=False)
+    max_range: Mapped[int]                  = mapped_column(Integer, nullable=False)
 
 
 class AfdModerator(Base):
@@ -53,24 +62,6 @@ class AfdModerator(Base):
     password_hash: Mapped[str]          = mapped_column(VARCHAR(255), nullable=False)
 
     created_at: Mapped[datetime]        = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
-class AtcAdmin(Base):
-    __tablename__ = "atc_admin"
-
-    id: Mapped[int]                             = mapped_column(Integer, primary_key=True, autoincrement=True)
-    country_id: Mapped[int]                     = mapped_column(SMALLINT, ForeignKey("country.id"), nullable=False)
-
-    email: Mapped[str]                          = mapped_column(VARCHAR(255), nullable=False)
-    affiliation: Mapped[str]                    = mapped_column(VARCHAR(4), nullable=False)
-    api_key: Mapped[str]                        = mapped_column(VARCHAR(255), nullable=False)
-
-    is_revoked: Mapped[bool]                    = mapped_column(Boolean, server_default="false", nullable=False)
-    revoke_reason: Mapped[Optional[str]]        = mapped_column(TEXT)
-    expires_at: Mapped[datetime]                = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked_at: Mapped[Optional[datetime]]      = mapped_column(DateTime(timezone=True))
-
-    created_at: Mapped[datetime]                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class GeoZone(Base):
@@ -92,9 +83,9 @@ class GeoZone(Base):
     strength: Mapped[int]                                       = mapped_column(Integer, nullable=False)
     zone_polygon: Mapped[Polygon]                               = mapped_column(GeometryType("POLYGON", 4326), nullable=False)
     height_agl: Mapped[Optional[int]]                           = mapped_column(Integer)
-    height_amsl: Mapped[Optional[int]]                          = mapped_column(Integer)
 
-    country: Mapped["Country"] = relationship()
+    country: Mapped["Country"]                                  = relationship()
+    activity_time: Mapped[list['ActivityTime']]                 = relationship()
 
 
 class GeoZoneH3(Base):
@@ -109,61 +100,77 @@ class GeoZoneH3(Base):
 class ActivityTime(Base):
     __tablename__ = "activity_time"
 
-    id: Mapped[int]                 = mapped_column(BIGINT, primary_key=True)
-    geo_zone_id: Mapped[int]        = mapped_column(BIGINT, ForeignKey("geo_zone.id"), nullable=False)
+    id: Mapped[int]                                 = mapped_column(BIGINT, primary_key=True)
+    geo_zone_id: Mapped[int]                        = mapped_column(BIGINT, ForeignKey("geo_zone.id"), nullable=False)
 
-    start_at: Mapped[datetime]      = mapped_column(DateTime(timezone=True), nullable=False)
-    ends_at: Mapped[datetime]       = mapped_column(DateTime(timezone=True), nullable=False)
+    start_at: Mapped[Optional[datetime]]            = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[Optional[datetime]]             = mapped_column(DateTime(timezone=True))
+    daily_start: Mapped[Optional[time]]             = mapped_column(Time)
+    daily_end: Mapped[Optional[time]]               = mapped_column(Time)
 
 
 class Pilot(Base):
     __tablename__ = "pilot"
 
-    id: Mapped[int]                                             = mapped_column(BIGINT, primary_key=True)
+    id: Mapped[int]                                                     = mapped_column(BIGINT, primary_key=True)
 
-    first_name: Mapped[str]                                     = mapped_column(VARCHAR(255), nullable=False)
-    last_name: Mapped[str]                                      = mapped_column(VARCHAR(255), nullable=False)
+    first_name: Mapped[str]                                             = mapped_column(VARCHAR(255), nullable=False)
+    last_name: Mapped[str]                                              = mapped_column(VARCHAR(255), nullable=False)
 
-    email: Mapped[str]                                          = mapped_column(VARCHAR(255), nullable=False)
-    phone_number: Mapped[str]                                   = mapped_column(VARCHAR(15), nullable=False)
-    pilot_number: Mapped[Optional[str]]                         = mapped_column(VARCHAR(255))
+    email: Mapped[str]                                                  = mapped_column(VARCHAR(255), nullable=False)
+    phone_number: Mapped[str]                                           = mapped_column(VARCHAR(15), nullable=False)
+    pilot_number: Mapped[Optional[str]]                                 = mapped_column(VARCHAR(255))
 
-    password_hash: Mapped[str]                                  = mapped_column(VARCHAR(255), nullable=False)
+    password_hash: Mapped[str]                                          = mapped_column(VARCHAR(255), nullable=False)
 
-    country_id: Mapped[Optional[int]]                           = mapped_column(SMALLINT, ForeignKey("country.id"))
-    show_to_public: Mapped[bool]                                = mapped_column(Boolean, server_default="false", nullable=False)
-    activity: Mapped[Optional[UserActivity]]                    = mapped_column(
+    show_to_public: Mapped[bool]                                        = mapped_column(Boolean, server_default="false", nullable=False)
+    activity: Mapped[Optional[UserActivity]]                            = mapped_column(
         EnumWithUnknown(
             UserActivity,
             name="user_activity",
-            unknown_value=UserActivity.UNKNOWN
+            unknown_value=UserActivity.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         )
     )
-    flight_time: Mapped[int]                                    = mapped_column(INTEGER, server_default="0", nullable=False)
-    dronepark_hash: Mapped[Optional[str]]                       = mapped_column(VARCHAR(255))
+    flight_time: Mapped[int]                                            = mapped_column(INTEGER, server_default="0", nullable=False)
+    dronepark_hash: Mapped[Optional[str]]                               = mapped_column(VARCHAR(255))
 
-    verified: Mapped[bool]                                      = mapped_column(Boolean, server_default="false", nullable=False)
+    created_at: Mapped[datetime]                                        = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    created_at: Mapped[datetime]                                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    drone: Mapped[list['Drone']]                                        = relationship('Drone', back_populates='pilot')
+    user_to_flying_privileges: Mapped[list['UserToFlyingPrivileges']]   = relationship()
+    verification_request: Mapped[list['VerificationRequest']]           = relationship('VerificationRequest', back_populates='pilot')
+    mission: Mapped[list['Mission']]                                    = relationship('Mission', back_populates='pilot')
+    checkin: Mapped[list['Checkin']]                                    = relationship('Checkin', back_populates='pilot')
 
 
 class Drone(Base):
     __tablename__ = "drone"
 
-    id: Mapped[int]             = mapped_column(BIGINT, primary_key=True)
-    pilot_id: Mapped[int]       = mapped_column(BIGINT, ForeignKey("pilot.id"), nullable=False)
+    id: Mapped[int]                         = mapped_column(BIGINT, primary_key=True)
+    pilot_id: Mapped[int]                   = mapped_column(BIGINT, ForeignKey("pilot.id"), nullable=False)
 
-    model_id: Mapped[int]       = mapped_column(INTEGER, ForeignKey("model.id"), nullable=False)
-    serial_number: Mapped[str]  = mapped_column(VARCHAR(255), nullable=False)
+    is_drone_modified: Mapped[bool]         = mapped_column(Boolean, server_default="false", nullable=False)
+    category: Mapped[DroneCategory]         = mapped_column(
+        EnumWithUnknown(
+            DroneCategory,
+            name="drone_category",
+            unknown_value=DroneCategory.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
+        ),
+        nullable=False
+    )
 
+    model_id: Mapped[int]                   = mapped_column(INTEGER, ForeignKey("model.id"), nullable=False)
+    serial_number: Mapped[str]              = mapped_column(VARCHAR(255), nullable=False)
 
-class GeoZoneToAtc(Base):
-    __tablename__ = "geo_zone_to_atc"
+    flight_time: Mapped[int]                = mapped_column(INTEGER, server_default="0", nullable=False)
+    mtom_override: Mapped[Optional[int]]    = mapped_column(Integer)
 
-    id: Mapped[int]                 = mapped_column(BIGINT, primary_key=True)
-
-    geo_zone_id: Mapped[int]        = mapped_column(BIGINT, ForeignKey("geo_zone.id"), nullable=False)
-    atc_admin_id: Mapped[int]       = mapped_column(INTEGER, ForeignKey("atc_admin.id"), nullable=False)
+    model: Mapped['Model']                  = relationship()
+    pilot: Mapped['Pilot']                  = relationship('Pilot', back_populates='drone')
+    mission: Mapped[list['Mission']]        = relationship('Mission', back_populates='drone')
+    checkin: Mapped[list['Checkin']]        = relationship()
 
 
 class UserToFlyingPrivileges(Base):
@@ -176,7 +183,8 @@ class UserToFlyingPrivileges(Base):
         EnumWithUnknown(
             FlyingPrivileges,
             name="flying_privileges",
-            unknown_value=FlyingPrivileges.UNKNOWN
+            unknown_value=FlyingPrivileges.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         nullable=False
     )
@@ -192,7 +200,8 @@ class VerificationRequest(Base):
         EnumWithUnknown(
             VerificationRequestStatus,
             name="verification_request_status",
-            unknown_value=VerificationRequestStatus.UNKNOWN
+            unknown_value=VerificationRequestStatus.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         server_default="pending",
         nullable=False
@@ -202,6 +211,10 @@ class VerificationRequest(Base):
     verified_at: Mapped[Optional[datetime]]                                      = mapped_column(DateTime(timezone=True))
     
     created_at: Mapped[datetime]                                                 = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    pilot: Mapped['Pilot']                                                       = relationship('Pilot', back_populates='verification_request')
+    afd_moderator: Mapped[Optional['AfdModerator']]                              = relationship()
+    verification_document: Mapped[list['VerificationDocument']]                  = relationship()
 
 
 class VerificationDocument(Base):
@@ -215,7 +228,8 @@ class VerificationDocument(Base):
         EnumWithUnknown(
             VerificationDocumentType,
             name="verification_document_type",
-            unknown_value=VerificationDocumentType.UNKNOWN
+            unknown_value=VerificationDocumentType.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         nullable=False
     )
@@ -230,11 +244,12 @@ class Mission(Base):
     pilot_id: Mapped[int]                                   = mapped_column(BIGINT, ForeignKey("pilot.id"), nullable=False)
         
     drone_id: Mapped[int]                                   = mapped_column(BIGINT, ForeignKey("drone.id"), nullable=False)
-    category: Mapped[MissionCategory]                       = mapped_column(
+    category: Mapped[OperationalCategory]                   = mapped_column(
         EnumWithUnknown(
-            MissionCategory,
+            OperationalCategory,
             name="mission_category",
-            unknown_value=MissionCategory.UNKNOWN
+            unknown_value=OperationalCategory.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         nullable=False
     )
@@ -242,7 +257,8 @@ class Mission(Base):
         EnumWithUnknown(
             MissionFlightGoal,
             name="mission_flight_goal",
-            unknown_value=MissionFlightGoal.UNKNOWN
+            unknown_value=MissionFlightGoal.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         )
     )
     description: Mapped[Optional[str]]                      = mapped_column(TEXT)
@@ -250,7 +266,8 @@ class Mission(Base):
         EnumWithUnknown(
             FlyingPrivileges,
             name="flying_privileges",
-            unknown_value=FlyingPrivileges.UNKNOWN
+            unknown_value=FlyingPrivileges.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         nullable=False
     )
@@ -272,13 +289,18 @@ class Mission(Base):
         EnumWithUnknown(
             MissionStatus,
             name="mission_status",
-            unknown_value=MissionStatus.UNKNOWN
+            unknown_value=MissionStatus.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         server_default="created",
         nullable=False
     )
 
     created_at: Mapped[datetime]                            = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    country: Mapped['Country']                              = relationship()
+    drone: Mapped['Drone']                                  = relationship('Drone', back_populates='mission')
+    pilot: Mapped['Pilot']                                  = relationship('Pilot', back_populates='mission')
 
 
 class Checkin(Base):
@@ -287,12 +309,14 @@ class Checkin(Base):
     id: Mapped[int]                             = mapped_column(BIGINT, primary_key=True)
     pilot_id: Mapped[int]                       = mapped_column(BIGINT, ForeignKey("pilot.id"), nullable=False)
     mission_id: Mapped[Optional[int]]           = mapped_column(BIGINT, ForeignKey("mission.id"))
+    drone_id: Mapped[int]                       = mapped_column(BIGINT, ForeignKey("drone.id"), nullable=False)
 
     flying_privilege: Mapped[FlyingPrivileges] = mapped_column(
         EnumWithUnknown(
             FlyingPrivileges,
             name="flying_privileges",
-            unknown_value=FlyingPrivileges.UNKNOWN
+            unknown_value=FlyingPrivileges.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         nullable=False
     )
@@ -300,7 +324,8 @@ class Checkin(Base):
         EnumWithUnknown(
             MissionFlightGoal,
             name="mission_flight_goal",
-            unknown_value=MissionFlightGoal.UNKNOWN
+            unknown_value=MissionFlightGoal.UNKNOWN,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls]
         )
     )
     description: Mapped[Optional[str]]          = mapped_column(TEXT)
@@ -318,7 +343,8 @@ class Checkin(Base):
         EnumWithUnknown(
            MissionStatus,
            name="mission_status",
-           unknown_value=MissionStatus.UNKNOWN
+           unknown_value=MissionStatus.UNKNOWN,
+           values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
         server_default="created",
         nullable=False
@@ -326,26 +352,8 @@ class Checkin(Base):
 
     created_at: Mapped[datetime]                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    mission: Mapped["Mission"]                  = relationship()
-    pilot: Mapped["Pilot"]                      = relationship()
-    country: Mapped["Country"]                  = relationship()
-
-
-class MissionAtcApproval(Base):
-    __tablename__ = "mission_atc_approval"
-
-    id: Mapped[int]                             = mapped_column(BIGINT, primary_key=True)
+    country: Mapped['Country']                  = relationship()
+    drone: Mapped['Drone']                      = relationship('Drone', back_populates='checkin')
+    mission: Mapped[Optional['Mission']]        = relationship()
+    pilot: Mapped['Pilot']                      = relationship('Pilot', back_populates='checkin')
     
-    mission_id: Mapped[int]                     = mapped_column(BIGINT, ForeignKey("mission.id"), nullable=False)
-    atc_admin_id: Mapped[int]                   = mapped_column(INTEGER, ForeignKey("atc_admin.id"), nullable=False)
-
-    status: Mapped[AtcDecision]                 = mapped_column(
-        EnumWithUnknown(
-           AtcDecision,
-           name="atc_decision",
-           unknown_value=AtcDecision.UNKNOWN
-        ),
-        server_default="pending",
-        nullable=False
-    )
-    decided_at: Mapped[Optional[datetime]]      = mapped_column(DateTime(timezone=True), server_default=FetchedValue())
