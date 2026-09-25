@@ -3,13 +3,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from backend_src.models.enum import FlyingPrivileges
+from backend_src.models import FlyingPrivileges
 
 class CheckinInput(BaseModel):
     lon: float = Field(ge=-180, le=180)
     lat: float = Field(ge=-90, le=90)
 
-    flying_privilege: FlyingPrivileges = FlyingPrivileges.a1
+    flying_privilege: FlyingPrivileges = FlyingPrivileges.A1
     description: Optional[str] = None
 
     height: int = Field(gt=0, description="meters")

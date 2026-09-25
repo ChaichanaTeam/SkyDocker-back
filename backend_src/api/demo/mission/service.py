@@ -10,14 +10,10 @@ from sqlalchemy import delete, select, update
 from backend_src.api.exceptions import APIExceptions
 from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
 from backend_src.db import AsyncDBSession
-from backend_src.models import Checkin, Country, Drone, Mission, Model, Pilot
-from backend_src.models.enum import (
-    FlyingPrivileges,
-    MissionCategory,
-    MissionFlightGoal,
-    MissionStatus,
+from backend_src.models import (
+    Checkin, Country, Drone, Mission, Model, Pilot,
+    FlyingPrivileges, OperationalCategory, MissionFlightGoal, MissionStatus,
 )
-from backend_src.models.model import MissionAtcApproval
 from .schema import MissionProperties
 from .constants import (
     DEFAULT_WINDOW_HOURS,
@@ -88,7 +84,7 @@ def _mission_from_feature(
         pilot_id=pilot_id,
         drone_id=drone_id,
         country_id=country_id,
-        category=MissionCategory(props["category"]),
+        category=OperationalCategory(props["category"]),
         flight_goal=(
             MissionFlightGoal(props["flight_goal"]) if props.get("flight_goal") else None
         ),
@@ -220,7 +216,6 @@ async def import_missions(db: AsyncDBSession, file: UploadFile, reset: bool) -> 
         await db.execute(
             update(Checkin).values(mission_id=None).where(Checkin.mission_id.is_not(None))
         )
-        await db.execute(delete(MissionAtcApproval))
         await db.execute(delete(Mission))
 
     now = datetime.now(timezone.utc)

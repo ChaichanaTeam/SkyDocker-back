@@ -9,8 +9,10 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
 from backend_src.api.v1.checkin.schema import CheckinProperties
 from backend_src.db import AsyncDBSession, Queries
-from backend_src.models import Checkin, Country, Pilot
-from backend_src.models.enum import FlyingPrivileges, MissionStatus
+from backend_src.models import (
+    Checkin, Country, Pilot,
+    FlyingPrivileges, MissionStatus
+)
 from .schema import CheckinInput
 from .constants import (
     DEMO_COUNTRY_NAME,
@@ -50,8 +52,7 @@ async def _resolve_demo_pilot(db: AsyncDBSession, country_id: int) -> Pilot:
             last_name=DEMO_PILOT_LAST_NAME,
             email=DEMO_PILOT_EMAIL,
             phone_number=DEMO_PILOT_PHONE,
-            password_hash="x",
-            country_id=country_id,
+            password_hash="x"
         )
         db.add(pilot)
         await db.flush()
@@ -68,7 +69,7 @@ def _random_checkin(pilot_id: int, country_id: int, now: datetime) -> tuple[Chec
         pilot_id=pilot_id,
         country_id=country_id,
         flying_privilege=random.choice(
-            [FlyingPrivileges.a1, FlyingPrivileges.a2, FlyingPrivileges.a3]
+            [FlyingPrivileges.A1, FlyingPrivileges.A2, FlyingPrivileges.A3]
         ),
         home_point=Point(lon, lat),
         height=random.randint(*HEIGHT_RANGE),
@@ -164,10 +165,10 @@ async def create_random_checkins(db: AsyncDBSession, count: int, reset: bool) ->
 
 
 _TERMINAL_STATUSES = {
-    MissionStatus.cancelled,
-    MissionStatus.loss_of_control,
-    MissionStatus.ended_intime,
-    MissionStatus.late_end,
+    MissionStatus.CANCELLED,
+    MissionStatus.LOSS_OF_CONTROL,
+    MissionStatus.ENDED_INTIME,
+    MissionStatus.LATE_END,
 }
 
 
