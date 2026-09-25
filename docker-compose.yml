@@ -62,7 +62,7 @@ services:
     volumes:
       - redis_data:/bitnami/redis/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli", "-a", "${REDIS_UPASSWORD}", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_UPASSWORD} ping"]
       interval: 5s
       timeout: 5s
       retries: 5
