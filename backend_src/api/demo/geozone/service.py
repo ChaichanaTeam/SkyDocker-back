@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession
-from backend_src.models import Country, GeoZone
+from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneH3
 from backend_src.models.enum import GeoZoneType
 from .constants import DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG
 
@@ -41,9 +41,15 @@ def _polygon_from_geometry(geometry: dict[str, Any]) -> Polygon:
 
 def _geozone_type(raw: Optional[str]) -> GeoZoneType:
     try:
-        return GeoZoneType(raw)
+        zone_type = GeoZoneType(raw)
     except ValueError:
+        zone_type = GeoZoneType.UNKNOWN
+
+    # UNKNOWN exists only on the Python side, the DB enum rejects it
+    if zone_type is GeoZoneType.UNKNOWN:
         raise ValueError(f"unknown geo zone type: {raw!r}")
+
+    return zone_type
 
 
 async def _resolve_country(db: AsyncDBSession, name: str, tag: str) -> Country:
@@ -66,6 +72,9 @@ async def import_geozones(db: AsyncDBSession, file: UploadFile, reset: bool) -> 
     country_name = country.name
 
     if reset:
+        zone_ids = select(GeoZone.id).where(GeoZone.country_id == country_id)
+        await db.execute(delete(ActivityTime).where(ActivityTime.geo_zone_id.in_(zone_ids)))
+        await db.execute(delete(GeoZoneH3).where(GeoZoneH3.geo_zone_id.in_(zone_ids)))
         await db.execute(delete(GeoZone).where(GeoZone.country_id == country_id))
 
     zones: list[GeoZone] = []
@@ -90,7 +99,6 @@ async def import_geozones(db: AsyncDBSession, file: UploadFile, reset: bool) -> 
                 strength=int(props.get("strength") or 0),
                 zone_polygon=polygon,
                 height_agl=props.get("height_agl"),
-                height_amsl=props.get("height_amsl"),
             )
         )
 
