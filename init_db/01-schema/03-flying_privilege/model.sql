@@ -1,4 +1,4 @@
-CREATE TABLE user_to_flying_privileges (
+CREATE TABLE pilot_to_flying_privileges (
     id                  bigserial PRIMARY KEY,
     
     pilot_id            bigint NOT NULL,
@@ -7,8 +7,8 @@ CREATE TABLE user_to_flying_privileges (
     FOREIGN KEY (pilot_id) REFERENCES pilot(id)
 );
 
-COMMENT ON TABLE  public.user_to_flying_privileges IS 'Many-to-Many relation. Pilots can have many privileges';
-COMMENT ON COLUMN public.user_to_flying_privileges.flying_privilege IS 'Type of privelege which pilot gained through his training';
+COMMENT ON TABLE  public.pilot_to_flying_privileges IS 'Many-to-Many relation. Pilots can have many privileges';
+COMMENT ON COLUMN public.pilot_to_flying_privileges.flying_privilege IS 'Type of privelege which pilot gained through his training';
 
 
 CREATE TABLE verification_request (

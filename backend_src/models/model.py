@@ -138,7 +138,7 @@ class Pilot(Base):
     created_at: Mapped[datetime]                                        = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     drone: Mapped[list['Drone']]                                        = relationship('Drone', back_populates='pilot')
-    user_to_flying_privileges: Mapped[list['UserToFlyingPrivileges']]   = relationship()
+    pilot_to_flying_privileges: Mapped[list['PilotToFlyingPrivileges']]   = relationship()
     verification_request: Mapped[list['VerificationRequest']]           = relationship('VerificationRequest', back_populates='pilot')
     mission: Mapped[list['Mission']]                                    = relationship('Mission', back_populates='pilot')
     checkin: Mapped[list['Checkin']]                                    = relationship('Checkin', back_populates='pilot')
@@ -173,8 +173,8 @@ class Drone(Base):
     checkin: Mapped[list['Checkin']]        = relationship()
 
 
-class UserToFlyingPrivileges(Base):
-    __tablename__ = "user_to_flying_privileges"
+class PilotToFlyingPrivileges(Base):
+    __tablename__ = "pilot_to_flying_privileges"
 
     id: Mapped[int]                                 = mapped_column(BIGINT, primary_key=True, autoincrement=True)
 

@@ -4,14 +4,14 @@ from sqlalchemy import select
 
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession, Queries
-from backend_src.models import UserToFlyingPrivileges
+from backend_src.models import PilotToFlyingPrivileges
 from backend_src.models.enum import FlyingPrivileges
 
 
 async def _pilot_privileges(db: AsyncDBSession, pilot_id: int) -> set[FlyingPrivileges]:
     result = await db.execute(
-        select(UserToFlyingPrivileges.flying_privilege)
-        .where(UserToFlyingPrivileges.pilot_id == pilot_id)
+        select(PilotToFlyingPrivileges.flying_privilege)
+        .where(PilotToFlyingPrivileges.pilot_id == pilot_id)
     )
     return set(result.scalars().all())
 
@@ -31,7 +31,7 @@ async def grant_privileges(db: AsyncDBSession, email: str, privileges: list[Flyi
 
     if missing:
         db.add_all(
-            UserToFlyingPrivileges(pilot_id=pilot_id, flying_privilege=privilege) for privilege in missing
+            PilotToFlyingPrivileges(pilot_id=pilot_id, flying_privilege=privilege) for privilege in missing
         )
         await db.commit()
 
