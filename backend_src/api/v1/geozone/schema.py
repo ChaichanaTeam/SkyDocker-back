@@ -18,7 +18,7 @@ class GeozoneProperties(FeatureProperties):
     type: GeoZoneType
     tag: str
     strength: int
-    height_agl: Optional[int] = Field(gt=0)
+    height_agl: Optional[int]
     activity_time: Optional[list[ActivityTime]] = None
 
 
