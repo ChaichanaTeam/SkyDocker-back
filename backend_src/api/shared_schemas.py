@@ -51,11 +51,6 @@ class FeatureProperties(BaseModel):
     pass
 
 
-class UserGeoData(BaseModel):
-    bounding_box: BoundingBox
-    user_pos: Coordinate
-
-
 class GeoFeature(BaseModel):
     type: Literal["Feature"] = "Feature"
     geometry: dict[str, Any]
