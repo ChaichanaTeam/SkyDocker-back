@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 
 from backend_src.api.shared_schemas import UserGeoData
 from backend_src.api.dependencies import AsyncDBDep
@@ -10,5 +12,5 @@ router = APIRouter(prefix="/check-in")
 
 
 @router.get("/", **docs.CHECKIN_BBOX)
-async def checkin_bbox(data: UserGeoData, db: AsyncDBDep):
+async def checkin_bbox(data: Annotated[UserGeoData, Query()], db: AsyncDBDep):
     return await service.checkin_bbox(data, db)

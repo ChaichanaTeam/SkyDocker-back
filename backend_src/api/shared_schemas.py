@@ -51,9 +51,14 @@ class FeatureProperties(BaseModel):
     pass
 
 
-class UserGeoData(BaseModel):
-    bounding_box: BoundingBox
-    user_pos: Coordinate
+class UserGeoData(BoundingBox, Coordinate):
+    @property
+    def bounding_box(self) -> BoundingBox:
+        return BoundingBox(min_lon=self.min_lon, min_lat=self.min_lat, max_lon=self.max_lon, max_lat=self.max_lat)
+
+    @property
+    def user_pos(self) -> Coordinate:
+        return Coordinate(lon=self.lon, lat=self.lat)
 
 
 class GeoFeature(BaseModel):

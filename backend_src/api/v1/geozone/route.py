@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 
 from backend_src.api.dependencies import AsyncDBDep
 from backend_src.api.shared_schemas import  UserGeoData
@@ -10,5 +12,5 @@ router = APIRouter(prefix="/geo-zone")
 
 
 @router.get("/", **docs.GEOZONE_BBOX)
-async def geozone_bbox(data: UserGeoData, db: AsyncDBDep):
+async def geozone_bbox(data: Annotated[UserGeoData, Query()], db: AsyncDBDep):
     return await service.geozone_bbox(data, db)
