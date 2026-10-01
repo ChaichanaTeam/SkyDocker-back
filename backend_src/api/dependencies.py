@@ -1,8 +1,9 @@
 from typing import Annotated, AsyncGenerator
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis_fastapi import AsyncRedisDep
 
+from backend_src.api.shared_schemas import BoundingBox
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
 from backend_src.core.security import TokenType, decode_token
 from backend_src.models import Pilot
@@ -24,6 +25,7 @@ async def get_db() -> AsyncGenerator[AsyncDBSession, None]:
 
 AsyncDBDep = Annotated[AsyncDBSession, Depends(get_db)]
 
+BoundingBoxQuery = Annotated[BoundingBox, Query(...)]
 
 
 async def _pilot_from_token(
