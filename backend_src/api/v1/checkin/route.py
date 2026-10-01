@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
-from backend_src.api.shared_schemas import BoundingBox
-from backend_src.api.dependencies import AsyncDBDep
+from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery
 from . import docs
 from . import service
 
@@ -10,5 +9,5 @@ router = APIRouter(prefix="/check-in")
 
 
 @router.get("/", **docs.CHECKIN_BBOX)
-async def checkin_bbox(db: AsyncDBDep, bbox: BoundingBox = Query(...)):
+async def checkin_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep):
     return await service.checkin_bbox(bbox, db)

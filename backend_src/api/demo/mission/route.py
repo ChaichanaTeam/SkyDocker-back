@@ -1,9 +1,6 @@
-from typing import Annotated
-
 from fastapi import APIRouter, File, Query, UploadFile
 
-from backend_src.api.dependencies import AsyncDBDep
-from backend_src.api.shared_schemas import BoundingBox
+from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery
 from . import docs
 from . import service
 
@@ -30,5 +27,5 @@ async def list_missions(
 
 
 @router.get("/bbox", **docs.MISSION_BBOX)
-async def missions_in_bbox(data: Annotated[BoundingBox, Query()], db: AsyncDBDep):
-    return await service.missions_in_bbox(data, db)
+async def missions_in_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep):
+    return await service.missions_in_bbox(bbox, db)
