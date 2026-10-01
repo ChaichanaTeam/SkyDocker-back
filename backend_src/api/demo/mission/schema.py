@@ -6,7 +6,7 @@ from typing import Optional
 from backend_src.api.shared_schemas import FeatureProperties
 from backend_src.models.enum import (
     FlyingPrivileges,
-    MissionCategory,
+    OperationalCategory,
     MissionFlightGoal,
     MissionStatus,
 )
@@ -15,7 +15,7 @@ from backend_src.models.model import Mission
 
 class MissionProperties(FeatureProperties):
     id: int
-    category: MissionCategory
+    category: OperationalCategory
     flight_goal: Optional[MissionFlightGoal]
     flying_privilege: FlyingPrivileges
     status: MissionStatus

@@ -72,7 +72,7 @@ async def refresh(data: RefreshTokenRequest, db: AsyncDBSession, redis: AsyncRed
 async def logout(data: RefreshTokenRequest, redis: AsyncRedisSession):
     payload = security.decode_token(data.refresh_token)
 
-    if not verify_token(payload, security.TokenType.REFRESH):
+    if verify_token(payload, security.TokenType.REFRESH):
         await revoke_refresh_session(redis, payload.sub, payload.jti) # type: ignore
 
     return {"message": "Logged out"}

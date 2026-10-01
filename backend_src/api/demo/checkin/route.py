@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Query
 
 from backend_src.api.dependencies import AsyncDBDep
@@ -30,5 +32,5 @@ async def end_checkin(checkin_id: int, db: AsyncDBDep):
 
 
 @router.get("/bbox", **docs.CHECKIN_BBOX)
-async def checkins_in_bbox(data: BoundingBox, db: AsyncDBDep):
+async def checkins_in_bbox(data: Annotated[BoundingBox, Query()], db: AsyncDBDep):
     return await service.checkins_in_bbox(data, db)

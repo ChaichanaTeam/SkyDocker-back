@@ -7,8 +7,11 @@ from backend_src.api.shared_schemas import GeoJson
 
 CREATE_CHECKIN = {
     "summary": "Create a check-in",
-    "description": "Creates one check-in from the request body, attached to the demo pilot.\n\n"
-                    "The demo pilot and the demo country (Poland) are created on first use.\n\n"
+    "description": "Creates one check-in from the request body, attached to the demo pilot and its demo drone.\n\n"
+                    "The demo pilot, its drone (with a demo model) and the demo country (Poland) "
+                    "are created on first use.\n\n"
+                    "A pilot may have only one active/late check-in, so the demo pilot's open check-ins "
+                    "are cancelled first - their count is returned in `cancelled`.\n\n"
                     "starts_at defaults to now and the window ends at starts_at + `time` seconds - "
                     "ends_at is not accepted. "
                     "h3_index is filled by a database trigger.",
@@ -21,10 +24,14 @@ CREATE_CHECKIN = {
 CREATE_RANDOM_CHECKINS = {
     "summary": "Create random check-ins",
     "description": "Creates `count` check-ins with random position, height, range and time "
-                    "inside the Warsaw bounding box, attached to the demo pilot.\n\n"
+                    "inside the Warsaw bounding box, attached to the demo pilot and its demo drone.\n\n"
                     "Each window ends at starts_at + the generated `time`.\n\n"
-                    "Pass `?reset=true` to first delete the demo pilot's existing check-ins "
-                    "(the pilot row and its flight_time are kept).",
+                    "The demo pilot's open check-ins are cancelled first. "
+                    "Pass `?reset=true` to delete them instead "
+                    "(the pilot row and its flight_time are kept).\n\n"
+                    "Caveat: with `count` > 1 the new check-ins are all open on one pilot. "
+                    "Once two of them expire, the overdue-check-in cron job hits the "
+                    "one-active-per-pilot index and fails until they are ended or reset.",
     "response_description": "Created check-ins with their points and h3 indexes",
     "responses": {
         200: { "description": "Check-ins created" }

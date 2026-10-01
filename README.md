@@ -24,6 +24,17 @@ pip install uv
 - Uber H3
 - PgChron
 
+### Database migrations
+
+`Alembic` is present as Python->SQL migration
+
+If want to easily migrate in another (SQL->Python) way, use `sqlacodegen`:
+
+```powershell
+$env:DB = (uv run python -c 'from dotenv import load_dotenv; import os; load_dotenv(); print(os.getenv(\"SQLACODEGEN_URL\"))')
+sqlacodegen $env:DB > output/model.py
+```
+
 ### Backend
 
 Using Python 3.11

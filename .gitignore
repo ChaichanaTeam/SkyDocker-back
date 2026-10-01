@@ -6,12 +6,15 @@ dist/
 wheels/
 *.egg-info
 *.pytest_cache
-logs/
 
 # Virtual environments
 .venv
 .local_mount
 *.env
+
+# Working output files
+logs/
+output/
 
 # Block .vscode from editing
 .vscode

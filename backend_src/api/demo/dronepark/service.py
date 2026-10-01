@@ -7,6 +7,7 @@ from sqlalchemy import select
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import Drone, Model
+from backend_src.models.enum import DroneCategory
 from .constants import DEMO_MODELS, SERIAL_LENGTH, SERIAL_PREFIX
 
 
@@ -49,6 +50,19 @@ async def seed_models(db: AsyncDBSession) -> dict[str, Any]:
     }
 
 
+def _map_category_by_mtom(mtom: int) -> DroneCategory:
+    if mtom < 250:
+        return DroneCategory.C0
+
+    if mtom < 900:
+        return DroneCategory.C1
+    
+    if mtom < 4000:
+        return DroneCategory.C2
+    
+    return DroneCategory.C5
+
+
 async def create_random_drones(db: AsyncDBSession, email: str, count: int) -> dict[str, Any]:
     pilot = await Queries.Pilot.get_by_email(email, db)
     if pilot is None:
@@ -63,7 +77,7 @@ async def create_random_drones(db: AsyncDBSession, email: str, count: int) -> di
     drones: list[tuple[Drone, Model]] = []
     for _ in range(count):
         model = random.choice(models)
-        drone = Drone(pilot_id=pilot_id, model_id=model.id, serial_number=_random_serial())
+        drone = Drone(pilot_id=pilot_id, category=_map_category_by_mtom(model.mtom), model_id=model.id, serial_number=_random_serial())
         drones.append((drone, model))
 
     db.add_all(drone for drone, _ in drones)
