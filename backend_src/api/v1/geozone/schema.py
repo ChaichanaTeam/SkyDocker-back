@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from backend_src.models.enum import GeoZoneType
 from backend_src.models.model import GeoZone
@@ -18,8 +18,7 @@ class GeozoneProperties(FeatureProperties):
     type: GeoZoneType
     tag: str
     strength: int
-    height_agl: Optional[int] = Field(..., description="Optional, if only other height valid")
-    height_amsl: Optional[int] = Field(..., description="Optional, if only other height valid")
+    height_agl: Optional[int] = Field(gt=0)
     activity_time: Optional[list[ActivityTime]] = None
 
 
@@ -31,16 +30,5 @@ class GeozoneProperties(FeatureProperties):
             type=geozone.type,
             tag=geozone.tag,
             strength=geozone.strength,
-            height_agl=geozone.height_agl,
-            height_amsl=geozone.height_amsl,
+            height_agl=geozone.height_agl
         )
-
-
-    @model_validator(mode="after")
-    def validate_height(self):
-        is_heights_null = self.height_agl is None and self.height_amsl is None
-        is_geozone_forbidden = self.type == GeoZoneType.flight_prohibited
-
-        if not is_geozone_forbidden and is_heights_null:
-            raise ValueError("Atleast one height must be valid")
-        return self

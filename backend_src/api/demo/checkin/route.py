@@ -30,5 +30,5 @@ async def end_checkin(checkin_id: int, db: AsyncDBDep):
 
 
 @router.get("/bbox", **docs.CHECKIN_BBOX)
-async def checkins_in_bbox(data: BoundingBox, db: AsyncDBDep):
-    return await service.checkins_in_bbox(data, db)
+async def checkins_in_bbox(db: AsyncDBDep, bbox: BoundingBox = Query(...)):
+    return await service.checkins_in_bbox(bbox, db)
