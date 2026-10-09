@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 import pytest
 from httpx import Client, RequestError, get, ConnectError
 
@@ -60,12 +60,35 @@ def _suite_of(item: pytest.Item) -> str:
     return item.path.relative_to(TESTS_ROOT).parts[0]
 
 
+def _module_of(item: pytest.Item) -> Optional[str]:
+    # tests/<suite>/<module>/test_*.py
+    parts = item.path.relative_to(TESTS_ROOT).parts
+
+    return parts[1] if len(parts) > 2 else None
+
+
+def _module_option(config: pytest.Config, name: str, env: str) -> set[str]:
+    values = config.getoption(name) or [os.getenv(env, "")]
+
+    return {module.strip() for value in values for module in value.split(",") if module.strip()}
+
+
 def pytest_addoption(parser: pytest.Parser):
     parser.addoption(
         "--suite",
         choices=SUITES,
         default=os.getenv("TEST_SUITE", "smoke"),
         help="Test suite to run after smoke tests (env: TEST_SUITE, default: smoke)",
+    )
+    parser.addoption(
+        "--module",
+        action="append",
+        help="Run only these modules, comma separated, repeatable (env: TEST_MODULES)",
+    )
+    parser.addoption(
+        "--exclude-module",
+        action="append",
+        help="Skip these modules, comma separated, repeatable (env: TEST_EXCLUDE_MODULES)",
     )
 
 
@@ -82,9 +105,31 @@ def pytest_sessionstart(session: pytest.Session):
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]):
     allowed = {"smoke", config.getoption("suite")}
+    included = _module_option(config, "module", "TEST_MODULES")
+    excluded = _module_option(config, "exclude_module", "TEST_EXCLUDE_MODULES")
 
-    selected = [item for item in items if _suite_of(item) in allowed]
-    deselected = [item for item in items if _suite_of(item) not in allowed]
+    known = {module for item in items if (module := _module_of(item))}
+    unknown = (included | excluded) - known
+    if unknown:
+        raise pytest.UsageError(
+            f"Unknown test modules: {', '.join(sorted(unknown))}. Known: {', '.join(sorted(known))}"
+        )
+
+    def is_selected(item: pytest.Item) -> bool:
+        suite = _suite_of(item)
+        if suite == "smoke":
+            return True
+        if suite not in allowed:
+            return False
+
+        module = _module_of(item)
+        if included and module not in included:
+            return False
+
+        return module not in excluded
+
+    selected = [item for item in items if is_selected(item)]
+    deselected = [item for item in items if not is_selected(item)]
 
     if deselected:
         config.hook.pytest_deselected(items=deselected)
