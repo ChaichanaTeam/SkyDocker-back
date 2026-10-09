@@ -114,6 +114,8 @@ services:
       OTP_CODE: ${OTP_CODE}
       RATE_LIMIT_THRESHOLD: ${RATE_LIMIT_THRESHOLD:-5}
       TEST_SUITE: ${TEST_SUITE:-smoke}
+      TEST_MODULES: ${TEST_MODULES:-}
+      TEST_EXCLUDE_MODULES: ${TEST_EXCLUDE_MODULES:-}
     volumes:
       - ./.local_mount:/app/.local_mount:ro
     depends_on:
