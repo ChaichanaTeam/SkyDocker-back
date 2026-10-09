@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from typing import Literal
 import pytest
 from httpx import Client, RequestError, get, ConnectError
@@ -7,6 +9,10 @@ from tests import constants
 from tests.utils import functional
 from tests.utils.behavioural.registration_behaviour import registration_flow
 from tests.config import Config
+
+
+TESTS_ROOT = Path(__file__).parent
+SUITES = ("smoke", "e2e", "integration")
 
 
 @pytest.fixture(scope="session")
@@ -50,8 +56,46 @@ def check_backend() -> None:
         return
 
 
-def pytest_sessionstart(session):
+def _suite_of(item: pytest.Item) -> str:
+    return item.path.relative_to(TESTS_ROOT).parts[0]
+
+
+def pytest_addoption(parser: pytest.Parser):
+    parser.addoption(
+        "--suite",
+        choices=SUITES,
+        default=os.getenv("TEST_SUITE", "smoke"),
+        help="Test suite to run after smoke tests (env: TEST_SUITE, default: smoke)",
+    )
+
+
+def pytest_sessionstart(session: pytest.Session):
+    # Smoke tests don't talk to the server
+    if session.config.getoption("suite") == "smoke":
+        return
+
     check_backend()
 
     if not Config.is_server_ready:
         pytest.exit("Server is down or in critical condition", 1)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]):
+    allowed = {"smoke", config.getoption("suite")}
+
+    selected = [item for item in items if _suite_of(item) in allowed]
+    deselected = [item for item in items if _suite_of(item) not in allowed]
+
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
+    report = yield
+
+    if report.failed and _suite_of(item) == "smoke":
+        item.session.shouldstop = "Smoke test failed, remaining suites are skipped"
+
+    return report
