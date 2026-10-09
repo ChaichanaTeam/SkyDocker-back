@@ -15,7 +15,7 @@
         {
             "label": "Pytest: Run tests",
             "type": "shell",
-            "command": "uv run pytest -v -x --capture=tee-sys",
+            "command": "uv run pytest -v -x --capture=tee-sys --suite ${input:testSuite}",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -51,7 +51,7 @@
         {
             "label": "Docker: Run test environment",
             "type": "shell",
-            "command": "docker compose run --build --rm test",
+            "command": "docker compose run --build --rm -e TEST_SUITE=${input:testSuite} test",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -59,6 +59,15 @@
                 "kind": "build",
                 "isDefault": false
             }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "testSuite",
+            "type": "pickString",
+            "description": "Test suite to run after smoke tests",
+            "options": ["smoke", "e2e", "integration"],
+            "default": "smoke"
         }
     ],
     "version": "2.0.0"

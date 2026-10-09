@@ -87,6 +87,17 @@ Docker run:
 - Docker: Run app container cached
 - Docker: Run test environment
 
+### Tests
+
+Tests are split into suites: `smoke`, `e2e`, `integration`      \
+Smoke tests always run first and stop the run on failure       \
+By default only `smoke` is run, pick another one with `--suite` or `TEST_SUITE`
+
+```bash
+uv run pytest --suite e2e
+TEST_SUITE=integration docker compose run --build --rm test
+```
+
 ## API Docs
 
 Swagger UI: on `docs/` endpoint
