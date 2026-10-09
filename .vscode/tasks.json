@@ -15,7 +15,7 @@
         {
             "label": "Pytest: Run tests",
             "type": "shell",
-            "command": "uv run pytest -v --capture=tee-sys",
+            "command": "uv run pytest -v -x --capture=tee-sys",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

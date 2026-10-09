@@ -110,7 +110,9 @@ services:
       context: .
       dockerfile: Dockerfile.test
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      BASE_HOST: app
+      OTP_CODE: ${OTP_CODE}
+      RATE_LIMIT_THRESHOLD: ${RATE_LIMIT_THRESHOLD:-5}
     volumes:
       - ./.local_mount:/app/.local_mount:ro
     depends_on:
