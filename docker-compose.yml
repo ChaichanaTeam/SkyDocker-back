@@ -92,6 +92,8 @@ services:
           memory: 4G
     ports:
       - "8000:8000"
+    volumes:
+      - ./data/geozones:/app/data/geozones
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/health"]
       interval: 1h

@@ -15,6 +15,7 @@ wheels/
 # Working output files
 logs/
 output/
+data/geozones/
 
 # Block .vscode from editing
 .vscode
