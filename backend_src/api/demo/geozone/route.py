@@ -15,3 +15,8 @@ async def import_geozones(
     reset: bool = False,
 ):
     return await service.import_geozones(db, file, reset)
+
+
+@router.post("/pansa")
+async def import_pansa_geozones(db: AsyncDBDep, reset: bool = False):
+    return await service.import_pansa_geozones(db, reset)

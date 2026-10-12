@@ -29,4 +29,11 @@ class APIExceptions:
             detail=detail,
         )
 
+    @staticmethod
+    def bad_gateway(detail: str) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=detail,
+        )
+
     credentials_exception = unauthorized("Could not validate credentials")
