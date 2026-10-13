@@ -28,7 +28,7 @@ services:
       - backend
       - edge
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=4)"]
       interval: 30s
       start_period: 10s
       start_interval: 5s
