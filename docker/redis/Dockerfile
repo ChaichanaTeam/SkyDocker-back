@@ -1,19 +1,16 @@
 FROM redis:7.2-alpine
 
-ARG REDIS_SUPASSWORD
-ARG REDIS_USER
-ARG REDIS_UPASSWORD
-
 RUN apk add --no-cache \
     gettext
 
-COPY --chown=r:r ./init.acl.template /etc/redis/init.acl.template
+COPY ./init.acl.template /etc/redis/init.acl.template
+COPY --chmod=755 ./entrypoint.sh /usr/local/bin/skydocker-entrypoint.sh
 
-RUN envsubst < /etc/redis/init.acl.template > /data/init.acl
+ENTRYPOINT ["skydocker-entrypoint.sh"]
 
 CMD [\
     "redis-server", \
-    "--maxmemory 2gb", "--maxmemory-policy", "allkeys-lru",\
-    "--aclfile", "/data/init.acl", \
-    "--save 60 1", "--loglevel notice" \
+    "--maxmemory", "2gb", "--maxmemory-policy", "allkeys-lru", \
+    "--aclfile", "/etc/redis/users.acl", \
+    "--save", "60", "1", "--loglevel", "notice" \
 ]

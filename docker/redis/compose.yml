@@ -2,10 +2,10 @@ services:
   redis:
     build:
       context: .
-      args:
-        REDIS_SUPASSWORD: ${REDIS_SUPASSWORD}
-        REDIS_USER: ${REDIS_USER}
-        REDIS_UPASSWORD: ${REDIS_UPASSWORD}
+    environment:
+      REDIS_SUPASSWORD: ${REDIS_SUPASSWORD}
+      REDIS_USER: ${REDIS_USER}
+      REDIS_UPASSWORD: ${REDIS_UPASSWORD}
     deploy:
       resources:
         limits:
@@ -13,11 +13,11 @@ services:
     container_name: skydocker_redis
     restart: always
     volumes:
-      - redis_data:/bitnami/redis/data
+      - redis_data:/data
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a ${REDIS_UPASSWORD} ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_UPASSWORD\" redis-cli --user \"$$REDIS_USER\" ping | grep -q PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
