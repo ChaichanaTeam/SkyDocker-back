@@ -1,23 +1,23 @@
 FROM python:3.11-slim
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/app/.venv/bin:$PATH"
 
-RUN useradd -l -m app
+COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /bin/
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
+RUN useradd -l -m -u 1000 app && \
+    mkdir /app && chown app:app /app
 
 WORKDIR /app
-
-COPY pyproject.toml uv.lock ./
-
-RUN uv sync --group test --frozen --no-cache
-
-COPY ./tests /app/tests
-
-RUN chown -R app:app /app
-RUN chmod -R u+rwx /app
-
 USER app
 
-CMD ["uv", "run", "pytest", "tests", "-v", "-x", "--capture=tee-sys"]
+COPY --chown=app:app pyproject.toml uv.lock ./
+
+RUN --mount=type=cache,target=/home/app/.cache/uv,uid=1000 \
+    uv sync --group test --frozen
+
+COPY --chown=app:app ./tests /app/tests
+
+CMD ["pytest", "tests", "-v", "-x", "--capture=tee-sys"]

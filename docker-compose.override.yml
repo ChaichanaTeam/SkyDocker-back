@@ -9,8 +9,6 @@ services:
 
   app:
     command:
-      - uv
-      - run
       - uvicorn
       - backend_src.main:app
       - --reload
