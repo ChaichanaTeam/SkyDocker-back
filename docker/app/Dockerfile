@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 RUN useradd -l -m app
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
 
 WORKDIR /app
 
