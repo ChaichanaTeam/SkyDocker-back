@@ -1,0 +1,46 @@
+services:
+  db:
+    build:
+      context: .
+    container_name: skydocker_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DATABASE_SUPERUSER}
+      POSTGRES_PASSWORD: ${DATABASE_SUPASSWORD}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_UPASSWORD: ${DATABASE_UPASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      H3_RESOLUTION: ${H3_RESOLUTION}
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - max_connections=75
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

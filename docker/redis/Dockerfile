@@ -7,7 +7,7 @@ ARG REDIS_UPASSWORD
 RUN apk add --no-cache \
     gettext
 
-COPY --chown=r:r ./init_redis/init.acl.template /etc/redis/init.acl.template
+COPY --chown=r:r ./init.acl.template /etc/redis/init.acl.template
 
 RUN envsubst < /etc/redis/init.acl.template > /data/init.acl
 
