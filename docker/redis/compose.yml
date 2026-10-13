@@ -12,10 +12,10 @@ services:
           memory: 2.5G
     container_name: skydocker_redis
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/bitnami/redis/data
+    networks:
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a ${REDIS_UPASSWORD} ping"]
       interval: 5s

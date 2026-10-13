@@ -1,0 +1,20 @@
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  app:
+    command:
+      - uv
+      - run
+      - uvicorn
+      - backend_src.main:app
+      - --reload
+      - --log-config
+      - ./backend_src/logging.json
+    volumes:
+      - ./backend_src:/app/backend_src

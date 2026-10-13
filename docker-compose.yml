@@ -9,3 +9,7 @@ include:
     env_file: .env
   - path: docker/test/compose.yml
     env_file: .env
+
+networks:
+  backend:
+  edge:

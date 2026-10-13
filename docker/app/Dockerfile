@@ -30,6 +30,5 @@ USER app
 
 CMD [\
     "uv", "run", "uvicorn", "backend_src.main:app", \
-    "--reload", \
     "--log-config", "./backend_src/logging.json" \
 ]
