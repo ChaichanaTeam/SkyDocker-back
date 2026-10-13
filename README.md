@@ -8,6 +8,31 @@ Infrastructure consists of these sevices:
 Testing environment:
 - `test` - isolated tool for testing endpoints
 
+### Structure
+
+Each service lives in its own folder with `compose.yml`, `Dockerfile` and init files
+
+```
+docker-compose.yml            # includes services, declares networks
+docker-compose.override.yml   # local dev overrides, applied automatically
+docker/
+  db/       # Postgres image, init/ - schema scripts (run on empty volume only)
+  redis/    # Redis image, ACL template rendered by entrypoint.sh at start
+  app/      # backend image
+  test/     # pytest image
+```
+
+Networks:
+- `backend` - `db`, `redis`, `app`. Storages are reachable only by services that use them
+- `edge` - `app`, `test`. Public facing layer, place for a future CDN / reverse proxy
+
+### Adding a service
+
+1. Create `docker/<service>/` with `compose.yml` (and `Dockerfile` if needed)
+2. Add it to `include` in [docker-compose.yml](./docker-compose.yml) with `env_file: .env`
+3. Attach it to `backend` and / or `edge` networks
+4. Dev-only settings (ports, mounts) go to [docker-compose.override.yml](./docker-compose.override.yml)
+
 
 ## Dependencies
 
@@ -63,10 +88,16 @@ If running in non-docker environment - before local run setup database and redis
 
 ### Once all set
 
-Docker run:
+Docker run (dev: `db` / `redis` ports on `127.0.0.1`, hot reload of `backend_src`):
 
 ```bash
 docker compose up --build app
+```
+
+Docker run without dev overrides (no published `db` / `redis` ports, no reload):
+
+```bash
+docker compose -f docker-compose.yml up --build app
 ```
 
 Local run:
