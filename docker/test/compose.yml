@@ -1,0 +1,19 @@
+services:
+  test:
+    build:
+      context: ../..
+      dockerfile: docker/test/Dockerfile
+    environment:
+      BASE_HOST: app
+      OTP_CODE: ${OTP_CODE}
+      RATE_LIMIT_THRESHOLD: ${RATE_LIMIT_THRESHOLD:-5}
+      TEST_SUITE: ${TEST_SUITE:-smoke}
+      TEST_MODULES: ${TEST_MODULES:-}
+      TEST_EXCLUDE_MODULES: ${TEST_EXCLUDE_MODULES:-}
+    volumes:
+      - ../../.local_mount:/app/.local_mount:ro
+    networks:
+      - edge
+    depends_on:
+      app:
+        condition: service_healthy

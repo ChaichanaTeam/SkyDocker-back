@@ -1,131 +1,15 @@
-services:
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
-    container_name: skydocker_db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DATABASE_SUPERUSER}
-      POSTGRES_PASSWORD: ${DATABASE_SUPASSWORD}
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_UPASSWORD: ${DATABASE_UPASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      H3_RESOLUTION: ${H3_RESOLUTION}
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-    command:
-      - postgres
-      - -c
-      - shared_buffers=1GB
-      - -c
-      - effective_cache_size=3GB
-      - -c
-      - work_mem=32MB
-      - -c
-      - maintenance_work_mem=256MB
-      - -c
-      - max_connections=75
-      - -c
-      - shared_preload_libraries=pg_cron
-      - -c
-      - cron.database_name=${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./init_db:/docker-entrypoint-initdb.d
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+name: skydocker-back
 
-  redis:
-    build:
-      context: .
-      dockerfile: Dockerfile.redis
-      args:
-        REDIS_SUPASSWORD: ${REDIS_SUPASSWORD}
-        REDIS_USER: ${REDIS_USER}
-        REDIS_UPASSWORD: ${REDIS_UPASSWORD}
-    deploy:
-      resources:
-        limits:
-          memory: 2.5G
-    container_name: skydocker_redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/bitnami/redis/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a ${REDIS_UPASSWORD} ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+include:
+  - path: docker/db/compose.yml
+    env_file: .env
+  - path: docker/redis/compose.yml
+    env_file: .env
+  - path: docker/app/compose.yml
+    env_file: .env
+  - path: docker/test/compose.yml
+    env_file: .env
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.skydocker
-    container_name: skydocker_app
-    restart: on-failure
-    environment:
-      DEBUG: ${DEBUG}
-      UVICORN_HOST: ${UVICORN_HOST}
-      UVICORN_PORT: ${UVICORN_PORT}
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      ALGORITHM: ${ALGORITHM}
-      OTP_CODE: ${OTP_CODE}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
-      RESET_TOKEN_EXPIRE_MINUTES: ${RESET_TOKEN_EXPIRE_MINUTES}
-      VERIFY_TOKEN_EXPIRE_MINUTES: ${VERIFY_TOKEN_EXPIRE_MINUTES}
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/health"]
-      interval: 1h
-      start_period: 10s
-      start_interval: 5s
-      timeout: 5s
-      retries: 5
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  test:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    environment:
-      BASE_HOST: app
-      OTP_CODE: ${OTP_CODE}
-      RATE_LIMIT_THRESHOLD: ${RATE_LIMIT_THRESHOLD:-5}
-      TEST_SUITE: ${TEST_SUITE:-smoke}
-      TEST_MODULES: ${TEST_MODULES:-}
-      TEST_EXCLUDE_MODULES: ${TEST_EXCLUDE_MODULES:-}
-    volumes:
-      - ./.local_mount:/app/.local_mount:ro
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      app:
-        condition: service_healthy
-
-volumes:
-  pgdata:
-  redis_data:
+networks:
+  backend:
+  edge:

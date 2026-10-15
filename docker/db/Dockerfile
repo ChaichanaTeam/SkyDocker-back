@@ -1,7 +1,9 @@
-FROM postgis/postgis:17-3.5
+FROM postgres:17-bookworm
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        postgresql-17-postgis-3 \
+        postgresql-17-postgis-3-scripts \
         postgresql-17-cron \
         postgresql-17-h3 && \
         apt-get clean && \
