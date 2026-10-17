@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Literal
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 from backend_src.core.security import IssuedToken
 from .constants import ACCESS_TTL_SECONDS
-from backend_src.api.shared_schemas import E164PhoneNumber
+from backend_src.api.shared_schemas import E164PhoneNumber, NormalizedEmailStr, normalize_email
 
 
 class PilotRegister(BaseModel):
@@ -17,7 +17,7 @@ class PilotRegister(BaseModel):
 
 
 class PilotLogin(BaseModel):
-    email: EmailStr
+    email: NormalizedEmailStr
     password: str
 
 
@@ -29,13 +29,20 @@ class ChangePasswordRequest(BaseModel):
 class RegisterRequestOTP(BaseModel):
     email: EmailStr
 
+    # Original address is kept, but it must still be normalizable
+    @field_validator("email")
+    @classmethod
+    def validate_normalizable(cls, email: str) -> str:
+        normalize_email(email)
+        return email
+
 
 class RegisterVerifyOTP(BaseModel):
     code: str = Field(min_length=6, max_length=6)
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
+    email: NormalizedEmailStr
 
 
 class VerifyResetTokenRequest(BaseModel):
