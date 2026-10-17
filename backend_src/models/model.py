@@ -118,6 +118,7 @@ class Pilot(Base):
     last_name: Mapped[str]                                              = mapped_column(VARCHAR(255), nullable=False)
 
     email: Mapped[str]                                                  = mapped_column(VARCHAR(255), nullable=False)
+    normalized_email: Mapped[str]                                       = mapped_column(VARCHAR(255), nullable=False, unique=True)
     phone_number: Mapped[str]                                           = mapped_column(VARCHAR(15), nullable=False)
     pilot_number: Mapped[Optional[str]]                                 = mapped_column(VARCHAR(255))
 
