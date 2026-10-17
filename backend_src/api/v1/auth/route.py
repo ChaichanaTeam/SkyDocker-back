@@ -37,13 +37,13 @@ async def register_request_otp(data: RegisterRequestOTP, redis: AsyncRedisDep, d
 
 
 @router.post("/register/verify-otp", dependencies=[Depends(rate_limit(RateLimits.REGISTER_VERIFY_OTP))], **docs.VERIFY_OTP)
-async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisDep, email: VerifyEmail):
-    return await service.register_verify_otp(data, redis, email)
+async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisDep, email_payload: VerifyEmail):
+    return await service.register_verify_otp(data, redis, email_payload)
 
 
 @router.post("/register", dependencies=[Depends(rate_limit(RateLimits.REGISTER))], **docs.REGISTER)
-async def register(data: PilotRegister, db: AsyncDBDep, redis: AsyncRedisDep, email: RegisterEmail):
-    return await service.register(data, db, redis, email)
+async def register(data: PilotRegister, db: AsyncDBDep, redis: AsyncRedisDep, email_payload: RegisterEmail):
+    return await service.register(data, db, redis, email_payload)
 
 
 @router.post("/forgot-password", dependencies=[Depends(rate_limit(RateLimits.FORGOT_PASSWORD))], **docs.FORGOT_PASSWORD)

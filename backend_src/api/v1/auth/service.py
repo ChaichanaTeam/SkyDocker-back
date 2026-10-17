@@ -1,5 +1,7 @@
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
+
 from backend_src.cache import AsyncRedisSession
 from backend_src.cache.otp import check_otp, issue_otp
 from backend_src.cache.sessions import (
@@ -18,6 +20,7 @@ from .schema import (
     TokenPair, BearerToken
 )
 from backend_src.models import Pilot
+from backend_src.api.shared_schemas import normalize_email
 
 
 def verify_pilot(pilot: Optional[Pilot], password: str) -> bool:
@@ -79,40 +82,48 @@ async def logout(data: RefreshTokenRequest, redis: AsyncRedisSession):
 
 
 async def register_request_otp(data: RegisterRequestOTP, redis: AsyncRedisSession, db: AsyncDBSession):
-    pilot = await Queries.Pilot.get_by_email(data.email, db)
+    normalized = normalize_email(data.email)
+    pilot = await Queries.Pilot.get_by_email(normalized, db)
     if pilot is not None:
         raise APIExceptions.conflict("Email already registered")
 
-    await issue_otp(redis, "verify", data.email)
-    verify = security.create_verify_token(data.email)
+    await issue_otp(redis, "verify", normalized)
+    verify = security.create_register_verify_token(normalized, data.email)
 
     return BearerToken(token=verify.token)
 
 
-async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisSession, email: str):
-    if not await check_otp(redis, "verify", email, data.code):
+async def register_verify_otp(data: RegisterVerifyOTP, redis: AsyncRedisSession, email_payload: security.EmailTokenPayload):
+    if not await check_otp(redis, "verify", email_payload.sub, data.code):
         raise APIExceptions.bad_request("Invalid or expired code")
 
-    register = security.create_register_token(email)
+    register = security.create_register_token(email_payload.sub, email_payload.email)
 
     return BearerToken(token=register.token)
 
 
-async def register(data: PilotRegister, db: AsyncDBSession, redis: AsyncRedisSession, email: str):
-    result = await Queries.Pilot.get_by_email(email, db)
+async def register(data: PilotRegister, db: AsyncDBSession, redis: AsyncRedisSession, email_payload: security.EmailTokenPayload):
+    result = await Queries.Pilot.get_by_email(email_payload.sub, db)
+
     if result is not None:
         raise APIExceptions.conflict("Email already registered")
 
     pilot = Pilot(
-        email=email,
+        normalized_email=email_payload.sub,
+        email=email_payload.email,
         phone_number=data.phone_number,
         password_hash=security.hash_password(data.password),
         first_name=data.first_name,
         last_name=data.last_name
     )
-    db.add(pilot)
-    await db.commit()
-    await db.refresh(pilot)
+
+    try:
+        db.add(pilot)
+        await db.commit()
+        await db.refresh(pilot)
+    except IntegrityError:
+        await db.rollback()
+        raise APIExceptions.conflict("Email already registered")
 
     return await issue_token_pair(str(pilot.id), redis)
 
