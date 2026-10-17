@@ -1,15 +1,17 @@
 import json
 from typing import Any, Optional
 
+import httpx
 from fastapi import UploadFile
 from shapely.geometry import Polygon
 from sqlalchemy import delete, select
 
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession
+from backend_src.integrations.pansa import update_geozones
 from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneH3
 from backend_src.models.enum import GeoZoneType
-from .constants import DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG
+from .constants import DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG, PANSA_DATA_DIR
 
 
 def _load_feature_collection(raw: bytes) -> list[dict[str, Any]]:
@@ -65,8 +67,7 @@ async def _resolve_country(db: AsyncDBSession, name: str, tag: str) -> Country:
     return country
 
 
-async def import_geozones(db: AsyncDBSession, file: UploadFile, reset: bool) -> dict[str, Any]:
-    features = _load_feature_collection(await file.read())
+async def _import_features(db: AsyncDBSession, features: list[dict[str, Any]], reset: bool) -> dict[str, Any]:
     country = await _resolve_country(db, DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG)
     country_id = country.id
     country_name = country.name
@@ -113,4 +114,27 @@ async def import_geozones(db: AsyncDBSession, file: UploadFile, reset: bool) -> 
         "imported": len(zones),
         "skipped": len(errors),
         "errors": errors[:20],
+    }
+
+
+async def import_geozones(db: AsyncDBSession, file: UploadFile, reset: bool) -> dict[str, Any]:
+    features = _load_feature_collection(await file.read())
+    return await _import_features(db, features, reset)
+
+
+async def import_pansa_geozones(db: AsyncDBSession, reset: bool) -> dict[str, Any]:
+    try:
+        geojson, report = await update_geozones(PANSA_DATA_DIR)
+    except (httpx.HTTPError, RuntimeError) as exc:
+        raise APIExceptions.bad_gateway(f"PANSA download failed: {exc}")
+
+    features = _load_feature_collection(geojson.read_bytes())
+    result = await _import_features(db, features, reset)
+
+    return {
+        **result,
+        "file": geojson.as_posix(),
+        "converted": report["zones"],
+        "types": report["types"],
+        "fixed_geometries": report["fixed"],
     }

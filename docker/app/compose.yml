@@ -24,6 +24,8 @@ services:
           memory: 4G
     ports:
       - "8000:8000"
+    volumes:
+      - ../../data/geozones:/app/data/geozones
     networks:
       - backend
       - edge
