@@ -1,10 +1,39 @@
-from typing import Any, Literal, Optional
-from pydantic import BaseModel, SerializeAsAny, model_validator
+from typing import Annotated, Any, Literal, Optional
+from pydantic import BaseModel, SerializeAsAny, model_validator, EmailStr, AfterValidator
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
 class E164PhoneNumber(PhoneNumber):
     phone_format = "E164"
+
+
+_GMAIL = {"gmail.com", "googlemail.com"}
+_PLUS_ONLY = {
+    "outlook.com", "hotmail.com", "live.com", "msn.com",
+    "icloud.com", "me.com", "mac.com",
+    "fastmail.com", "proton.me", "protonmail.com",
+}
+
+
+def _strip_tag(name: str) -> str:
+    name = name.split('+')[0]
+    if len(name) == 0:
+        raise ValueError("Name is empty")
+    return name
+
+
+def normalize_email(email: EmailStr) -> EmailStr:
+    name, domain = email.lower().split('@')
+
+    if domain in _GMAIL:
+        return f"{_strip_tag(name).replace('.', '')}@gmail.com"
+    elif domain in _PLUS_ONLY:
+        return f"{_strip_tag(name)}@{domain}"
+
+    return f"{name}@{domain}"
+
+
+NormalizedEmailStr = Annotated[EmailStr, AfterValidator(normalize_email)]
 
 
 class BoundingBox(BaseModel):
@@ -60,3 +89,4 @@ class GeoFeature(BaseModel):
 class GeoJson(BaseModel):
     type: Literal["FeatureCollection"] = "FeatureCollection"
     features: list[GeoFeature]
+    

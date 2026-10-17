@@ -8,7 +8,7 @@ from shapely.geometry import Point, mapping
 from sqlalchemy import delete, select, update
 
 from backend_src.api.exceptions import APIExceptions
-from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
+from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson, normalize_email
 from backend_src.db import AsyncDBSession
 from backend_src.models import (
     Checkin, Country, Drone, Mission, Model, Pilot,
@@ -151,6 +151,7 @@ async def _resolve_import_pilot(db: AsyncDBSession, country_id: int) -> Pilot:
             first_name=IMPORT_PILOT_FIRST_NAME,
             last_name=IMPORT_PILOT_LAST_NAME,
             email=IMPORT_PILOT_EMAIL,
+            normalized_email=normalize_email(IMPORT_PILOT_EMAIL),
             phone_number=IMPORT_PILOT_PHONE,
             password_hash="x",
             country_id=country_id,

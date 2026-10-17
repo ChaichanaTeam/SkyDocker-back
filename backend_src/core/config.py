@@ -6,7 +6,7 @@ load_dotenv()
 
 @dataclass(frozen=True)
 class Settings:
-    DEBUG                           = True if os.getenv("DEBUG") else False
+    DEBUG                           = os.getenv("DEBUG", "").strip().lower() in ("1", "true", "yes")
 
     DATABASE_URL                    = os.getenv("DATABASE_URL")
     REDIS_URL                       = os.getenv("REDIS_URL")
