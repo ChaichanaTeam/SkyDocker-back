@@ -5,6 +5,7 @@ CREATE TABLE pilot (
     last_name                       character varying(255) NOT NULL,
     
     email                           character varying(255) NOT NULL,
+    normalized_email                character varying(255) NOT NULL UNIQUE,
     phone_number                    character varying(15) NOT NULL,
     pilot_number                    character varying(255) NULL,
     

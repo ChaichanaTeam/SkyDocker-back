@@ -4,9 +4,13 @@ import string
 from tests import constants
 from tests.types import TokenContainer, UserInfo
 
-def random_email():
+def random_local():
     suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
-    return f"testuser_{suffix}@localhost.me"
+    return f"testuser_{suffix}"
+
+
+def random_email():
+    return f"{random_local()}@localhost.me"
 
 
 def random_phone():

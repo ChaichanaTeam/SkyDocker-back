@@ -2,10 +2,11 @@ from typing import Annotated, AsyncGenerator
 from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis_fastapi import AsyncRedisDep
+from loguru import logger
 
-from backend_src.api.shared_schemas import BoundingBox
+from backend_src.api.shared_schemas import BoundingBox, normalize_email
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
-from backend_src.core.security import TokenType, decode_token
+from backend_src.core.security import EmailTokenPayload, TokenType, decode_token
 from backend_src.models import Pilot
 from backend_src.api.exceptions import APIExceptions
 
@@ -47,19 +48,20 @@ async def _pilot_from_token(
 
     return pilot
 
+
 async def _email_from_token(
     credentials: HTTPAuthorizationCredentials,
     expected_type: TokenType
-) -> str:
-    payload = decode_token(credentials.credentials)
+) -> EmailTokenPayload:
+    payload = decode_token(credentials.credentials, EmailTokenPayload)
+    
     if payload is None or payload.type != expected_type.value:
         raise APIExceptions.credentials_exception
 
-    email = payload.sub
-    if email is None:
+    if normalize_email(payload.email) != payload.sub:
         raise APIExceptions.credentials_exception
 
-    return email
+    return payload
 
 
 async def get_current_pilot(
@@ -85,18 +87,18 @@ async def get_reset_pilot(
 
 async def get_register_email(
         credentials: HeaderAuthorization
-) -> str:
+) -> EmailTokenPayload:
     return await _email_from_token(credentials, TokenType.REGISTER)
 
 
 async def get_verify_email(
         credentials: HeaderAuthorization
-) -> str:
+) -> EmailTokenPayload:
     return await _email_from_token(credentials, TokenType.VERIFY)
 
 
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
 VerifyPilot = Annotated[Pilot, Depends(get_verify_pilot)]
 ResetPilot = Annotated[Pilot, Depends(get_reset_pilot)]
-RegisterEmail = Annotated[str, Depends(get_register_email)]
-VerifyEmail = Annotated[str, Depends(get_verify_email)]
+RegisterEmail = Annotated[EmailTokenPayload, Depends(get_register_email)]
+VerifyEmail = Annotated[EmailTokenPayload, Depends(get_verify_email)]
