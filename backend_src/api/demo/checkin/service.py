@@ -6,7 +6,7 @@ from shapely.geometry import Point, mapping
 from sqlalchemy import delete, select, update
 
 from backend_src.api.exceptions import APIExceptions
-from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
+from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson, normalize_email
 from backend_src.api.v1.checkin.schema import CheckinProperties
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import (
@@ -66,6 +66,7 @@ async def _resolve_demo_pilot(db: AsyncDBSession, country_id: int) -> Pilot:
             first_name=DEMO_PILOT_FIRST_NAME,
             last_name=DEMO_PILOT_LAST_NAME,
             email=DEMO_PILOT_EMAIL,
+            normalized_email=normalize_email(DEMO_PILOT_EMAIL),
             phone_number=DEMO_PILOT_PHONE,
             password_hash="x"
         )
