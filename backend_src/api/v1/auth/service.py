@@ -5,7 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from backend_src.cache import AsyncRedisSession
 from backend_src.cache.otp import check_otp, issue_otp
 from backend_src.cache.sessions import (
+    get_session_gen,
     pop_refresh_session,
+    revoke_all_sessions,
     revoke_refresh_session,
     store_refresh_session,
     verify_refresh_token
@@ -34,8 +36,9 @@ def verify_token(payload: Optional[security.TokenPayload], type: security.TokenT
 
 
 async def issue_token_pair(subject: str, redis: AsyncRedisSession) -> TokenPair:
-    access = security.create_access_token(subject)
-    refresh = security.create_refresh_token(subject)
+    gen = await get_session_gen(redis, subject)
+    access = security.create_access_token(subject, gen)
+    refresh = security.create_refresh_token(subject, gen)
 
     await store_refresh_session(redis, subject, refresh)
 
@@ -147,7 +150,8 @@ async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisSes
     if not await check_otp(redis, "reset", pilot_id, data.code):
         raise APIExceptions.bad_request("Invalid or expired code")
 
-    reset = security.create_reset_token(pilot_id)
+    gen = await get_session_gen(redis, pilot_id)
+    reset = security.create_reset_token(pilot_id, gen)
     return BearerToken(token=reset.token)
 
 
@@ -156,4 +160,5 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncDBSession, redis: 
     pilot_id = str(pilot.id)
     await db.commit()
 
+    await revoke_all_sessions(redis, pilot_id)
     return await issue_token_pair(pilot_id, redis)
