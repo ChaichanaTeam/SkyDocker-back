@@ -2,6 +2,8 @@ import logging
 from loguru import logger
 from sys import stdout, _getframe
 
+from backend_src.core.config import Settings
+
 
 LOGGERS_TO_INTERCEPT = ("fastapi", )
 
@@ -38,7 +40,7 @@ class BackendLoggerMixin:
             stdout,
             enqueue=True,
             backtrace=True,
-            diagnose=True,
+            diagnose=Settings.DEBUG,
             format=console_format,
             level="INFO",
         )
@@ -51,6 +53,7 @@ class BackendLoggerMixin:
             enqueue=True,
             level="DEBUG",
             encoding="utf-8",
+            diagnose=Settings.DEBUG,
         )
 
         logging.root.handlers = [InterceptHandler()]
