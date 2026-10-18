@@ -24,8 +24,10 @@ from backend_src.api.shared_schemas import normalize_email
 
 
 def verify_pilot(pilot: Optional[Pilot], password: str) -> bool:
-    return pilot is not None and \
-        security.verify_password(password, pilot.password_hash)
+    if pilot is None:
+        return security.dummy_verify_password()
+
+    return security.verify_password(password, pilot.password_hash)
 
 
 def verify_token(payload: Optional[security.TokenPayload], type: security.TokenType) -> bool:
