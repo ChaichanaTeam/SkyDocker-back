@@ -7,7 +7,7 @@ from tests.types import UserInfo, EndpointCreator
 from tests.utils import functional
 from tests.utils.behavioural.login_behaviour import login
 from tests.utils.behavioural.registration_behaviour import (
-    registration_flow, registration_request_otp, registration_verify_otp, registration_end
+    registration_flow, registration_request_otp, registration_verify_otp
 )
 
 
@@ -23,19 +23,12 @@ def _register(client: Client, email: str, get_endpoint_link: EndpointCreator) ->
 
 
 def _assert_cannot_register(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator) -> None:
-    # 409 now; 200 with a dead-end token once user enumeration is fixed
     r = registration_request_otp(client, user, get_endpoint_link)
-    assert r.status_code in (200, 409), f"Unexpected request-otp response: {r.text}"
+    assert r.status_code == 200, f"request-otp must not reveal a registered alias: {r.text}"
+    user["tokens"]["verify_token"] = r.json()["token"]
 
-    if r.status_code == 200:
-        user["tokens"]["verify_token"] = r.json().get("token")
-
-        r = registration_verify_otp(client, user, get_endpoint_link)
-        if r.status_code == 200:
-            user["tokens"]["register_token"] = r.json().get("token")
-            r = registration_end(client, user, get_endpoint_link)
-
-        assert r.status_code != 200, f"Alias {user['email']} must not finish registration: {r.text}"
+    r = registration_verify_otp(client, user, get_endpoint_link)
+    assert r.status_code == 400, f"Alias {user['email']} must get a dead-end token: {r.text}"
 
 
 @pytest.mark.parametrize("alias", [

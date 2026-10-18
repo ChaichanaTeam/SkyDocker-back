@@ -24,16 +24,38 @@ def test_login_wrong_password_and_unknown_email_indistinguishable(
 def test_forgot_password_unknown_email_does_not_leak_reset(
     client: Client, new_user: UserInfo, get_endpoint_link: EndpointCreator
 ):
-    # 404 now; 200 with a dead-end token once user enumeration is fixed
     r = forgot_password(client, new_user, get_endpoint_link)
-    assert r.status_code in (200, 404), f"Unexpected forgot-password response: {r.text}"
+    assert r.status_code == 200, f"forgot-password must not reveal an unknown email: {r.text}"
+    new_user["tokens"]["verify_token"] = r.json()["token"]
 
-    token = r.json().get("token") if r.status_code == 200 else None
-    if token:
-        new_user["tokens"]["verify_token"] = token
+    # No code is issued for an unknown email, so even the right one is rejected
+    r = password_verify_otp(client, new_user, get_endpoint_link)
+    assert r.status_code == 400, f"Unknown email must not get a reset token: {r.text}"
 
-        r = password_verify_otp(client, new_user, get_endpoint_link)
-        assert r.status_code != 200, f"Unknown email must not get a reset token: {r.text}"
+
+def test_forgot_password_does_not_reveal_registered_email(
+    client: Client, registered_user: UserInfo, new_user: UserInfo, get_endpoint_link: EndpointCreator
+):
+    r_registered = forgot_password(client, registered_user, get_endpoint_link)
+    r_unknown = forgot_password(client, new_user, get_endpoint_link)
+
+    assert r_registered.status_code == 200, f"forgot-password failed: {r_registered.text}"
+    assert functional.response_shape(r_registered) == functional.response_shape(r_unknown),         "forgot-password must answer the same for registered and unknown emails"
+
+
+def test_unknown_email_reset_matches_wrong_code(
+    client: Client, registered_user: UserInfo, new_user: UserInfo, get_endpoint_link: EndpointCreator
+):
+    for user in (registered_user, new_user):
+        r = forgot_password(client, user, get_endpoint_link)
+        assert r.status_code == 200, f"forgot-password failed: {r.text}"
+        user["tokens"]["verify_token"] = r.json()["token"]
+
+    r_wrong = password_verify_otp(client, registered_user, get_endpoint_link, code=functional.wrong_otp_code())
+    r_unknown = password_verify_otp(client, new_user, get_endpoint_link)
+
+    assert r_wrong.status_code == 400, f"Wrong code should be rejected: {r_wrong.text}"
+    assert (r_unknown.status_code, r_unknown.json()) == (r_wrong.status_code, r_wrong.json()),         "Unknown email must look like a wrong code on verify-reset-token"
 
 
 def test_verify_reset_wrong_code(client: Client, registered_user: UserInfo, get_endpoint_link: EndpointCreator):

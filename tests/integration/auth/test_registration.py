@@ -26,27 +26,47 @@ def _obtain_register_token(client: Client, user: UserInfo, get_endpoint_link: En
 def test_duplicate_email_cannot_register_twice(
     client: Client, registered_user: UserInfo, get_endpoint_link: EndpointCreator
 ):
-    # 409 now; 200 with a dead-end token once user enumeration is fixed
     duplicate = functional.create_user(email=registered_user["email"], password="an0th3rp455w0rd")
 
     r = registration_request_otp(client, duplicate, get_endpoint_link)
-    assert r.status_code in (200, 409), f"Unexpected request-otp response: {r.text}"
+    assert r.status_code == 200, f"request-otp must not reveal a registered email: {r.text}"
+    duplicate["tokens"]["verify_token"] = r.json()["token"]
 
-    if r.status_code == 200:
-        duplicate["tokens"]["verify_token"] = r.json().get("token")
-
-        r = registration_verify_otp(client, duplicate, get_endpoint_link)
-        if r.status_code == 200:
-            duplicate["tokens"]["register_token"] = r.json().get("token")
-            r = registration_end(client, duplicate, get_endpoint_link)
-
-        assert r.status_code != 200, f"Duplicate email must not finish registration: {r.text}"
+    # No code is issued for a registered email, so even the right one is rejected
+    r = registration_verify_otp(client, duplicate, get_endpoint_link)
+    assert r.status_code == 400, f"Dead-end token must not pass verify-otp: {r.text}"
 
     r = login(client, registered_user, get_endpoint_link)
     assert r.status_code == 200, f"Original account must stay intact: {r.text}"
 
     r = login(client, duplicate, get_endpoint_link)
     assert r.status_code == 401, f"Duplicate credentials must not be accepted: {r.text}"
+
+
+def test_request_otp_does_not_reveal_registered_email(
+    client: Client, registered_user: UserInfo, new_user: UserInfo, get_endpoint_link: EndpointCreator
+):
+    r_registered = registration_request_otp(client, registered_user, get_endpoint_link)
+    r_free = registration_request_otp(client, new_user, get_endpoint_link)
+
+    assert r_free.status_code == 200, f"request-otp failed: {r_free.text}"
+    assert functional.response_shape(r_registered) == functional.response_shape(r_free),         "request-otp must answer the same for registered and free emails"
+
+
+def test_dead_end_verify_matches_wrong_code(
+    client: Client, registered_user: UserInfo, new_user: UserInfo, get_endpoint_link: EndpointCreator
+):
+    duplicate = functional.create_user(email=registered_user["email"])
+    for user in (duplicate, new_user):
+        r = registration_request_otp(client, user, get_endpoint_link)
+        assert r.status_code == 200, f"request-otp failed: {r.text}"
+        user["tokens"]["verify_token"] = r.json()["token"]
+
+    r_dead_end = registration_verify_otp(client, duplicate, get_endpoint_link)
+    r_wrong = registration_verify_otp(client, new_user, get_endpoint_link, code=functional.wrong_otp_code())
+
+    assert r_wrong.status_code == 400, f"Wrong code should be rejected: {r_wrong.text}"
+    assert (r_dead_end.status_code, r_dead_end.json()) == (r_wrong.status_code, r_wrong.json()),         "Registered email must look like a wrong code on verify-otp"
 
 
 def test_verify_otp_wrong_code(client: Client, new_user: UserInfo, get_endpoint_link: EndpointCreator):
