@@ -1,4 +1,3 @@
-from loguru import logger
 from random import choices, shuffle, randint
 from string import ascii_uppercase, digits
 
