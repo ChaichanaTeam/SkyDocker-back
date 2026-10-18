@@ -130,24 +130,23 @@ async def register(data: PilotRegister, db: AsyncDBSession, redis: AsyncRedisSes
 
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBSession, redis: AsyncRedisSession):
     pilot = await Queries.Pilot.get_by_email(data.email, db)
-    if pilot is None:
-        raise APIExceptions.not_found("Pilot not found")
+    if pilot is not None:
+        await issue_otp(redis, "reset", data.email)
 
-    pilot_id = str(pilot.id)
-
-    await issue_otp(redis, "reset", pilot_id)
-    verify = security.create_verify_token(pilot_id)
+    verify = security.create_verify_token(data.email)
 
     return BearerToken(token=verify.token)
 
 
-async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisSession, pilot: Pilot):
-    pilot_id = str(pilot.id)
-
-    if not await check_otp(redis, "reset", pilot_id, data.code):
+async def verify_reset_token(data: VerifyResetTokenRequest, db: AsyncDBSession, redis: AsyncRedisSession, email: str):
+    if not await check_otp(redis, "reset", email, data.code):
         raise APIExceptions.bad_request("Invalid or expired code")
 
-    reset = security.create_reset_token(pilot_id)
+    pilot = await Queries.Pilot.get_by_email(email, db)
+    if pilot is None:
+        raise APIExceptions.bad_request("Invalid or expired code")
+
+    reset = security.create_reset_token(str(pilot.id))
     return BearerToken(token=reset.token)
 
 

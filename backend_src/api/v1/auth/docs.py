@@ -86,12 +86,13 @@ REGISTER = {
 FORGOT_PASSWORD = {
     "summary": "Request a password reset",
     "description": "Sends an OTP code to a pilot's email "
-                    "to start the password recovery flow",
+                    "to start the password recovery flow.\n\n"
+                    "Always returns a verify token, so the response does not reveal "
+                    "whether the email is registered. For an unknown email no code is sent",
     "response_description": "Temporary verify token for OTP confirmation",
     "response_model": BearerToken,
     "responses": {
-        200: { "description": "OTP sent to the pilot's email" },
-        404: { "description": "Pilot with the given email was not found" }
+        200: { "description": "Verify token returned, OTP sent if the email is registered" }
     }
 }
 

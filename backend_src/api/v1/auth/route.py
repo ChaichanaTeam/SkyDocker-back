@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from backend_src.api.dependencies import RegisterEmail, VerifyEmail, ResetPilot, VerifyPilot, AsyncDBDep, AsyncRedisDep
+from backend_src.api.dependencies import RegisterEmail, VerifyEmail, ResetPilot, VerifySubject, AsyncDBDep, AsyncRedisDep
 from backend_src.cache import rate_limit
 from . import docs
 from .schema import (
@@ -52,8 +52,8 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBDep, redis: As
 
 
 @router.post("/verify-reset-token", dependencies=[Depends(rate_limit(RateLimits.VERIFY_RESET_TOKEN))], **docs.VERIFY_RESET_TOKEN)
-async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisDep, pilot: VerifyPilot):
-    return await service.verify_reset_token(data, redis, pilot)
+async def verify_reset_token(data: VerifyResetTokenRequest, db: AsyncDBDep, redis: AsyncRedisDep, email: VerifySubject):
+    return await service.verify_reset_token(data, db, redis, email)
 
 
 @router.patch("/reset-password", dependencies=[Depends(rate_limit(RateLimits.RESET_PASSWORD))], **docs.RESET_PASSWORD)
