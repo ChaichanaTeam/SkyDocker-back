@@ -26,7 +26,6 @@ def _generate_otp_code() -> str:
 async def issue_otp(redis: AsyncRedisSession, purpose: str, subject: str) -> None:
     code = _generate_otp_code()
     await redis.set(otp_key(purpose, subject), hash_token(code), ex=OTP_TTL_SECONDS)
-    logger.info(f"OTP code ({purpose}) for subject {subject}: {code}")
 
 
 async def check_otp(redis: AsyncRedisSession, purpose: str, subject: str, code: str) -> bool:
