@@ -46,12 +46,13 @@ LOGOUT = {
 
 REGISTER_REQUEST_OTP = {
     "summary": "Request an OTP for registration",
-    "description": "Checks the email is free and sends an OTP code to start pilot registration",
+    "description": "Sends an OTP code to start pilot registration.\n\n"
+                    "Always returns a verify token, so the response does not reveal "
+                    "whether the email is registered. For a registered email no code is sent",
     "response_description": "Temporary verify token for OTP confirmation",
     "response_model": BearerToken,
     "responses": {
-        200: { "description": "OTP sent, verify token returned" },
-        409: { "description": "Email is already registered" }
+        200: { "description": "Verify token returned, OTP sent if the email is free" }
     }
 }
 

@@ -84,10 +84,9 @@ async def logout(data: RefreshTokenRequest, redis: AsyncRedisSession):
 async def register_request_otp(data: RegisterRequestOTP, redis: AsyncRedisSession, db: AsyncDBSession):
     normalized = normalize_email(data.email)
     pilot = await Queries.Pilot.get_by_email(normalized, db)
-    if pilot is not None:
-        raise APIExceptions.conflict("Email already registered")
+    if pilot is None:
+        await issue_otp(redis, "verify", normalized)
 
-    await issue_otp(redis, "verify", normalized)
     verify = security.create_register_verify_token(normalized, data.email)
 
     return BearerToken(token=verify.token)
