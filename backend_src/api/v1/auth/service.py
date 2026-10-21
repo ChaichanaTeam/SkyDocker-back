@@ -150,6 +150,7 @@ async def verify_reset_token(data: VerifyResetTokenRequest, db: AsyncDBSession, 
     if pilot is None:
         raise APIExceptions.bad_request("Invalid or expired code")
 
+    pilot_id = str(pilot.id)
     gen = await get_session_gen(redis, pilot_id)
     reset = security.create_reset_token(pilot_id, gen)
     return BearerToken(token=reset.token)
