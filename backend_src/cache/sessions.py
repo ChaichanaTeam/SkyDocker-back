@@ -2,7 +2,7 @@ from backend_src.core.config import Settings
 from backend_src.core.security import IssuedToken
 
 from .client import AsyncRedisSession
-from .keys import refresh_key
+from .keys import refresh_key, session_gen_key
 from .tokens import hash_token
 
 REFRESH_TTL_SECONDS = Settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
@@ -33,3 +33,24 @@ async def revoke_refresh_session(redis: AsyncRedisSession, pilot_id: str, jti: s
 
 def verify_refresh_token(stored_hash: str | None, token: str) -> bool:
     return stored_hash is not None and stored_hash == hash_token(token)
+
+
+async def get_session_gen(redis: AsyncRedisSession, pilot_id: str) -> int:
+    gen = await redis.get(session_gen_key(pilot_id))
+    if gen is None:
+        return 0
+
+    if isinstance(gen, bytes):
+        gen = gen.decode()
+
+    return int(gen)
+
+
+async def revoke_all_sessions(redis: AsyncRedisSession, pilot_id: str) -> None:
+    # Bumping the generation invalidates every access/reset token issued before
+    key = session_gen_key(pilot_id)
+    await redis.incr(key)
+    await redis.expire(key, REFRESH_TTL_SECONDS)
+
+    async for refresh in redis.scan_iter(match=refresh_key(pilot_id, "*")):
+        await redis.delete(refresh)

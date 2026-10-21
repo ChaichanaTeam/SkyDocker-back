@@ -6,6 +6,8 @@ __all__ = [
     "pop_refresh_session",
     "revoke_refresh_session",
     "verify_refresh_token",
+    "get_session_gen",
+    "revoke_all_sessions",
     "rate_limit",
     "AsyncRedisSession",
 ]
@@ -20,4 +22,6 @@ from .sessions import (
     pop_refresh_session,
     revoke_refresh_session,
     verify_refresh_token,
+    get_session_gen,
+    revoke_all_sessions,
 )

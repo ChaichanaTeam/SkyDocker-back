@@ -28,6 +28,7 @@ class TokenPayload(BaseModel):
     type:  TokenType
     iat: Union[int, datetime]
     exp: Union[int, datetime]
+    gen: int = 0
 
     @classmethod
     def from_token_string(cls, token: str) -> Self:
@@ -91,27 +92,30 @@ def _create_token(subject: str, expires_delta: timedelta, token_type: TokenType,
     return IssuedToken.from_payload(payload)
 
 
-def create_access_token(subject: str) -> IssuedToken:
+def create_access_token(subject: str, gen: int) -> IssuedToken:
     return _create_token(
         subject=subject,
         expires_delta=timedelta(minutes=Settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         token_type=TokenType.ACCESS,
+        gen=gen,
     )
 
 
-def create_refresh_token(subject: str) -> IssuedToken:
+def create_refresh_token(subject: str, gen: int) -> IssuedToken:
     return _create_token(
         subject=subject,
         expires_delta=timedelta(days=Settings.REFRESH_TOKEN_EXPIRE_DAYS),
         token_type=TokenType.REFRESH,
+        gen=gen,
     )
 
 
-def create_reset_token(subject: str) -> IssuedToken:
+def create_reset_token(subject: str, gen: int) -> IssuedToken:
     return _create_token(
         subject=subject,
         expires_delta=timedelta(minutes=Settings.RESET_TOKEN_EXPIRE_MINUTES),
         token_type=TokenType.RESET,
+        gen=gen,
     )
 
 
