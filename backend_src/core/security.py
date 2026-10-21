@@ -71,6 +71,10 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
     return pwd_context.verify(plain_password, password_hash)
 
 
+def dummy_verify_password() -> bool:
+    return pwd_context.dummy_verify()
+
+
 def _create_token(subject: str, expires_delta: timedelta, token_type: TokenType, payload_cls: type[TokenPayload] = TokenPayload, **claims) -> IssuedToken:
     now = datetime.now(timezone.utc)
     jti = uuid4().hex

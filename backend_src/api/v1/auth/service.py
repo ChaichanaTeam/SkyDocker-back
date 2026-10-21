@@ -26,8 +26,10 @@ from backend_src.api.shared_schemas import normalize_email
 
 
 def verify_pilot(pilot: Optional[Pilot], password: str) -> bool:
-    return pilot is not None and \
-        security.verify_password(password, pilot.password_hash)
+    if pilot is None:
+        return security.dummy_verify_password()
+
+    return security.verify_password(password, pilot.password_hash)
 
 
 def verify_token(payload: Optional[security.TokenPayload], type: security.TokenType) -> bool:
@@ -87,10 +89,9 @@ async def logout(data: RefreshTokenRequest, redis: AsyncRedisSession):
 async def register_request_otp(data: RegisterRequestOTP, redis: AsyncRedisSession, db: AsyncDBSession):
     normalized = normalize_email(data.email)
     pilot = await Queries.Pilot.get_by_email(normalized, db)
-    if pilot is not None:
-        raise APIExceptions.conflict("Email already registered")
+    if pilot is None:
+        await issue_otp(redis, "verify", normalized)
 
-    await issue_otp(redis, "verify", normalized)
     verify = security.create_register_verify_token(normalized, data.email)
 
     return BearerToken(token=verify.token)
@@ -133,21 +134,20 @@ async def register(data: PilotRegister, db: AsyncDBSession, redis: AsyncRedisSes
 
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncDBSession, redis: AsyncRedisSession):
     pilot = await Queries.Pilot.get_by_email(data.email, db)
-    if pilot is None:
-        raise APIExceptions.not_found("Pilot not found")
+    if pilot is not None:
+        await issue_otp(redis, "reset", data.email)
 
-    pilot_id = str(pilot.id)
-
-    await issue_otp(redis, "reset", pilot_id)
-    verify = security.create_verify_token(pilot_id)
+    verify = security.create_verify_token(data.email)
 
     return BearerToken(token=verify.token)
 
 
-async def verify_reset_token(data: VerifyResetTokenRequest, redis: AsyncRedisSession, pilot: Pilot):
-    pilot_id = str(pilot.id)
+async def verify_reset_token(data: VerifyResetTokenRequest, db: AsyncDBSession, redis: AsyncRedisSession, email: str):
+    if not await check_otp(redis, "reset", email, data.code):
+        raise APIExceptions.bad_request("Invalid or expired code")
 
-    if not await check_otp(redis, "reset", pilot_id, data.code):
+    pilot = await Queries.Pilot.get_by_email(email, db)
+    if pilot is None:
         raise APIExceptions.bad_request("Invalid or expired code")
 
     gen = await get_session_gen(redis, pilot_id)

@@ -44,8 +44,9 @@ Install it before run in non-docker environment
 pip install uv
 ```
 
-### Database - Postgres
-- PostGIS image
+### Database - Postgres 17
+With extensions:
+- PostGIS
 - Uber H3
 - PgChron
 
