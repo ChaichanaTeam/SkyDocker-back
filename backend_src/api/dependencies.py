@@ -71,11 +71,14 @@ async def get_current_pilot(
     return await _pilot_from_token(db, credentials, TokenType.ACCESS)
 
 
-async def get_verify_pilot(
-    db: AsyncDBDep,
+async def get_verify_subject(
     credentials: HeaderAuthorization,
-) -> Pilot:
-    return await _pilot_from_token(db, credentials, TokenType.VERIFY)
+) -> str:
+    payload = decode_token(credentials.credentials)
+    if payload is None or payload.type != TokenType.VERIFY.value:
+        raise APIExceptions.credentials_exception
+
+    return payload.sub
 
 
 async def get_reset_pilot(
@@ -98,7 +101,7 @@ async def get_verify_email(
 
 
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
-VerifyPilot = Annotated[Pilot, Depends(get_verify_pilot)]
+VerifySubject = Annotated[str, Depends(get_verify_subject)]
 ResetPilot = Annotated[Pilot, Depends(get_reset_pilot)]
 RegisterEmail = Annotated[EmailTokenPayload, Depends(get_register_email)]
 VerifyEmail = Annotated[EmailTokenPayload, Depends(get_verify_email)]

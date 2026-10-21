@@ -1,6 +1,8 @@
 import random
 import string
 
+from httpx import Response
+
 from tests import constants
 from tests.types import TokenContainer, UserInfo
 
@@ -18,6 +20,11 @@ def random_phone():
     number = "+4850" + ''.join(random.choices(string.digits, k=7))
 
     return number
+
+
+def response_shape(r: Response) -> tuple[int, list[str]]:
+    # Token values always differ, so only status and keys are comparable
+    return r.status_code, sorted(r.json())
 
 
 def wrong_otp_code() -> str:
