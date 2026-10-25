@@ -1,4 +1,9 @@
-__all__ = [ "DroneMapClient", "Zone", "ZoneType", "Activation", "Notam", "NotamSchedule", "TimeWindow" ]
+__all__ = [
+    "DroneMapClient", "Zone", "ZoneType", "Activation", "Notam", "NotamSchedule", "TimeWindow",
+    "Classification", "classify", "HeightRule", "height_rule",
+]
 
 from .client import DroneMapClient
 from .schema import Activation, Notam, NotamSchedule, TimeWindow, Zone, ZoneType
+from .classify import Classification, classify
+from .rules import HeightRule, height_rule
