@@ -1,18 +1,18 @@
 from pathlib import Path
 
 
-API = "https://api.dronemap.pansa.pl"
-API_KEY = "4b705300-8dfa-11ee-b9d1-0242ac120002"
+LOGIN_PATH = "/v1/front/login"
+ZONES_PATH = "/v1/zones"
+ZONE_TYPES_PATH = "/v1/zones/types"
+ACTIVATIONS_PATH = "/v1/activ/activations"
+NOTAMS_PATH = "/v1/notams"
+KML_PATH = "/v1/kml"
+
 KML_MIME = "application/vnd.google-earth.kml+xml"
-HEADERS = {
-    "x-api-key": API_KEY,
-    "Origin": "https://dronemap.pansa.pl",
-    "Referer": "https://dronemap.pansa.pl/",
-    "User-Agent": "Mozilla/5.0",
-}
 TIMEOUT_SECONDS = 120
 
 
+# api.dronemap.pansa.pl does not send the intermediate certificate of its chain
 INTERMEDIATE_CA = Path(__file__).with_name("gdig2.pem")
 
 

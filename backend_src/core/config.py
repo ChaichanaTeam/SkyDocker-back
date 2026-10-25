@@ -20,4 +20,8 @@ class Settings:
     RESET_TOKEN_EXPIRE_MINUTES      = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "60"))
     VERIFY_TOKEN_EXPIRE_MINUTES     = int(os.getenv("VERIFY_TOKEN_EXPIRE_MINUTES", "60"))
 
+    PANSA_API_URL                   = os.getenv("PANSA_API_URL") or "https://api.dronemap.pansa.pl"
+    PANSA_API_KEY                   = os.getenv("PANSA_API_KEY")
+    PANSA_USER_AGENT                = os.getenv("PANSA_USER_AGENT") or "SkyDocker (university thesis project)"
+
     ORIGINS                         = ["http://localhost:3000"]
