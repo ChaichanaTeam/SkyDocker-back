@@ -12,6 +12,17 @@ class ActivityTime(BaseModel):
     ends_at: datetime
 
 
+class CatalogSyncReport(BaseModel):
+    fetched: int = Field(description="Zones returned by PANSA")
+    inserted: int
+    updated: int
+    unchanged: int
+    deleted: int = Field(description="Zones no longer published by PANSA")
+    skipped: int = Field(description="Zones with invalid data, see errors")
+    parents_linked: int = Field(description="Zones whose parent zone was set or changed")
+    errors: list[str]
+
+
 class GeozoneProperties(FeatureProperties):
     country_id: int
     country: str
