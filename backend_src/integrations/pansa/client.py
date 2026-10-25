@@ -11,8 +11,6 @@ from backend_src.core.config import Settings
 from .constants import (
     ACTIVATIONS_PATH,
     INTERMEDIATE_CA,
-    KML_MIME,
-    KML_PATH,
     LOGIN_PATH,
     NOTAMS_PATH,
     TIMEOUT_SECONDS,
@@ -67,14 +65,6 @@ class DroneMapClient:
 
     async def notams(self) -> list[Notam]:
         return await self._get_list(NOTAMS_PATH, "notams", Notam)
-
-    async def kml(self) -> bytes:
-        response = await self._get(KML_PATH, params={"extrude": "false"}, headers={"Accept": KML_MIME})
-
-        if b"<kml" not in response.content[:500]:
-            raise RuntimeError("Response is not KML")
-
-        return response.content
 
     async def _login(self) -> None:
         response = await self._client.post(LOGIN_PATH)
