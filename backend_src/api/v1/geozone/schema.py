@@ -17,8 +17,6 @@ class GeozoneProperties(FeatureProperties):
     country: str
     type: GeoZoneType
     tag: str
-    strength: int
-    height_agl: Optional[int]
     activity_time: Optional[list[ActivityTime]] = None
 
 
@@ -28,7 +26,5 @@ class GeozoneProperties(FeatureProperties):
             country_id=geozone.country.id,
             country=geozone.country.name,
             type=geozone.type,
-            tag=geozone.tag,
-            strength=geozone.strength,
-            height_agl=geozone.height_agl
+            tag=geozone.tag
         )

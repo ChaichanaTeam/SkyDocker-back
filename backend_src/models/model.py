@@ -1,15 +1,16 @@
 from sqlalchemy import (
-    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, Time, func, Boolean, ForeignKey, TEXT
+    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT, Uuid
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from datetime import datetime, time
+from datetime import datetime
 from typing import Optional
+from uuid import UUID
 from shapely.geometry import Point, Polygon
 
 from backend_src.db.base import Base
 from backend_src.db.types import EnumWithUnknown, H3Index, GeometryType
 from .enum import (
-    GeoZoneType,
+    GeoZoneType, GeoZoneActivityMode, GeoZoneActivitySource,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
     OperationalCategory, MissionFlightGoal, MissionStatus, DroneCategory
@@ -69,7 +70,9 @@ class GeoZone(Base):
 
     id: Mapped[int]                                             = mapped_column(BIGINT, primary_key=True)
     country_id: Mapped[int]                                     = mapped_column(SMALLINT, ForeignKey("country.id"), nullable=False)
-        
+    parent_id: Mapped[Optional[int]]                            = mapped_column(BIGINT, ForeignKey("geo_zone.id", ondelete="SET NULL"))
+
+    external_id: Mapped[UUID]                                   = mapped_column(Uuid, nullable=False)
     type: Mapped[GeoZoneType]                                   = mapped_column(
             EnumWithUnknown(
                 GeoZoneType,
@@ -79,13 +82,34 @@ class GeoZone(Base):
             ),
             nullable=False
         )
+    source_type: Mapped[str]                                    = mapped_column(VARCHAR(16), nullable=False)
+    activity_mode: Mapped[GeoZoneActivityMode]                  = mapped_column(
+            EnumWithUnknown(
+                GeoZoneActivityMode,
+                name="geo_zone_activity_mode",
+                unknown_value=GeoZoneActivityMode.UNKNOWN,
+                values_callable=lambda enum_cls: [member.value for member in enum_cls]
+            ),
+            nullable=False
+        )
     tag: Mapped[str]                                            = mapped_column(VARCHAR(255), nullable=False)
-    strength: Mapped[int]                                       = mapped_column(Integer, nullable=False)
     zone_polygon: Mapped[Polygon]                               = mapped_column(GeometryType("POLYGON", 4326), nullable=False)
-    height_agl: Mapped[Optional[int]]                           = mapped_column(Integer)
+
+    lower_limit_ft: Mapped[int]                                 = mapped_column(Integer, nullable=False)
+    upper_limit_ft: Mapped[int]                                 = mapped_column(Integer, nullable=False)
+
+    valid_from: Mapped[Optional[datetime]]                      = mapped_column(DateTime(timezone=True))
+    valid_to: Mapped[Optional[datetime]]                        = mapped_column(DateTime(timezone=True))
+
+    description_pl: Mapped[Optional[str]]                       = mapped_column(TEXT)
+    description_en: Mapped[Optional[str]]                       = mapped_column(TEXT)
+    contact: Mapped[Optional[str]]                              = mapped_column(VARCHAR(255))
+
+    source_modified_at: Mapped[datetime]                        = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime]                                = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     country: Mapped["Country"]                                  = relationship()
-    activity_time: Mapped[list['ActivityTime']]                 = relationship()
+    activity_time: Mapped[list['ActivityTime']]                 = relationship(passive_deletes=True)
 
 
 class GeoZoneH3(Base):
@@ -93,7 +117,7 @@ class GeoZoneH3(Base):
 
     id: Mapped[int]             = mapped_column(BIGINT, primary_key=True)
 
-    geo_zone_id: Mapped[int]    = mapped_column(BIGINT, ForeignKey("geo_zone.id"), nullable=False)
+    geo_zone_id: Mapped[int]    = mapped_column(BIGINT, ForeignKey("geo_zone.id", ondelete="CASCADE"), nullable=False)
     h3_index: Mapped[str]       = mapped_column(H3Index, nullable=False)
 
 
@@ -101,12 +125,24 @@ class ActivityTime(Base):
     __tablename__ = "activity_time"
 
     id: Mapped[int]                                 = mapped_column(BIGINT, primary_key=True)
-    geo_zone_id: Mapped[int]                        = mapped_column(BIGINT, ForeignKey("geo_zone.id"), nullable=False)
+    geo_zone_id: Mapped[int]                        = mapped_column(BIGINT, ForeignKey("geo_zone.id", ondelete="CASCADE"), nullable=False)
 
-    start_at: Mapped[Optional[datetime]]            = mapped_column(DateTime(timezone=True))
-    ends_at: Mapped[Optional[datetime]]             = mapped_column(DateTime(timezone=True))
-    daily_start: Mapped[Optional[time]]             = mapped_column(Time)
-    daily_end: Mapped[Optional[time]]               = mapped_column(Time)
+    source: Mapped[GeoZoneActivitySource]           = mapped_column(
+            EnumWithUnknown(
+                GeoZoneActivitySource,
+                name="geo_zone_activity_source",
+                unknown_value=GeoZoneActivitySource.UNKNOWN,
+                values_callable=lambda enum_cls: [member.value for member in enum_cls]
+            ),
+            nullable=False
+        )
+    source_ref: Mapped[Optional[str]]               = mapped_column(VARCHAR(64))
+
+    start_at: Mapped[datetime]                      = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime]                       = mapped_column(DateTime(timezone=True), nullable=False)
+
+    lower_limit_ft: Mapped[Optional[int]]           = mapped_column(Integer)
+    upper_limit_ft: Mapped[Optional[int]]           = mapped_column(Integer)
 
 
 class Pilot(Base):

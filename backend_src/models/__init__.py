@@ -1,5 +1,5 @@
 __all__ = [ "Country", 
-    "GeoZone", "GeoZoneH3", "ActivityTime", "GeoZoneType",
+    "GeoZone", "GeoZoneH3", "ActivityTime", "GeoZoneType", "GeoZoneActivityMode", "GeoZoneActivitySource",
     "Pilot", "Drone", "PilotToFlyingPrivileges", "UserActivity", "FlyingPrivileges",
     "AfdModerator", "VerificationRequest", "VerificationDocument", "Model", "VerificationRequestStatus", "VerificationDocumentType",
     "Mission", "Checkin", "OperationalCategory", "MissionFlightGoal", "MissionStatus", "DroneCategory"
@@ -13,7 +13,7 @@ from .model import (
     Mission, Checkin
 )
 from .enum import (
-    GeoZoneType,
+    GeoZoneType, GeoZoneActivityMode, GeoZoneActivitySource,
     UserActivity, FlyingPrivileges,
     VerificationRequestStatus, VerificationDocumentType,
     OperationalCategory, MissionFlightGoal, MissionStatus, DroneCategory

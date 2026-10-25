@@ -9,5 +9,5 @@ create type drone_category as enum (
     'c6'
 );
 
-COMMENT ON TYPE geo_zone_type IS 'PB, C0 - C4 are mainly categorized for open operational category, else is specific;
+COMMENT ON TYPE drone_category IS 'PB, C0 - C4 are mainly categorized for open operational category, else is specific;
                                   PB stands for private build';
