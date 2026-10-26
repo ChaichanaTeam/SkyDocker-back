@@ -9,5 +9,6 @@ from .checkin import CheckinRouter
 from .mission import MissionRouter
 from .privilege import PrivilegeRouter
 from .dronepark import DroneparkRouter
+from .verification import VerificationRouter
 
-BusinessRouters = (CountryRouter, RedisRouter, GeoZoneRouter, CheckinRouter, MissionRouter, PrivilegeRouter, DroneparkRouter)
+BusinessRouters = (CountryRouter, RedisRouter, GeoZoneRouter, CheckinRouter, MissionRouter, PrivilegeRouter, DroneparkRouter, VerificationRouter)
