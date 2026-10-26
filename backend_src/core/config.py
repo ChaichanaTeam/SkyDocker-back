@@ -20,4 +20,9 @@ class Settings:
     RESET_TOKEN_EXPIRE_MINUTES      = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "60"))
     VERIFY_TOKEN_EXPIRE_MINUTES     = int(os.getenv("VERIFY_TOKEN_EXPIRE_MINUTES", "60"))
 
+    STORAGE_URL                     = os.getenv("STORAGE_URL")
+    STORAGE_PUBLIC_URL              = os.getenv("STORAGE_PUBLIC_URL")
+    STORAGE_APP_KEY                 = os.getenv("STORAGE_APP_KEY")
+    STORAGE_APP_SECRET              = os.getenv("STORAGE_APP_SECRET")
+
     ORIGINS                         = ["http://localhost:3000"]

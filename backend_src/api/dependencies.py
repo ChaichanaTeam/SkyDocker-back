@@ -9,6 +9,7 @@ from backend_src.cache import AsyncRedisSession, get_session_gen
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
 from backend_src.core.security import EmailTokenPayload, TokenType, decode_token
 from backend_src.models import Pilot
+from backend_src.storage import Storage, get_storage
 from backend_src.api.exceptions import APIExceptions
 
 
@@ -26,6 +27,8 @@ async def get_db() -> AsyncGenerator[AsyncDBSession, None]:
         await db.close()
 
 AsyncDBDep = Annotated[AsyncDBSession, Depends(get_db)]
+
+StorageDep = Annotated[Storage, Depends(get_storage)]
 
 BoundingBoxQuery = Annotated[BoundingBox, Query(...)]
 

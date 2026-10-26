@@ -30,6 +30,20 @@ class APIExceptions:
         )
 
     @staticmethod
+    def content_too_large(detail: str) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=detail,
+        )
+
+    @staticmethod
+    def unprocessable(detail: str) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=detail,
+        )
+
+    @staticmethod
     def bad_gateway(detail: str) -> HTTPException:
         return HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
