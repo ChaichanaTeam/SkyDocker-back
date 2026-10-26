@@ -7,6 +7,10 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
 
+  storage:
+    ports:
+      - "127.0.0.1:8333:8333"
+
   app:
     command:
       - uvicorn
