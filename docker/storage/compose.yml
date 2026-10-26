@@ -1,0 +1,47 @@
+services:
+  storage:
+    build:
+      context: .
+    container_name: skydocker_storage
+    restart: always
+    environment:
+      STORAGE_ADMIN_KEY: ${STORAGE_ADMIN_KEY}
+      STORAGE_ADMIN_SECRET: ${STORAGE_ADMIN_SECRET}
+      STORAGE_APP_KEY: ${STORAGE_APP_KEY}
+      STORAGE_APP_SECRET: ${STORAGE_APP_SECRET}
+      WEED_S3_SSE_KEY: ${STORAGE_SSE_KEY}
+      WEED_JWT_FILER_SIGNING_KEY: ${STORAGE_FILER_JWT_KEY}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - storage_data:/data
+    networks:
+      - backend
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -o /dev/null http://localhost:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  storage-init:
+    build:
+      context: .
+    container_name: skydocker_storage_init
+    restart: "no"
+    entrypoint: ["skydocker-storage-init.sh"]
+    environment:
+      STORAGE_ADMIN_KEY: ${STORAGE_ADMIN_KEY}
+      STORAGE_ADMIN_SECRET: ${STORAGE_ADMIN_SECRET}
+      WEED_JWT_FILER_SIGNING_KEY: ${STORAGE_FILER_JWT_KEY}
+    networks:
+      - backend
+    depends_on:
+      storage:
+        condition: service_healthy
+
+volumes:
+  storage_data:
