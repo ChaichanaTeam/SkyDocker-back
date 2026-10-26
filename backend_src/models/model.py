@@ -207,6 +207,13 @@ class VerificationRequest(Base):
         server_default="pending",
         nullable=False
     )
+
+    first_name: Mapped[str]                                                     = mapped_column(VARCHAR(255), nullable=False)
+    last_name: Mapped[str]                                                      = mapped_column(VARCHAR(255), nullable=False)
+    email: Mapped[str]                                                          = mapped_column(VARCHAR(255), nullable=False)
+    phone_number: Mapped[Optional[str]]                                         = mapped_column(VARCHAR(15))
+    pilot_number: Mapped[str]                                                   = mapped_column(VARCHAR(255), nullable=False)
+
     reason: Mapped[Optional[str]]                                                = mapped_column(TEXT)
     verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("afd_moderator.id"))
     verified_at: Mapped[Optional[datetime]]                                      = mapped_column(DateTime(timezone=True))
@@ -215,7 +222,7 @@ class VerificationRequest(Base):
 
     pilot: Mapped['Pilot']                                                       = relationship('Pilot', back_populates='verification_request')
     afd_moderator: Mapped[Optional['AfdModerator']]                              = relationship()
-    verification_document: Mapped[list['VerificationDocument']]                  = relationship()
+    verification_document: Mapped[list['VerificationDocument']]                  = relationship(cascade="all, delete-orphan")
 
 
 class VerificationDocument(Base):
