@@ -1,17 +1,8 @@
 CREATE OR REPLACE FUNCTION sync_pilot_verification()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status = 'approved' AND (OLD.status IS NULL OR OLD.status != 'approved') THEN
-        UPDATE pilot
-        SET verified = TRUE
-        WHERE id = NEW.pilot_id;
-        
+    IF NEW.status = 'approved' AND (TG_OP = 'INSERT' OR OLD.status != 'approved') THEN
         NEW.verified_at := COALESCE(NEW.verified_at, NOW());
-
-    ELSIF NEW.status = 'rejected' THEN
-        UPDATE pilot
-        SET verified = FALSE
-        WHERE id = NEW.pilot_id;
     END IF;
     
     RETURN NEW;
