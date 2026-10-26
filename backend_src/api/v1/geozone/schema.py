@@ -23,6 +23,18 @@ class CatalogSyncReport(BaseModel):
     errors: list[str]
 
 
+class ActivitySyncReport(BaseModel):
+    activations: int = Field(description="AUP/UUP reservations returned by PANSA")
+    notams: int = Field(description="NOTAMs returned by PANSA")
+    windows: int = Field(description="Activity windows stored after the sync")
+    inserted: int
+    deleted: int = Field(description="Windows that ended or are no longer published")
+    unchanged: int
+    zones_with_windows: int
+    ignored: int = Field(description="Windows of zones that are not scheduled, e.g. CTR hours of service")
+    unmatched: list[str] = Field(description="Designators missing from the zone catalog, e.g. reserved sub-sectors")
+
+
 class GeozoneProperties(FeatureProperties):
     country_id: int
     country: str

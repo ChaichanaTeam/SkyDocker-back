@@ -11,3 +11,6 @@ PANSA_SNAPSHOT_DIR = Path("data") / "pansa"
 MIN_ZONES_RATIO = 0.7
 
 MAX_REPORTED_ERRORS = 20
+
+# How far ahead repeating NOTAM schedules are expanded into windows
+ACTIVITY_HORIZON_DAYS = 7

@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
 
 from backend_src.db import AsyncDBSession
-from backend_src.models import Country, GeoZone
+from backend_src.models import ActivityTime, Country, GeoZone
 
 
 async def get_all_by_bbox(x1: float, y1: float, x2: float, y2: float, db: AsyncDBSession) -> list[GeoZone]:
@@ -31,6 +31,29 @@ async def get_sync_states(country_id: int, db: AsyncDBSession) -> list[Row]:
             GeoZone.id, GeoZone.external_id, GeoZone.parent_id, GeoZone.tag, GeoZone.type,
             GeoZone.source_type, GeoZone.activity_mode, GeoZone.source_modified_at,
         )
+        .where(GeoZone.country_id == country_id)
+    )
+
+    return list(result.all())
+
+
+async def get_activity_targets(country_id: int, db: AsyncDBSession) -> list[Row]:
+    """Zones activity windows can be matched to by name."""
+    result = await db.execute(
+        select(GeoZone.id, GeoZone.tag, GeoZone.activity_mode, GeoZone.lower_limit_ft, GeoZone.upper_limit_ft)
+        .where(GeoZone.country_id == country_id)
+    )
+
+    return list(result.all())
+
+
+async def get_activity_windows(country_id: int, db: AsyncDBSession) -> list[Row]:
+    result = await db.execute(
+        select(
+            ActivityTime.id, ActivityTime.geo_zone_id, ActivityTime.source, ActivityTime.source_ref,
+            ActivityTime.start_at, ActivityTime.ends_at, ActivityTime.lower_limit_ft, ActivityTime.upper_limit_ft,
+        )
+        .join(GeoZone, GeoZone.id == ActivityTime.geo_zone_id)
         .where(GeoZone.country_id == country_id)
     )
 

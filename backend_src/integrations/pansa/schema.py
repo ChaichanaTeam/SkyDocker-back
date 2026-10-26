@@ -121,6 +121,8 @@ class Notam(PansaModel):
     uid: UUID
     series: str
     type: str
+    # series of the NOTAM this NOTAMR replaces
+    replaces: Text = Field(None, validation_alias="seriesref")
     zone_name: Optional[Name] = Field(None, validation_alias="zonename")
     starts_at: datetime = Field(validation_alias="b")
     ends_at: datetime = Field(validation_alias="c")

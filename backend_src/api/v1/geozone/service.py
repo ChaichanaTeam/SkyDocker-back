@@ -1,5 +1,6 @@
-from datetime import datetime, timezone
-from typing import Any, Iterable
+import re
+from datetime import datetime, timedelta, timezone
+from typing import Any, Iterable, NamedTuple, Optional
 from uuid import UUID
 
 import httpx
@@ -11,10 +12,17 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
 from backend_src.api.shared_schemas import BoundingBox
-from backend_src.integrations.pansa import DroneMapClient, Zone, classify
-from backend_src.models import Country, GeoZone
-from .constants import DEFAULT_COUNTRY_NAME, DEFAULT_COUNTRY_TAG, MAX_REPORTED_ERRORS, MIN_ZONES_RATIO, PANSA_SNAPSHOT_DIR
-from .schema import CatalogSyncReport, GeozoneProperties
+from backend_src.integrations.pansa import Activation, DroneMapClient, Notam, Zone, classify, current_notams, notam_windows
+from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneActivityMode, GeoZoneActivitySource
+from .constants import (
+    ACTIVITY_HORIZON_DAYS,
+    DEFAULT_COUNTRY_NAME,
+    DEFAULT_COUNTRY_TAG,
+    MAX_REPORTED_ERRORS,
+    MIN_ZONES_RATIO,
+    PANSA_SNAPSHOT_DIR,
+)
+from .schema import ActivitySyncReport, CatalogSyncReport, GeozoneProperties
 
 
 # Fields that make a stored zone outdated even if PANSA did not touch it, e.g. after classifier changes
@@ -160,3 +168,143 @@ async def _link_parents(country_id: int, zones: Iterable[Zone], db: AsyncDBSessi
         await db.execute(update(GeoZone), changes)
 
     return len(changes)
+
+
+class _ZoneLookup:
+    """Finds zones by name; AUP and NOTAM spell some names differently, e.g. EPTR1078 for EP.TR1078."""
+
+    def __init__(self, rows: list[Row]) -> None:
+        self._by_tag = {row.tag: row for row in rows}
+
+        candidates: dict[str, list[Row]] = {}
+        for row in rows:
+            candidates.setdefault(_name_key(row.tag), []).append(row)
+        self._by_key = {key: found[0] for key, found in candidates.items() if len(found) == 1}
+
+    def get(self, name: str) -> Optional[Row]:
+        return self._by_tag.get(name) or self._by_key.get(_name_key(name))
+
+
+def _name_key(name: str) -> str:
+    # "DRA-R DTM Kakolewo" -> "DTMKAKOLEWO", "EP.TR1078" -> "EPTR1078"
+    return re.sub(r"[^A-Z0-9]", "", re.sub(r"^DRA-[A-Z]+\s+", "", name.upper()))
+
+
+class _Window(NamedTuple):
+    zone_name: str
+    source: GeoZoneActivitySource
+    source_ref: str
+    start_at: datetime
+    ends_at: datetime
+    lower_limit_ft: Optional[int]
+    upper_limit_ft: Optional[int]
+
+
+async def sync_activity(db: AsyncDBSession) -> ActivitySyncReport:
+    activations, notams = await _fetch_activity()
+    country = await _resolve_country(db)
+    zones = _ZoneLookup(await Queries.GeoZone.get_activity_targets(country.id, db))
+
+    now = datetime.now(timezone.utc)
+    until = (now + timedelta(days=ACTIVITY_HORIZON_DAYS)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # (zone id, start, end, lower, upper) -> (source, reference); the same window from AUP and UUP is kept once
+    wanted: dict[tuple, tuple[GeoZoneActivitySource, str]] = {}
+    unmatched: set[str] = set()
+    ignored = 0
+
+    for window in [*_activation_windows(activations, now), *_notam_windows(notams, now, until)]:
+        zone = zones.get(window.zone_name)
+        if zone is None:
+            unmatched.add(window.zone_name)
+            continue
+
+        # Permanent zones are active anyway, inherited ones follow their parent
+        if zone.activity_mode != GeoZoneActivityMode.SCHEDULED:
+            ignored += 1
+            continue
+
+        key = (
+            zone.id, window.start_at, window.ends_at,
+            _own_limit(window.lower_limit_ft, zone.lower_limit_ft), _own_limit(window.upper_limit_ft, zone.upper_limit_ft),
+        )
+        if key not in wanted or window.source is GeoZoneActivitySource.UUP:
+            wanted[key] = (window.source, window.source_ref)
+
+    rows = {
+        (row.geo_zone_id, row.start_at, row.ends_at, row.lower_limit_ft, row.upper_limit_ft, row.source, row.source_ref): row.id
+        for row in await Queries.GeoZone.get_activity_windows(country.id, db)
+    }
+    target = {key + source for key, source in wanted.items()}
+
+    removed = [row_id for key, row_id in rows.items() if key not in target]
+    if removed:
+        await db.execute(delete(ActivityTime).where(ActivityTime.id.in_(removed)))
+
+    added = [key for key in target if key not in rows]
+    db.add_all(
+        ActivityTime(
+            geo_zone_id=zone_id, start_at=start_at, ends_at=ends_at,
+            lower_limit_ft=lower_limit_ft, upper_limit_ft=upper_limit_ft, source=source, source_ref=source_ref,
+        )
+        for zone_id, start_at, ends_at, lower_limit_ft, upper_limit_ft, source, source_ref in added
+    )
+    await db.commit()
+
+    return ActivitySyncReport(
+        activations=len(activations),
+        notams=len(notams),
+        windows=len(target),
+        inserted=len(added),
+        deleted=len(removed),
+        unchanged=len(target) - len(added),
+        zones_with_windows=len({key[0] for key in target}),
+        ignored=ignored,
+        unmatched=sorted(unmatched)[:MAX_REPORTED_ERRORS],
+    )
+
+
+async def _fetch_activity() -> tuple[list[Activation], list[Notam]]:
+    try:
+        async with DroneMapClient(snapshot_dir=PANSA_SNAPSHOT_DIR) as client:
+            return await client.activations(), await client.notams()
+    except (httpx.HTTPError, RuntimeError) as exc:
+        raise APIExceptions.bad_gateway(f"PANSA request failed: {exc}")
+
+
+def _activation_windows(activations: list[Activation], now: datetime) -> list[_Window]:
+    return [
+        _Window(
+            zone_name=activation.designator,
+            source=GeoZoneActivitySource.UUP if activation.plan == "UUP" else GeoZoneActivitySource.AUP,
+            source_ref=str(activation.id),
+            start_at=activation.start.replace(microsecond=0),
+            ends_at=activation.stop.replace(microsecond=0),
+            lower_limit_ft=activation.min_ft,
+            upper_limit_ft=activation.max_ft,
+        )
+        for activation in activations
+        if activation.stop > now
+    ]
+
+
+def _notam_windows(notams: list[Notam], now: datetime, until: datetime) -> list[_Window]:
+    return [
+        _Window(
+            zone_name=notam.zone_name,
+            source=GeoZoneActivitySource.NOTAM,
+            source_ref=notam.series,
+            start_at=start_at,
+            ends_at=ends_at,
+            lower_limit_ft=notam.lower_ft,
+            upper_limit_ft=notam.upper_ft,
+        )
+        for notam in current_notams(notams)
+        if notam.zone_name
+        for start_at, ends_at in notam_windows(notam, now, until)
+    ]
+
+
+def _own_limit(limit: Optional[int], zone_limit: int) -> Optional[int]:
+    # Store a reserved limit only when it differs from the zone itself
+    return None if limit is None or limit == zone_limit else limit

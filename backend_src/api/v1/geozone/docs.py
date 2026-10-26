@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import CatalogSyncReport
+from .schema import ActivitySyncReport, CatalogSyncReport
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -30,5 +30,23 @@ GEOZONE_SYNC = {
         200: { "description": "Sync report" },
         401: { "description": "Missing or invalid admin key" },
         502: { "description": "PANSA is unavailable or returned a suspiciously short zone list, nothing was changed" }
+    }
+}
+
+
+GEOZONE_ACTIVITY_SYNC = {
+    "name": "Sync GeoZone activity from PANSA",
+    "summary": "Sync GeoZone activity from PANSA",
+    "description": "Downloads AUP/UUP airspace reservations and NOTAMs from the PANSA DroneMap API "
+                    "and stores them as activity windows of scheduled zones (TRA, TSA, MRT, D, R, ATZ).\n\n"
+                    "Repeating NOTAM schedules are expanded for the next days, ended windows are removed. "
+                    "A scheduled zone without a current window is inactive, so run it at least daily: "
+                    "AUP/UUP cover only the current day.\n\n"
+                    "Run the catalog sync first. Requires the `X-Admin-Key` header.",
+    "response_model": ActivitySyncReport,
+    "responses": {
+        200: { "description": "Sync report" },
+        401: { "description": "Missing or invalid admin key" },
+        502: { "description": "PANSA is unavailable, nothing was changed" }
     }
 }
