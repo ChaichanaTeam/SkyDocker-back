@@ -1,7 +1,7 @@
 # Storage - SeaweedFS (S3 API)
 
 Object storage for pilot documents and the wiki. Clients never get storage credentials:
-the backend checks access rights and hands out short-lived presigned URLs.
+documents are uploaded through the backend, downloads go through short-lived presigned URLs.
 
 - `storage` - SeaweedFS all-in-one (master, volume, filer, S3 gateway). Only the S3 port `8333` is meant to be reachable from outside
 - `storage-init` - one-shot job: creates buckets, enables default encryption and TTL. Safe to rerun
@@ -17,9 +17,9 @@ wiki/                                           public read
   (layout is defined by the wiki ticket)
 ```
 
-- `verification` - documents of a pending `verification_request`, visible only to the moderator who reviews it.
-  `{document_type}` matches `verification_document_type` enum (`operator_registration`, `certificate`).
-  TTL is a safety net: closed requests delete their documents explicitly
+- `verification` - documents of a `verification_request`, visible only to the moderator who reviews it.
+  `{document_type}` matches `verification_document_type` enum (`privilege_a1` ... `privilege_sts02`, `operator_number`).
+  Rejected and withdrawn requests delete their documents explicitly, approved ones keep them until the pilot decides. TTL is a safety net
 - `organizer` - pilot's personal documents, visible only to the pilot.
   After approval the pilot may keep verification documents: server-side copy from `verification/` to `organizer/`, then delete the original
 - Object names are random UUIDs. Original file names live only in the database, keys contain no personal data
@@ -36,10 +36,10 @@ wiki/                                           public read
 `app` cannot create or delete buckets, nor change their encryption. Private buckets are never readable anonymously.
 Which prefix a user may touch (`requests/{id}` for the assigned moderator, `pilots/{own id}` for the pilot) is decided by the backend before signing a URL.
 
-## Rules for presigned URLs
+## Uploads and downloads
 
-- Lifetime up to 5 minutes
-- Uploads go through presigned POST with conditions: `content-length-range` up to 10 MB and `Content-Type` one of `application/pdf`, `image/jpeg`, `image/png`
+- Uploads are multipart requests to the backend (`backend_src/storage/files.py`): up to 10 MB, PDF, JPEG or PNG detected by file signature, not by name or `Content-Type`
+- Downloads are presigned GET URLs with lifetime up to 5 minutes
 - URLs are signed for `STORAGE_PUBLIC_URL`, the backend itself talks to `STORAGE_URL`
 
 ## Secrets
