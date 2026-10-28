@@ -13,10 +13,9 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
 from backend_src.api.shared_schemas import BoundingBox
-from backend_src.integrations import ElevationProvider
 from backend_src.integrations.copernicus import ATTRIBUTION as DEM_ATTRIBUTION, CopernicusDemClient, TileCell
 from backend_src.integrations.pansa import (
-    Activation, DroneMapClient, Notam, SrtmElevation, Zone, classify, current_notams, height_rule, notam_windows,
+    Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
 )
 from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneActivityMode, GeoZoneActivitySource
 from .constants import (
@@ -28,6 +27,7 @@ from .constants import (
     MIN_ZONES_RATIO,
     PANSA_SNAPSHOT_DIR,
 )
+from .elevation import ground_elevation
 from .schema import (
     ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
     TerrainSyncReport,
@@ -36,8 +36,6 @@ from .schema import (
 
 # Fields that make a stored zone outdated even if PANSA did not touch it, e.g. after classifier changes
 _COMPARED_FIELDS = ("type", "source_type", "activity_mode", "source_modified_at")
-
-ELEVATION: ElevationProvider = SrtmElevation()
 
 
 async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
@@ -53,16 +51,20 @@ async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
 
 async def geozone_point(point: FlightPoint, db: AsyncDBSession) -> GeozonePointCollection:
     try:
-        ground_elevation_m = await ELEVATION.elevation_m(point.lon, point.lat)
+        ground = await ground_elevation(point.lon, point.lat, db)
     except (httpx.HTTPError, RuntimeError, ValueError) as exc:
         raise APIExceptions.bad_gateway(f"Ground elevation is unavailable: {exc}")
 
-    max_altitude_ft = math.ceil((ground_elevation_m + point.height_m) * FEET_PER_METRE)
+    if ground is None:
+        raise APIExceptions.not_found("No ground elevation data for this point")
+
+    max_altitude_ft = math.ceil((ground.metres + point.height_m) * FEET_PER_METRE)
     geozones = await Queries.GeoZone.get_all_at_point(point.lon, point.lat, max_altitude_ft, db)
 
     return GeozonePointCollection(
         features=await _geozone_features(geozones, db, max_altitude_ft),
-        ground_elevation_m=round(ground_elevation_m, 1),
+        ground_elevation_m=round(ground.metres, 1),
+        ground_elevation_source=ground.source,
         max_altitude_ft=max_altitude_ft,
     )
 

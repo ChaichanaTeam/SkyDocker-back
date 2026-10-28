@@ -31,8 +31,9 @@ GEOZONE_POINT = {
     "name": "Get GeoZone at a point for the flight height",
     "summary": "Get GeoZone at a point for the flight height",
     "description": "Fetches the geo-zones over the point that a drone flying up to `height_m` above ground can enter.\n\n"
-                    "Zone limits are above mean sea level, so the ground elevation at the point (SRTM) is added "
-                    "to the flight height. Zones starting at or above the top of the flight are left out, "
+                    "Zone limits are above mean sea level, so the ground elevation at the point is added "
+                    "to the flight height. The elevation comes from the Copernicus DEM stored by the terrain sync, "
+                    "or from PANSA SRTM where the DEM has no data. Zones starting at or above the top of the flight are left out, "
                     "as well as activity windows reserved only above it, so `active_now` already tells "
                     "whether the zone restricts this flight.\n\n"
                     "The properties of each zone are the same as in the bounding box request. "
@@ -40,7 +41,8 @@ GEOZONE_POINT = {
     "response_model": GeozonePointCollection,
     "responses": {
         200: { "description": "GeoJSON collection of geo-zones that apply to the flight" },
-        502: { "description": "Ground elevation service is unavailable" }
+        404: { "description": "Neither the DEM nor PANSA SRTM has elevation data for the point, e.g. open sea" },
+        502: { "description": "PANSA SRTM is needed but unavailable" }
     }
 }
 

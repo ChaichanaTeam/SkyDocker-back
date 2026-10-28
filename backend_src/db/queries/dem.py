@@ -1,5 +1,7 @@
+from typing import Optional
+
 from sqlalchemy import Integer, LargeBinary, Row, func, insert, literal, select, true
-from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
+from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
 
 from backend_src.db import AsyncDBSession
 from backend_src.models import Dem, GeoZone
@@ -7,6 +9,19 @@ from backend_src.models import Dem, GeoZone
 
 # A 1° tile has up to 1200 x 1200 pixels, smaller rasters keep the spatial index selective
 _RASTER_SIZE_PX = 100
+
+
+async def get_elevation_m(lon: float, lat: float, db: AsyncDBSession) -> Optional[float]:
+    """Ground elevation at the point interpolated from the four nearest pixels, None outside the stored tiles."""
+    point = ST_SetSRID(ST_MakePoint(lon, lat), 4326)
+
+    # a point on the edge between rasters touches several of them, the higher value is the safer one
+    result = await db.execute(
+        select(func.max(func.ST_Value(Dem.rast, 1, point, True, "bilinear")))
+        .where(ST_Intersects(Dem.rast, point))
+    )
+
+    return result.scalar_one_or_none()
 
 
 async def get_stored_tiles(db: AsyncDBSession) -> set[str]:

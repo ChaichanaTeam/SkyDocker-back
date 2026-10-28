@@ -15,6 +15,9 @@ class FlightPoint(Coordinate):
 
 class GeozonePointCollection(GeoJson):
     ground_elevation_m: float = Field(description="Ground elevation at the point, metres above mean sea level")
+    ground_elevation_source: str = Field(
+        description="copernicus_dem from the terrain sync, or pansa_srtm where the own DEM has no data"
+    )
     max_altitude_ft: int = Field(description="Top of the flight, feet above mean sea level, "
                                              "zones and windows starting at or above it are left out")
 
