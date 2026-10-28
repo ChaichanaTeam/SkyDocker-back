@@ -14,3 +14,5 @@ MAX_REPORTED_ERRORS = 20
 
 # How far ahead repeating NOTAM schedules are expanded into windows
 ACTIVITY_HORIZON_DAYS = 7
+
+FEET_PER_METRE = 1 / 0.3048

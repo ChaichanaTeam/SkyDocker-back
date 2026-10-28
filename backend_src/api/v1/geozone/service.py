@@ -1,3 +1,4 @@
+import math
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, NamedTuple, Optional
@@ -12,23 +13,29 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
 from backend_src.api.shared_schemas import BoundingBox
+from backend_src.integrations import ElevationProvider
 from backend_src.integrations.pansa import (
-    Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
+    Activation, DroneMapClient, Notam, SrtmElevation, Zone, classify, current_notams, height_rule, notam_windows,
 )
 from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneActivityMode, GeoZoneActivitySource
 from .constants import (
     ACTIVITY_HORIZON_DAYS,
     DEFAULT_COUNTRY_NAME,
     DEFAULT_COUNTRY_TAG,
+    FEET_PER_METRE,
     MAX_REPORTED_ERRORS,
     MIN_ZONES_RATIO,
     PANSA_SNAPSHOT_DIR,
 )
-from .schema import ActivitySyncReport, ActivityWindow, CatalogSyncReport, GeozoneProperties
+from .schema import (
+    ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
+)
 
 
 # Fields that make a stored zone outdated even if PANSA did not touch it, e.g. after classifier changes
 _COMPARED_FIELDS = ("type", "source_type", "activity_mode", "source_modified_at")
+
+ELEVATION: ElevationProvider = SrtmElevation()
 
 
 async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
@@ -37,19 +44,38 @@ async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
     if len(geozones) == 0:
         raise APIExceptions.not_found("No zones in this region")
 
+    return GeoJson(
+        features=await _geozone_features(geozones, db)
+    )
+
+
+async def geozone_point(point: FlightPoint, db: AsyncDBSession) -> GeozonePointCollection:
+    try:
+        ground_elevation_m = await ELEVATION.elevation_m(point.lon, point.lat)
+    except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+        raise APIExceptions.bad_gateway(f"Ground elevation is unavailable: {exc}")
+
+    max_altitude_ft = math.ceil((ground_elevation_m + point.height_m) * FEET_PER_METRE)
+    geozones = await Queries.GeoZone.get_all_at_point(point.lon, point.lat, max_altitude_ft, db)
+
+    return GeozonePointCollection(
+        features=await _geozone_features(geozones, db, max_altitude_ft),
+        ground_elevation_m=round(ground_elevation_m, 1),
+        max_altitude_ft=max_altitude_ft,
+    )
+
+
+async def _geozone_features(geozones: list[GeoZone], db: AsyncDBSession, max_altitude_ft: Optional[int] = None) -> list[GeoFeature]:
     now = datetime.now(timezone.utc)
     owners = {_schedule_owner(gz) for gz in geozones} - {None}
     windows: dict[int, list[ActivityTime]] = {}
     for window in await Queries.GeoZone.get_windows_ending_after(owners, now, db):
         windows.setdefault(window.geo_zone_id, []).append(window)
 
-    features: list[GeoFeature] = [
-        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now)) for gz in geozones
+    return [
+        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now, max_altitude_ft))
+        for gz in geozones
     ]
-
-    return GeoJson(
-        features=features
-    )
 
 
 def _schedule_owner(zone: GeoZone) -> Optional[int]:
@@ -64,16 +90,23 @@ def _schedule_owner(zone: GeoZone) -> Optional[int]:
     return None
 
 
-def _geozone_properties(zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime) -> GeozoneProperties:
+def _geozone_properties(
+    zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime, max_altitude_ft: Optional[int] = None,
+) -> GeozoneProperties:
     owner = _schedule_owner(zone)
-    zone_windows = windows.get(owner, []) if owner is not None else []
+    owned = windows.get(owner, []) if owner is not None else []
+    zone_windows = [ActivityWindow.from_activity_time(window, zone) for window in owned]
+
+    # a window reserved only above the drone does not restrict it
+    if max_altitude_ft is not None:
+        zone_windows = [window for window in zone_windows if window.lower_limit_ft < max_altitude_ft]
 
     valid = (zone.valid_from is None or zone.valid_from <= now) and (zone.valid_to is None or zone.valid_to > now)
-    scheduled_active = owner is None or any(window.start_at <= now < window.ends_at for window in zone_windows)
+    scheduled_active = owner is None or any(window.starts_at <= now < window.ends_at for window in zone_windows)
 
     return GeozoneProperties.from_geozone(
         zone,
-        windows=[ActivityWindow.from_activity_time(window, zone) for window in zone_windows],
+        windows=zone_windows,
         active_now=valid and scheduled_active,
         rule=height_rule(zone.type, zone.source_type, zone.tag, zone.description_en),
     )

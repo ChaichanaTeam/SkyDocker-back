@@ -5,7 +5,18 @@ from pydantic import BaseModel, Field
 from backend_src.models.enum import GeoZoneActivityMode, GeoZoneActivitySource, GeoZoneType
 from backend_src.models.model import ActivityTime, GeoZone
 from backend_src.integrations.pansa import HeightRule
-from backend_src.api.shared_schemas import FeatureProperties
+from backend_src.integrations.pansa.rules import OPEN_CATEGORY_MAX_M
+from backend_src.api.shared_schemas import Coordinate, FeatureProperties, GeoJson
+
+
+class FlightPoint(Coordinate):
+    height_m: int = Field(OPEN_CATEGORY_MAX_M, gt=0, le=OPEN_CATEGORY_MAX_M, description="Planned height above ground")
+
+
+class GeozonePointCollection(GeoJson):
+    ground_elevation_m: float = Field(description="Ground elevation at the point, metres above mean sea level")
+    max_altitude_ft: int = Field(description="Top of the flight, feet above mean sea level, "
+                                             "zones and windows starting at or above it are left out")
 
 
 class ActivityWindow(BaseModel):

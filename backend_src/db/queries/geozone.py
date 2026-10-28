@@ -3,7 +3,7 @@ from typing import Collection, Optional
 
 from sqlalchemy import Row, select
 from sqlalchemy.orm import joinedload
-from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
+from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
 
 from backend_src.db import AsyncDBSession
 from backend_src.models import ActivityTime, Country, GeoZone
@@ -17,6 +17,20 @@ async def get_all_by_bbox(x1: float, y1: float, x2: float, y2: float, db: AsyncD
     )
 
     return result.scalars().all() # type: ignore
+
+
+async def get_all_at_point(lon: float, lat: float, below_ft: int, db: AsyncDBSession) -> list[GeoZone]:
+    """Zones over the point whose lower limit is below ``below_ft`` above mean sea level."""
+    result = await db.execute(
+        select(GeoZone)
+        .where(
+            ST_Intersects(GeoZone.zone_polygon, ST_SetSRID(ST_MakePoint(lon, lat), 4326)),
+            GeoZone.lower_limit_ft < below_ft,
+        )
+        .options(joinedload(GeoZone.country))
+    )
+
+    return list(result.scalars().all())
 
 
 async def get_windows_ending_after(zone_ids: Collection[int], moment: datetime, db: AsyncDBSession) -> list[ActivityTime]:

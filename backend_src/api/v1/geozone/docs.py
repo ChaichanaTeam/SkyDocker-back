@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, CatalogSyncReport
+from .schema import ActivitySyncReport, CatalogSyncReport, GeozonePointCollection
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -24,6 +24,23 @@ GEOZONE_BBOX = {
     "responses": {
         200: { "description": "GeoJSON collection of geo-zones in the bounding box" },
         404: { "description": "No geo-zone found in the bounding box" }
+    }
+}
+
+GEOZONE_POINT = {
+    "name": "Get GeoZone at a point for the flight height",
+    "summary": "Get GeoZone at a point for the flight height",
+    "description": "Fetches the geo-zones over the point that a drone flying up to `height_m` above ground can enter.\n\n"
+                    "Zone limits are above mean sea level, so the ground elevation at the point (SRTM) is added "
+                    "to the flight height. Zones starting at or above the top of the flight are left out, "
+                    "as well as activity windows reserved only above it, so `active_now` already tells "
+                    "whether the zone restricts this flight.\n\n"
+                    "The properties of each zone are the same as in the bounding box request. "
+                    "An empty collection means no zone restricts the flight.",
+    "response_model": GeozonePointCollection,
+    "responses": {
+        200: { "description": "GeoJSON collection of geo-zones that apply to the flight" },
+        502: { "description": "Ground elevation service is unavailable" }
     }
 }
 
