@@ -12,7 +12,9 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
 from backend_src.api.shared_schemas import BoundingBox
-from backend_src.integrations.pansa import Activation, DroneMapClient, Notam, Zone, classify, current_notams, notam_windows
+from backend_src.integrations.pansa import (
+    Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
+)
 from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneActivityMode, GeoZoneActivitySource
 from .constants import (
     ACTIVITY_HORIZON_DAYS,
@@ -22,7 +24,7 @@ from .constants import (
     MIN_ZONES_RATIO,
     PANSA_SNAPSHOT_DIR,
 )
-from .schema import ActivitySyncReport, CatalogSyncReport, GeozoneProperties
+from .schema import ActivitySyncReport, ActivityWindow, CatalogSyncReport, GeozoneProperties
 
 
 # Fields that make a stored zone outdated even if PANSA did not touch it, e.g. after classifier changes
@@ -35,12 +37,45 @@ async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
     if len(geozones) == 0:
         raise APIExceptions.not_found("No zones in this region")
 
+    now = datetime.now(timezone.utc)
+    owners = {_schedule_owner(gz) for gz in geozones} - {None}
+    windows: dict[int, list[ActivityTime]] = {}
+    for window in await Queries.GeoZone.get_windows_ending_after(owners, now, db):
+        windows.setdefault(window.geo_zone_id, []).append(window)
+
     features: list[GeoFeature] = [
-        GeoFeature(geometry=mapping(gz.zone_polygon), properties=GeozoneProperties.from_geozone(gz)) for gz in geozones
+        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now)) for gz in geozones
     ]
 
     return GeoJson(
         features=features
+    )
+
+
+def _schedule_owner(zone: GeoZone) -> Optional[int]:
+    """Zone whose activity windows apply to this one, None for zones that are active all the time."""
+    if zone.activity_mode is GeoZoneActivityMode.SCHEDULED:
+        return zone.id
+
+    # an inherited zone whose parent is missing from the catalog stays active, as a permanent one
+    if zone.activity_mode is GeoZoneActivityMode.INHERITED:
+        return zone.parent_id
+
+    return None
+
+
+def _geozone_properties(zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime) -> GeozoneProperties:
+    owner = _schedule_owner(zone)
+    zone_windows = windows.get(owner, []) if owner is not None else []
+
+    valid = (zone.valid_from is None or zone.valid_from <= now) and (zone.valid_to is None or zone.valid_to > now)
+    scheduled_active = owner is None or any(window.start_at <= now < window.ends_at for window in zone_windows)
+
+    return GeozoneProperties.from_geozone(
+        zone,
+        windows=[ActivityWindow.from_activity_time(window, zone) for window in zone_windows],
+        active_now=valid and scheduled_active,
+        rule=height_rule(zone.type, zone.source_type, zone.tag, zone.description_en),
     )
 
 

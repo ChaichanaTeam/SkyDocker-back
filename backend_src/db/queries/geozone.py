@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import datetime
+from typing import Collection, Optional
 
 from sqlalchemy import Row, select
 from sqlalchemy.orm import joinedload
@@ -16,6 +17,19 @@ async def get_all_by_bbox(x1: float, y1: float, x2: float, y2: float, db: AsyncD
     )
 
     return result.scalars().all() # type: ignore
+
+
+async def get_windows_ending_after(zone_ids: Collection[int], moment: datetime, db: AsyncDBSession) -> list[ActivityTime]:
+    if not zone_ids:
+        return []
+
+    result = await db.execute(
+        select(ActivityTime)
+        .where(ActivityTime.geo_zone_id.in_(zone_ids), ActivityTime.ends_at > moment)
+        .order_by(ActivityTime.start_at)
+    )
+
+    return list(result.scalars().all())
 
 
 async def get_country_by_tag(tag: str, db: AsyncDBSession) -> Optional[Country]:

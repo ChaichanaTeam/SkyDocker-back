@@ -10,7 +10,16 @@ GEOZONE_BBOX = {
     "summary": "Get GeoZone from Bounding Box",
     "description": "Fetches all geo-zones that are within the bounding box provided by the user.\n\n"
                     "The bounding box is defined by two coordinates: the southwest corner and the northeast corner.\n\n"
-                    "The response is a GeoJSON collection of geo-zones.",
+                    "The response is a GeoJSON collection of geo-zones. Each zone carries:\n\n"
+                    "- `active_now`: whether the zone restricts flights right now. Permanent zones are active "
+                    "within their validity dates, scheduled ones only in an activity window, "
+                    "inherited ones (e.g. ATZ 1 km and 6 km rings) in a window of their parent zone.\n"
+                    "- `activity_time`: current and upcoming windows from AUP/UUP and NOTAMs, "
+                    "empty for permanent zones.\n"
+                    "- `height_rule`: heights above ground for the open category while the zone is active. "
+                    "Up to `free_m` a check-in is enough, up to `max_m` the zone manager consent "
+                    "or a mission plan is needed.\n\n"
+                    "Zone and window limits are in feet above mean sea level, `height_rule` is in metres above ground.",
     "response_model": GeoJson,
     "responses": {
         200: { "description": "GeoJSON collection of geo-zones in the bounding box" },
