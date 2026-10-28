@@ -12,6 +12,7 @@ CREATE TABLE geo_zone (
 
     lower_limit_ft      integer NOT NULL,
     upper_limit_ft      integer NOT NULL,
+    terrain_max_m       real,
 
     valid_from          timestamptz,
     valid_to            timestamptz,
@@ -40,6 +41,7 @@ COMMENT ON COLUMN public.geo_zone.tag IS 'Geo zone name, e.g. EPTR4H or DRA-RL 1
 COMMENT ON COLUMN public.geo_zone.zone_polygon IS 'PostGIS data type describing zone polygon';
 COMMENT ON COLUMN public.geo_zone.lower_limit_ft IS 'Lower limit in feet AMSL, 0 means ground';
 COMMENT ON COLUMN public.geo_zone.upper_limit_ft IS 'Upper limit in feet AMSL';
+COMMENT ON COLUMN public.geo_zone.terrain_max_m IS 'Highest ground inside the zone, metres AMSL from the DEM. Measured only for zones starting above ground or with activity windows, NULL means not measured';
 COMMENT ON COLUMN public.geo_zone.valid_from IS 'Start of the zone validity, NULL means already valid';
 COMMENT ON COLUMN public.geo_zone.valid_to IS 'End of the zone validity, NULL means valid until further notice';
 COMMENT ON COLUMN public.geo_zone.description_pl IS 'Flight conditions published by the source, in Polish';

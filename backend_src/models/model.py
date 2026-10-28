@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT, Uuid
+    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, REAL, DateTime, func, Boolean, ForeignKey, TEXT, Uuid
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Raster, RasterElement
@@ -98,6 +98,7 @@ class GeoZone(Base):
 
     lower_limit_ft: Mapped[int]                                 = mapped_column(Integer, nullable=False)
     upper_limit_ft: Mapped[int]                                 = mapped_column(Integer, nullable=False)
+    terrain_max_m: Mapped[Optional[float]]                      = mapped_column(REAL)
 
     valid_from: Mapped[Optional[datetime]]                      = mapped_column(DateTime(timezone=True))
     valid_to: Mapped[Optional[datetime]]                        = mapped_column(DateTime(timezone=True))

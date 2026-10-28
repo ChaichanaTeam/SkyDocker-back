@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import Integer, LargeBinary, Row, func, insert, literal, select, true
+from sqlalchemy import Integer, LargeBinary, Row, func, insert, literal, select, text, true
 from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
 
 from backend_src.db import AsyncDBSession
@@ -22,6 +22,30 @@ async def get_elevation_m(lon: float, lat: float, db: AsyncDBSession) -> Optiona
     )
 
     return result.scalar_one_or_none()
+
+
+async def measure_zone_terrain(db: AsyncDBSession) -> int:
+    """Stores the highest ground of zones that need it and have none yet, returns how many zones got it.
+
+    Only zones starting above ground or with activity windows need it: the rest restrict flights from the ground.
+    Every pixel the polygon touches counts, so small zones get a value too; some PANSA polygons
+    intersect themselves and are made valid before clipping.
+    """
+    result = await db.execute(text("""
+        UPDATE geo_zone AS z
+        SET terrain_max_m = m.terrain_max_m
+        FROM (
+            SELECT z.id, (ST_SummaryStatsAgg(ST_Clip(d.rast, ST_MakeValid(z.zone_polygon), true, true), 1, true)).max AS terrain_max_m
+            FROM geo_zone AS z
+            JOIN dem AS d ON ST_Intersects(d.rast, z.zone_polygon)
+            WHERE z.terrain_max_m IS NULL
+              AND (z.lower_limit_ft > 0 OR z.activity_mode <> 'permanent')
+            GROUP BY z.id
+        ) AS m
+        WHERE z.id = m.id AND m.terrain_max_m IS NOT NULL
+    """))
+
+    return result.rowcount # type: ignore
 
 
 async def get_stored_tiles(db: AsyncDBSession) -> set[str]:

@@ -51,7 +51,8 @@ GEOZONE_SYNC = {
     "summary": "Sync GeoZone catalog from PANSA",
     "description": "Downloads all geo-zones from the PANSA DroneMap API and updates the stored catalog.\n\n"
                     "New zones are added, zones changed in PANSA or by the classifier are updated, "
-                    "zones PANSA no longer publishes are removed together with their activity windows.\n\n"
+                    "zones PANSA no longer publishes are removed together with their activity windows. "
+                    "Once the terrain sync has stored the DEM, new and changed zones also get their highest ground measured.\n\n"
                     "Requires the `X-Admin-Key` header.",
     "response_model": CatalogSyncReport,
     "responses": {
@@ -88,6 +89,8 @@ GEOZONE_TERRAIN_SYNC = {
                     "Tiles that are already stored are skipped, so after the first run it only adds tiles "
                     "for cells new zones reach into. The first run downloads about 215 MB and takes a minute or two; "
                     "each tile is committed on its own, so an interrupted sync can simply be run again.\n\n"
+                    "Afterwards it measures the highest ground of zones that start above ground or have activity windows "
+                    "and have no value yet. The catalog sync does the same for new and changed zones once the tiles are stored.\n\n"
                     "Run the catalog sync first. Requires the `X-Admin-Key` header.",
     "response_model": TerrainSyncReport,
     "responses": {

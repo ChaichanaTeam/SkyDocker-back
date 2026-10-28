@@ -64,6 +64,7 @@ class CatalogSyncReport(BaseModel):
     deleted: int = Field(description="Zones no longer published by PANSA")
     skipped: int = Field(description="Zones with invalid data, see errors")
     parents_linked: int = Field(description="Zones whose parent zone was set or changed")
+    terrain_measured: int = Field(description="New or changed zones whose highest ground was measured, needs the terrain sync")
     errors: list[str]
 
 
@@ -84,6 +85,7 @@ class TerrainSyncReport(BaseModel):
     stored: int = Field(description="Tiles that were already stored and were not downloaded again")
     loaded: int = Field(description="Tiles downloaded and stored by this sync")
     sea: list[str] = Field(description="Cells without a DEM tile, open sea")
+    terrain_measured: int = Field(description="Zones whose highest ground was measured, e.g. all of them on the first run")
     attribution: str = Field(description="Credit line required by the Copernicus DEM licence")
 
 

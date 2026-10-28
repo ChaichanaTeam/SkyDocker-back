@@ -148,7 +148,8 @@ async def sync_catalog(db: AsyncDBSession) -> CatalogSyncReport:
         if row is None:
             inserts.append(GeoZone(country_id=country.id, external_id=zone.uid, **values))
         elif any(getattr(row, field) != values[field] for field in _COMPARED_FIELDS):
-            updates.append({"id": row.id, "updated_at": now, **values})
+            # the polygon or the classification may have changed, measure the terrain again
+            updates.append({"id": row.id, "updated_at": now, "terrain_max_m": None, **values})
         else:
             unchanged += 1
 
@@ -158,6 +159,7 @@ async def sync_catalog(db: AsyncDBSession) -> CatalogSyncReport:
     await db.flush()
 
     parents_linked = await _link_parents(country.id, incoming.values(), db)
+    terrain_measured = await Queries.Dem.measure_zone_terrain(db)
     await db.commit()
 
     if errors:
@@ -171,6 +173,7 @@ async def sync_catalog(db: AsyncDBSession) -> CatalogSyncReport:
         deleted=len(removed),
         skipped=len(errors),
         parents_linked=parents_linked,
+        terrain_measured=terrain_measured,
         errors=errors[:MAX_REPORTED_ERRORS],
     )
 
@@ -402,11 +405,15 @@ async def sync_terrain(db: AsyncDBSession) -> TerrainSyncReport:
     except httpx.HTTPError as exc:
         raise APIExceptions.bad_gateway(f"Copernicus DEM request failed after {len(loaded)} new tiles: {exc}")
 
+    terrain_measured = await Queries.Dem.measure_zone_terrain(db)
+    await db.commit()
+
     return TerrainSyncReport(
         cells=len(cells),
         stored=len(cells) - len(missing),
         loaded=len(loaded),
         sea=sea,
+        terrain_measured=terrain_measured,
         attribution=DEM_ATTRIBUTION,
     )
 
