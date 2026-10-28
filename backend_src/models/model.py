@@ -2,6 +2,7 @@ from sqlalchemy import (
     FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, DateTime, func, Boolean, ForeignKey, TEXT, Uuid
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from geoalchemy2 import Raster, RasterElement
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -143,6 +144,15 @@ class ActivityTime(Base):
 
     lower_limit_ft: Mapped[Optional[int]]           = mapped_column(Integer)
     upper_limit_ft: Mapped[Optional[int]]           = mapped_column(Integer)
+
+
+class Dem(Base):
+    __tablename__ = "dem"
+
+    id: Mapped[int]                 = mapped_column(BIGINT, primary_key=True)
+
+    tile: Mapped[str]               = mapped_column(VARCHAR(16), nullable=False)
+    rast: Mapped[RasterElement]     = mapped_column(Raster(spatial_index=False), nullable=False)
 
 
 class Pilot(Base):

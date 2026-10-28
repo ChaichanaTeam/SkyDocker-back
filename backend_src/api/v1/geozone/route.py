@@ -30,3 +30,8 @@ async def geozone_sync(db: AsyncDBDep):
 @router.post("/activity/sync", dependencies=[AdminKey], **docs.GEOZONE_ACTIVITY_SYNC)
 async def geozone_activity_sync(db: AsyncDBDep):
     return await service.sync_activity(db)
+
+
+@router.post("/terrain/sync", dependencies=[AdminKey], **docs.GEOZONE_TERRAIN_SYNC)
+async def geozone_terrain_sync(db: AsyncDBDep):
+    return await service.sync_terrain(db)

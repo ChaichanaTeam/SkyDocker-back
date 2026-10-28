@@ -76,6 +76,14 @@ class ActivitySyncReport(BaseModel):
     unmatched: list[str] = Field(description="Designators missing from the zone catalog, e.g. reserved sub-sectors")
 
 
+class TerrainSyncReport(BaseModel):
+    cells: int = Field(description="1° x 1° DEM cells that intersect geo-zones")
+    stored: int = Field(description="Tiles that were already stored and were not downloaded again")
+    loaded: int = Field(description="Tiles downloaded and stored by this sync")
+    sea: list[str] = Field(description="Cells without a DEM tile, open sea")
+    attribution: str = Field(description="Credit line required by the Copernicus DEM licence")
+
+
 class GeozoneProperties(FeatureProperties):
     id: int
     parent_id: Optional[int] = Field(description="Zone this one belongs to, e.g. ATZ EPKP for ATZEPKP1KM")

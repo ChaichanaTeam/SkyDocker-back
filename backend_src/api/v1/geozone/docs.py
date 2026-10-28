@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, CatalogSyncReport, GeozonePointCollection
+from .schema import ActivitySyncReport, CatalogSyncReport, GeozonePointCollection, TerrainSyncReport
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -74,5 +74,24 @@ GEOZONE_ACTIVITY_SYNC = {
         200: { "description": "Sync report" },
         401: { "description": "Missing or invalid admin key" },
         502: { "description": "PANSA is unavailable, nothing was changed" }
+    }
+}
+
+
+GEOZONE_TERRAIN_SYNC = {
+    "name": "Sync terrain elevation for GeoZone",
+    "summary": "Sync terrain elevation for GeoZone",
+    "description": "Downloads Copernicus DEM GLO-90 tiles (about 90 m per pixel) for every 1° x 1° cell "
+                    "that intersects a stored geo-zone and stores them in PostGIS.\n\n"
+                    "Tiles that are already stored are skipped, so after the first run it only adds tiles "
+                    "for cells new zones reach into. The first run downloads about 215 MB and takes a minute or two; "
+                    "each tile is committed on its own, so an interrupted sync can simply be run again.\n\n"
+                    "Run the catalog sync first. Requires the `X-Admin-Key` header.",
+    "response_model": TerrainSyncReport,
+    "responses": {
+        200: { "description": "Sync report" },
+        401: { "description": "Missing or invalid admin key" },
+        409: { "description": "No geo-zones stored yet" },
+        502: { "description": "Copernicus DEM is unavailable, tiles loaded before the error are kept" }
     }
 }

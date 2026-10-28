@@ -14,6 +14,7 @@ from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
 from backend_src.api.shared_schemas import BoundingBox
 from backend_src.integrations import ElevationProvider
+from backend_src.integrations.copernicus import ATTRIBUTION as DEM_ATTRIBUTION, CopernicusDemClient, TileCell
 from backend_src.integrations.pansa import (
     Activation, DroneMapClient, Notam, SrtmElevation, Zone, classify, current_notams, height_rule, notam_windows,
 )
@@ -29,6 +30,7 @@ from .constants import (
 )
 from .schema import (
     ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
+    TerrainSyncReport,
 )
 
 
@@ -371,6 +373,40 @@ def _notam_windows(notams: list[Notam], now: datetime, until: datetime) -> list[
         if notam.zone_name
         for start_at, ends_at in notam_windows(notam, now, until)
     ]
+
+
+async def sync_terrain(db: AsyncDBSession) -> TerrainSyncReport:
+    cells = [TileCell(lat=row.lat, lon=row.lon) for row in await Queries.Dem.get_cells_covering_geo_zones(db)]
+    if not cells:
+        raise APIExceptions.conflict("No geo-zones stored, run the catalog sync first")
+
+    stored = await Queries.Dem.get_stored_tiles(db)
+    missing = [cell for cell in cells if cell.name not in stored]
+    loaded: list[str] = []
+    sea: list[str] = []
+
+    try:
+        async with CopernicusDemClient() as client:
+            for cell in missing:
+                geotiff = await client.tile(cell)
+                if geotiff is None:
+                    sea.append(cell.name)
+                    continue
+
+                # one tile per transaction, a failed sync keeps the tiles loaded before
+                await Queries.Dem.add_tile(cell.name, geotiff, db)
+                await db.commit()
+                loaded.append(cell.name)
+    except httpx.HTTPError as exc:
+        raise APIExceptions.bad_gateway(f"Copernicus DEM request failed after {len(loaded)} new tiles: {exc}")
+
+    return TerrainSyncReport(
+        cells=len(cells),
+        stored=len(cells) - len(missing),
+        loaded=len(loaded),
+        sea=sea,
+        attribution=DEM_ATTRIBUTION,
+    )
 
 
 def _own_limit(limit: Optional[int], zone_limit: int) -> Optional[int]:

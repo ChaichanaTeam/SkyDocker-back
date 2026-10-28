@@ -1,8 +1,30 @@
-from sqlalchemy import Integer, Row, func, select, true
+from sqlalchemy import Integer, LargeBinary, Row, func, insert, literal, select, true
 from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
 
 from backend_src.db import AsyncDBSession
-from backend_src.models import GeoZone
+from backend_src.models import Dem, GeoZone
+
+
+# A 1° tile has up to 1200 x 1200 pixels, smaller rasters keep the spatial index selective
+_RASTER_SIZE_PX = 100
+
+
+async def get_stored_tiles(db: AsyncDBSession) -> set[str]:
+    result = await db.execute(select(Dem.tile).distinct())
+
+    return set(result.scalars().all())
+
+
+async def add_tile(tile: str, geotiff: bytes, db: AsyncDBSession) -> None:
+    """Stores a GeoTIFF tile cut into rasters. PostGIS reads it with GDAL, so its GTiff driver must be enabled."""
+    raster = func.ST_FromGDALRaster(literal(geotiff, LargeBinary), 4326)
+
+    await db.execute(
+        insert(Dem).from_select(
+            ["tile", "rast"],
+            select(literal(tile), func.ST_Tile(raster, _RASTER_SIZE_PX, _RASTER_SIZE_PX)),
+        )
+    )
 
 
 async def get_cells_covering_geo_zones(db: AsyncDBSession) -> list[Row]:
