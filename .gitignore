@@ -16,6 +16,7 @@ wheels/
 logs/
 output/
 data/geozones/
+data/pansa/
 
 # Block .vscode from editing
 .vscode

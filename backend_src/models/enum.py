@@ -4,12 +4,27 @@ from enum import StrEnum
 class GeoZoneType(StrEnum):
     UNKNOWN = "unknown"
     DRA_P = 'dra_p'
+    DRA_R = 'dra_r'
     DRA_RH = 'dra_rh'
     DRA_RM = 'dra_rm'
     DRA_RL = 'dra_rl'
     DRA_T = 'dra_t'
     DRA_U = 'dra_u'
     DRA_I = 'dra_i'
+
+
+class GeoZoneActivityMode(StrEnum):
+    UNKNOWN = "unknown"
+    PERMANENT = 'permanent'
+    SCHEDULED = 'scheduled'
+    INHERITED = 'inherited'
+
+
+class GeoZoneActivitySource(StrEnum):
+    UNKNOWN = "unknown"
+    AUP = 'aup'
+    UUP = 'uup'
+    NOTAM = 'notam'
 
 
 class UserActivity(StrEnum):

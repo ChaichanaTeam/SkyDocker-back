@@ -1,3 +1,4 @@
-__all__ = [ "pansa" ]
+__all__ = [ "pansa", "ElevationProvider" ]
 
 from . import pansa
+from .elevation import ElevationProvider

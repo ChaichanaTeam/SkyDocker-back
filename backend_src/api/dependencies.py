@@ -1,18 +1,21 @@
+import secrets
 from typing import Annotated, AsyncGenerator, Optional
 from fastapi import Depends, Query
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from redis_fastapi import AsyncRedisDep
 from loguru import logger
 
 from backend_src.api.shared_schemas import BoundingBox, normalize_email
 from backend_src.cache import AsyncRedisSession, get_session_gen
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
+from backend_src.core.config import Settings
 from backend_src.core.security import EmailTokenPayload, TokenType, decode_token
 from backend_src.models import Pilot
 from backend_src.api.exceptions import APIExceptions
 
 
 bearer_scheme = HTTPBearer()
+admin_key_scheme = APIKeyHeader(name="X-Admin-Key", auto_error=False)
 
 
 HeaderAuthorization = Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)]
@@ -108,7 +111,14 @@ async def get_verify_email(
     return await _email_from_token(credentials, TokenType.VERIFY)
 
 
+async def verify_admin_key(key: Annotated[Optional[str], Depends(admin_key_scheme)]) -> None:
+    # Admin endpoints stay closed while ADMIN_API_KEY is not configured
+    if not Settings.ADMIN_API_KEY or key is None or not secrets.compare_digest(key, Settings.ADMIN_API_KEY):
+        raise APIExceptions.unauthorized("Invalid admin key")
+
+
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
+AdminKey = Depends(verify_admin_key)
 VerifySubject = Annotated[str, Depends(get_verify_subject)]
 ResetPilot = Annotated[Pilot, Depends(get_reset_pilot)]
 RegisterEmail = Annotated[EmailTokenPayload, Depends(get_register_email)]

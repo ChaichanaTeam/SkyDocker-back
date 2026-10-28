@@ -18,14 +18,16 @@ services:
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
       RESET_TOKEN_EXPIRE_MINUTES: ${RESET_TOKEN_EXPIRE_MINUTES}
       VERIFY_TOKEN_EXPIRE_MINUTES: ${VERIFY_TOKEN_EXPIRE_MINUTES}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      PANSA_API_URL: ${PANSA_API_URL:-}
+      PANSA_API_KEY: ${PANSA_API_KEY}
+      PANSA_USER_AGENT: ${PANSA_USER_AGENT:-}
     deploy:
       resources:
         limits:
           memory: 4G
     ports:
       - "8000:8000"
-    volumes:
-      - ../../data/geozones:/app/data/geozones
     networks:
       - backend
       - edge

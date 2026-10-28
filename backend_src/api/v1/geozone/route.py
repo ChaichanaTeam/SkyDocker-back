@@ -1,13 +1,32 @@
-from fastapi import APIRouter
+from typing import Annotated
+from fastapi import APIRouter, Query
 
-from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery
+from backend_src.api.dependencies import AdminKey, AsyncDBDep, BoundingBoxQuery
+from .schema import FlightPoint
 from . import service
 from . import docs
 
 
 router = APIRouter(prefix="/geo-zone")
 
+FlightPointQuery = Annotated[FlightPoint, Query()]
+
 
 @router.get("/", **docs.GEOZONE_BBOX)
 async def geozone_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep):
     return await service.geozone_bbox(bbox, db)
+
+
+@router.get("/point", **docs.GEOZONE_POINT)
+async def geozone_point(point: FlightPointQuery, db: AsyncDBDep):
+    return await service.geozone_point(point, db)
+
+
+@router.post("/sync", dependencies=[AdminKey], **docs.GEOZONE_SYNC)
+async def geozone_sync(db: AsyncDBDep):
+    return await service.sync_catalog(db)
+
+
+@router.post("/activity/sync", dependencies=[AdminKey], **docs.GEOZONE_ACTIVITY_SYNC)
+async def geozone_activity_sync(db: AsyncDBDep):
+    return await service.sync_activity(db)
