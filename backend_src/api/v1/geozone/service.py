@@ -1,7 +1,7 @@
 import math
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, NamedTuple, Optional
+from typing import Any, Callable, Iterable, NamedTuple, Optional
 from uuid import UUID
 
 import httpx
@@ -12,7 +12,6 @@ from sqlalchemy import Row, delete, update
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
-from backend_src.api.shared_schemas import BoundingBox
 from backend_src.integrations.copernicus import ATTRIBUTION as DEM_ATTRIBUTION, CopernicusDemClient, TileCell
 from backend_src.integrations.pansa import (
     Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
@@ -23,6 +22,7 @@ from .constants import (
     DEFAULT_COUNTRY_NAME,
     DEFAULT_COUNTRY_TAG,
     FEET_PER_METRE,
+    MAP_HEIGHT_MARGIN_M,
     MAX_REPORTED_ERRORS,
     MIN_ZONES_RATIO,
     PANSA_SNAPSHOT_DIR,
@@ -30,7 +30,7 @@ from .constants import (
 from .elevation import ground_elevation
 from .schema import (
     ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
-    TerrainSyncReport,
+    MapArea, TerrainSyncReport,
 )
 
 
@@ -38,14 +38,20 @@ from .schema import (
 _COMPARED_FIELDS = ("type", "source_type", "activity_mode", "source_modified_at")
 
 
-async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
-    geozones = await Queries.GeoZone.get_all_by_bbox(*bbox.unpack(), db)
+async def geozone_bbox(area: MapArea, db: AsyncDBSession):
+    def ceiling_ft(zone: GeoZone) -> Optional[int]:
+        return _map_ceiling_ft(zone, area.height_m)
+
+    geozones = [
+        gz for gz in await Queries.GeoZone.get_all_by_bbox(*area.unpack(), db)
+        if _reachable(gz.lower_limit_ft, ceiling_ft(gz))
+    ]
 
     if len(geozones) == 0:
         raise APIExceptions.not_found("No zones in this region")
 
     return GeoJson(
-        features=await _geozone_features(geozones, db)
+        features=await _geozone_features(geozones, db, ceiling_ft)
     )
 
 
@@ -62,14 +68,16 @@ async def geozone_point(point: FlightPoint, db: AsyncDBSession) -> GeozonePointC
     geozones = await Queries.GeoZone.get_all_at_point(point.lon, point.lat, max_altitude_ft, db)
 
     return GeozonePointCollection(
-        features=await _geozone_features(geozones, db, max_altitude_ft),
+        features=await _geozone_features(geozones, db, lambda zone: max_altitude_ft),
         ground_elevation_m=round(ground.metres, 1),
         ground_elevation_source=ground.source,
         max_altitude_ft=max_altitude_ft,
     )
 
 
-async def _geozone_features(geozones: list[GeoZone], db: AsyncDBSession, max_altitude_ft: Optional[int] = None) -> list[GeoFeature]:
+async def _geozone_features(
+    geozones: list[GeoZone], db: AsyncDBSession, ceiling_ft: Callable[[GeoZone], Optional[int]],
+) -> list[GeoFeature]:
     now = datetime.now(timezone.utc)
     owners = {_schedule_owner(gz) for gz in geozones} - {None}
     windows: dict[int, list[ActivityTime]] = {}
@@ -77,9 +85,22 @@ async def _geozone_features(geozones: list[GeoZone], db: AsyncDBSession, max_alt
         windows.setdefault(window.geo_zone_id, []).append(window)
 
     return [
-        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now, max_altitude_ft))
+        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now, ceiling_ft(gz)))
         for gz in geozones
     ]
+
+
+def _map_ceiling_ft(zone: GeoZone, height_m: Optional[int]) -> Optional[int]:
+    """Top of a flight over the highest ground of the zone, None where it cannot be told."""
+    if height_m is None or zone.terrain_max_m is None:
+        return None
+
+    return math.ceil((zone.terrain_max_m + height_m + MAP_HEIGHT_MARGIN_M) * FEET_PER_METRE)
+
+
+def _reachable(lower_limit_ft: int, ceiling_ft: Optional[int]) -> bool:
+    """Whether a flight up to the ceiling enters a zone or an activity window starting at the lower limit."""
+    return ceiling_ft is None or lower_limit_ft < ceiling_ft
 
 
 def _schedule_owner(zone: GeoZone) -> Optional[int]:
@@ -95,15 +116,14 @@ def _schedule_owner(zone: GeoZone) -> Optional[int]:
 
 
 def _geozone_properties(
-    zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime, max_altitude_ft: Optional[int] = None,
+    zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime, ceiling_ft: Optional[int],
 ) -> GeozoneProperties:
     owner = _schedule_owner(zone)
     owned = windows.get(owner, []) if owner is not None else []
     zone_windows = [ActivityWindow.from_activity_time(window, zone) for window in owned]
 
     # a window reserved only above the drone does not restrict it
-    if max_altitude_ft is not None:
-        zone_windows = [window for window in zone_windows if window.lower_limit_ft < max_altitude_ft]
+    zone_windows = [window for window in zone_windows if _reachable(window.lower_limit_ft, ceiling_ft)]
 
     valid = (zone.valid_from is None or zone.valid_from <= now) and (zone.valid_to is None or zone.valid_to > now)
     scheduled_active = owner is None or any(window.starts_at <= now < window.ends_at for window in zone_windows)

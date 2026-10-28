@@ -19,7 +19,13 @@ GEOZONE_BBOX = {
                     "- `height_rule`: heights above ground for the open category while the zone is active. "
                     "Up to `free_m` a check-in is enough, up to `max_m` the zone manager consent "
                     "or a mission plan is needed.\n\n"
-                    "Zone and window limits are in feet above mean sea level, `height_rule` is in metres above ground.",
+                    "Zone and window limits are in feet above mean sea level, `height_rule` is in metres above ground.\n\n"
+                    "With `height_m` only what a drone flying that high can reach is returned. There is no flight point "
+                    "on a map, so the highest ground inside each zone (from the terrain sync) plus `height_m` and 50 m "
+                    "of margin is taken: zones starting at or above it are left out, and so are activity windows "
+                    "reserved only above it, so `active_now` turns false when such windows are all the zone has. "
+                    "Zones without a measured ground height are always kept. For a precise answer at one place "
+                    "use the point request.",
     "response_model": GeoJson,
     "responses": {
         200: { "description": "GeoJSON collection of geo-zones in the bounding box" },

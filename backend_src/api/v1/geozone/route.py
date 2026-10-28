@@ -1,20 +1,21 @@
 from typing import Annotated
 from fastapi import APIRouter, Query
 
-from backend_src.api.dependencies import AdminKey, AsyncDBDep, BoundingBoxQuery
-from .schema import FlightPoint
+from backend_src.api.dependencies import AdminKey, AsyncDBDep
+from .schema import FlightPoint, MapArea
 from . import service
 from . import docs
 
 
 router = APIRouter(prefix="/geo-zone")
 
+MapAreaQuery = Annotated[MapArea, Query()]
 FlightPointQuery = Annotated[FlightPoint, Query()]
 
 
 @router.get("/", **docs.GEOZONE_BBOX)
-async def geozone_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep):
-    return await service.geozone_bbox(bbox, db)
+async def geozone_bbox(area: MapAreaQuery, db: AsyncDBDep):
+    return await service.geozone_bbox(area, db)
 
 
 @router.get("/point", **docs.GEOZONE_POINT)

@@ -6,7 +6,15 @@ from backend_src.models.enum import GeoZoneActivityMode, GeoZoneActivitySource, 
 from backend_src.models.model import ActivityTime, GeoZone
 from backend_src.integrations.pansa import HeightRule
 from backend_src.integrations.pansa.rules import OPEN_CATEGORY_MAX_M
-from backend_src.api.shared_schemas import Coordinate, FeatureProperties, GeoJson
+from backend_src.api.shared_schemas import BoundingBox, Coordinate, FeatureProperties, GeoJson
+
+
+class MapArea(BoundingBox):
+    height_m: Optional[int] = Field(
+        None, gt=0, le=OPEN_CATEGORY_MAX_M,
+        description="Planned height above ground; zones and activity windows the drone cannot reach "
+                    "anywhere inside the zone are left out",
+    )
 
 
 class FlightPoint(Coordinate):
