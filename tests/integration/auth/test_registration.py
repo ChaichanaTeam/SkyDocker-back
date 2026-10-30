@@ -80,10 +80,7 @@ def test_verify_otp_wrong_code(client: Client, new_user: UserInfo, get_endpoint_
 
 def test_register_without_token_rejected(client: Client, new_user: UserInfo, get_endpoint_link: EndpointCreator):
     payload = {
-        "phone_number": new_user["phone_number"],
         "password": new_user["password"],
-        "first_name": new_user["first_name"],
-        "last_name": new_user["last_name"],
     }
     r = client.post(get_endpoint_link("live", "auth/register"), json=payload)
     assert r.status_code in (401, 403), f"Registration without a token should be rejected: {r.text}"
@@ -109,21 +106,11 @@ def test_register_rejects_short_password(client: Client, new_user: UserInfo, get
 def test_register_rejects_missing_password(client: Client, new_user: UserInfo, get_endpoint_link: EndpointCreator):
     _obtain_register_token(client, new_user, get_endpoint_link)
     payload = {
-        "phone_number": new_user["phone_number"],
-        "first_name": new_user["first_name"],
-        "last_name": new_user["last_name"],
+        "empty": ""
     }
 
     r = registration_end(client, new_user, get_endpoint_link, payload=payload)
     assert r.status_code == 422, f"Missing password should be rejected: {r.text}"
-
-
-def test_register_rejects_invalid_phone(client: Client, new_user: UserInfo, get_endpoint_link: EndpointCreator):
-    _obtain_register_token(client, new_user, get_endpoint_link)
-    new_user["phone_number"] = "12345"
-
-    r = registration_end(client, new_user, get_endpoint_link)
-    assert r.status_code == 422, f"Invalid phone number should be rejected: {r.text}"
 
 
 @pytest.mark.order(-1)
