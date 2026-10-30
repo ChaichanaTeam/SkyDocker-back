@@ -150,12 +150,12 @@ class Pilot(Base):
 
     id: Mapped[int]                                                     = mapped_column(BIGINT, primary_key=True)
 
-    first_name: Mapped[str]                                             = mapped_column(VARCHAR(255), nullable=False)
-    last_name: Mapped[str]                                              = mapped_column(VARCHAR(255), nullable=False)
+    first_name: Mapped[Optional[str]]                                   = mapped_column(VARCHAR(255))
+    last_name: Mapped[Optional[str]]                                    = mapped_column(VARCHAR(255))
 
     email: Mapped[str]                                                  = mapped_column(VARCHAR(255), nullable=False)
     normalized_email: Mapped[str]                                       = mapped_column(VARCHAR(255), nullable=False, unique=True)
-    phone_number: Mapped[str]                                           = mapped_column(VARCHAR(15), nullable=False)
+    phone_number: Mapped[Optional[str]]                                 = mapped_column(VARCHAR(15))
     pilot_number: Mapped[Optional[str]]                                 = mapped_column(VARCHAR(255))
 
     password_hash: Mapped[str]                                          = mapped_column(VARCHAR(255), nullable=False)

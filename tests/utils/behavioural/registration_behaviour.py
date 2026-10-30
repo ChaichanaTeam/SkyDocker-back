@@ -7,10 +7,7 @@ from tests.types import UserInfo, EndpointCreator
 
 def _register_payload(test_user: UserInfo) -> dict[str, str]:
     return {
-        "phone_number": test_user["phone_number"],
-        "password": test_user["password"],
-        "first_name": test_user["first_name"],
-        "last_name": test_user["last_name"],
+        "password": test_user["password"]
     }
 
 

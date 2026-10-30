@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import socket
 from dotenv import load_dotenv
 import asyncio
 import os
@@ -89,7 +90,10 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    try:
+        asyncio.run(run_async_migrations())
+    except socket.gaierror:
+        print("Database inaccessible. Fix the connection or change .env: ALEMBIC_URL")
 
 
 if context.is_offline_mode():
