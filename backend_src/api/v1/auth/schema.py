@@ -4,16 +4,11 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 
 from backend_src.core.security import IssuedToken
 from .constants import ACCESS_TTL_SECONDS
-from backend_src.api.shared_schemas import E164PhoneNumber, NormalizedEmailStr, normalize_email
+from backend_src.api.shared_schemas import NormalizedEmailStr, normalize_email
 
 
 class PilotRegister(BaseModel):
-    phone_number: E164PhoneNumber
-
     password: str = Field(min_length=8)
-
-    first_name: str = Field(min_length=1, max_length=255)
-    last_name: str = Field(min_length=1, max_length=255)
 
 
 class PilotLogin(BaseModel):

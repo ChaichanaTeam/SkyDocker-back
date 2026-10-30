@@ -115,10 +115,7 @@ async def register(data: PilotRegister, db: AsyncDBSession, redis: AsyncRedisSes
     pilot = Pilot(
         normalized_email=email_payload.sub,
         email=email_payload.email,
-        phone_number=data.phone_number,
         password_hash=security.hash_password(data.password),
-        first_name=data.first_name,
-        last_name=data.last_name
     )
 
     try:
