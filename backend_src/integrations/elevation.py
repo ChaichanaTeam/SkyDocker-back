@@ -1,9 +1,12 @@
-from typing import Protocol
+from typing import Optional, Protocol
 
 
 class ElevationProvider(Protocol):
-    """Source of ground elevation, PANSA SRTM for now, an own DEM in PostGIS later."""
+    """Source of ground elevation: the own Copernicus DEM in PostGIS, PANSA SRTM as a fallback."""
 
-    async def elevation_m(self, lon: float, lat: float) -> float:
-        """Ground elevation in metres above mean sea level."""
+    # reported to clients together with the elevation
+    name: str
+
+    async def elevation_m(self, lon: float, lat: float) -> Optional[float]:
+        """Ground elevation in metres above mean sea level, None where the source has no data for the point."""
         ...

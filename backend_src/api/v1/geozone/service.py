@@ -1,7 +1,7 @@
 import math
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, NamedTuple, Optional
+from typing import Any, Callable, Iterable, NamedTuple, Optional
 from uuid import UUID
 
 import httpx
@@ -12,10 +12,9 @@ from sqlalchemy import Row, delete, update
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import GeoJson, GeoFeature
-from backend_src.api.shared_schemas import BoundingBox
-from backend_src.integrations import ElevationProvider
+from backend_src.integrations.copernicus import ATTRIBUTION as DEM_ATTRIBUTION, CopernicusDemClient, TileCell
 from backend_src.integrations.pansa import (
-    Activation, DroneMapClient, Notam, SrtmElevation, Zone, classify, current_notams, height_rule, notam_windows,
+    Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
 )
 from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneActivityMode, GeoZoneActivitySource
 from .constants import (
@@ -23,49 +22,62 @@ from .constants import (
     DEFAULT_COUNTRY_NAME,
     DEFAULT_COUNTRY_TAG,
     FEET_PER_METRE,
+    MAP_HEIGHT_MARGIN_M,
     MAX_REPORTED_ERRORS,
     MIN_ZONES_RATIO,
     PANSA_SNAPSHOT_DIR,
 )
+from .elevation import ground_elevation
 from .schema import (
     ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
+    MapArea, TerrainSyncReport,
 )
 
 
 # Fields that make a stored zone outdated even if PANSA did not touch it, e.g. after classifier changes
 _COMPARED_FIELDS = ("type", "source_type", "activity_mode", "source_modified_at")
 
-ELEVATION: ElevationProvider = SrtmElevation()
 
+async def geozone_bbox(area: MapArea, db: AsyncDBSession):
+    def ceiling_ft(zone: GeoZone) -> Optional[int]:
+        return _map_ceiling_ft(zone, area.height_m)
 
-async def geozone_bbox(bbox: BoundingBox, db: AsyncDBSession):
-    geozones = await Queries.GeoZone.get_all_by_bbox(*bbox.unpack(), db)
+    geozones = [
+        gz for gz in await Queries.GeoZone.get_all_by_bbox(*area.unpack(), db)
+        if _reachable(gz.lower_limit_ft, ceiling_ft(gz))
+    ]
 
     if len(geozones) == 0:
         raise APIExceptions.not_found("No zones in this region")
 
     return GeoJson(
-        features=await _geozone_features(geozones, db)
+        features=await _geozone_features(geozones, db, ceiling_ft)
     )
 
 
 async def geozone_point(point: FlightPoint, db: AsyncDBSession) -> GeozonePointCollection:
     try:
-        ground_elevation_m = await ELEVATION.elevation_m(point.lon, point.lat)
+        ground = await ground_elevation(point.lon, point.lat, db)
     except (httpx.HTTPError, RuntimeError, ValueError) as exc:
         raise APIExceptions.bad_gateway(f"Ground elevation is unavailable: {exc}")
 
-    max_altitude_ft = math.ceil((ground_elevation_m + point.height_m) * FEET_PER_METRE)
+    if ground is None:
+        raise APIExceptions.not_found("No ground elevation data for this point")
+
+    max_altitude_ft = math.ceil((ground.metres + point.height_m) * FEET_PER_METRE)
     geozones = await Queries.GeoZone.get_all_at_point(point.lon, point.lat, max_altitude_ft, db)
 
     return GeozonePointCollection(
-        features=await _geozone_features(geozones, db, max_altitude_ft),
-        ground_elevation_m=round(ground_elevation_m, 1),
+        features=await _geozone_features(geozones, db, lambda zone: max_altitude_ft),
+        ground_elevation_m=round(ground.metres, 1),
+        ground_elevation_source=ground.source,
         max_altitude_ft=max_altitude_ft,
     )
 
 
-async def _geozone_features(geozones: list[GeoZone], db: AsyncDBSession, max_altitude_ft: Optional[int] = None) -> list[GeoFeature]:
+async def _geozone_features(
+    geozones: list[GeoZone], db: AsyncDBSession, ceiling_ft: Callable[[GeoZone], Optional[int]],
+) -> list[GeoFeature]:
     now = datetime.now(timezone.utc)
     owners = {_schedule_owner(gz) for gz in geozones} - {None}
     windows: dict[int, list[ActivityTime]] = {}
@@ -73,9 +85,22 @@ async def _geozone_features(geozones: list[GeoZone], db: AsyncDBSession, max_alt
         windows.setdefault(window.geo_zone_id, []).append(window)
 
     return [
-        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now, max_altitude_ft))
+        GeoFeature(geometry=mapping(gz.zone_polygon), properties=_geozone_properties(gz, windows, now, ceiling_ft(gz)))
         for gz in geozones
     ]
+
+
+def _map_ceiling_ft(zone: GeoZone, height_m: Optional[int]) -> Optional[int]:
+    """Top of a flight over the highest ground of the zone, None where it cannot be told."""
+    if height_m is None or zone.terrain_max_m is None:
+        return None
+
+    return math.ceil((zone.terrain_max_m + height_m + MAP_HEIGHT_MARGIN_M) * FEET_PER_METRE)
+
+
+def _reachable(lower_limit_ft: int, ceiling_ft: Optional[int]) -> bool:
+    """Whether a flight up to the ceiling enters a zone or an activity window starting at the lower limit."""
+    return ceiling_ft is None or lower_limit_ft < ceiling_ft
 
 
 def _schedule_owner(zone: GeoZone) -> Optional[int]:
@@ -91,15 +116,14 @@ def _schedule_owner(zone: GeoZone) -> Optional[int]:
 
 
 def _geozone_properties(
-    zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime, max_altitude_ft: Optional[int] = None,
+    zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime, ceiling_ft: Optional[int],
 ) -> GeozoneProperties:
     owner = _schedule_owner(zone)
     owned = windows.get(owner, []) if owner is not None else []
     zone_windows = [ActivityWindow.from_activity_time(window, zone) for window in owned]
 
     # a window reserved only above the drone does not restrict it
-    if max_altitude_ft is not None:
-        zone_windows = [window for window in zone_windows if window.lower_limit_ft < max_altitude_ft]
+    zone_windows = [window for window in zone_windows if _reachable(window.lower_limit_ft, ceiling_ft)]
 
     valid = (zone.valid_from is None or zone.valid_from <= now) and (zone.valid_to is None or zone.valid_to > now)
     scheduled_active = owner is None or any(window.starts_at <= now < window.ends_at for window in zone_windows)
@@ -144,7 +168,8 @@ async def sync_catalog(db: AsyncDBSession) -> CatalogSyncReport:
         if row is None:
             inserts.append(GeoZone(country_id=country.id, external_id=zone.uid, **values))
         elif any(getattr(row, field) != values[field] for field in _COMPARED_FIELDS):
-            updates.append({"id": row.id, "updated_at": now, **values})
+            # the polygon or the classification may have changed, measure the terrain again
+            updates.append({"id": row.id, "updated_at": now, "terrain_max_m": None, **values})
         else:
             unchanged += 1
 
@@ -154,6 +179,7 @@ async def sync_catalog(db: AsyncDBSession) -> CatalogSyncReport:
     await db.flush()
 
     parents_linked = await _link_parents(country.id, incoming.values(), db)
+    terrain_measured = await Queries.Dem.measure_zone_terrain(db)
     await db.commit()
 
     if errors:
@@ -167,6 +193,7 @@ async def sync_catalog(db: AsyncDBSession) -> CatalogSyncReport:
         deleted=len(removed),
         skipped=len(errors),
         parents_linked=parents_linked,
+        terrain_measured=terrain_measured,
         errors=errors[:MAX_REPORTED_ERRORS],
     )
 
@@ -371,6 +398,44 @@ def _notam_windows(notams: list[Notam], now: datetime, until: datetime) -> list[
         if notam.zone_name
         for start_at, ends_at in notam_windows(notam, now, until)
     ]
+
+
+async def sync_terrain(db: AsyncDBSession) -> TerrainSyncReport:
+    cells = [TileCell(lat=row.lat, lon=row.lon) for row in await Queries.Dem.get_cells_covering_geo_zones(db)]
+    if not cells:
+        raise APIExceptions.conflict("No geo-zones stored, run the catalog sync first")
+
+    stored = await Queries.Dem.get_stored_tiles(db)
+    missing = [cell for cell in cells if cell.name not in stored]
+    loaded: list[str] = []
+    sea: list[str] = []
+
+    try:
+        async with CopernicusDemClient() as client:
+            for cell in missing:
+                geotiff = await client.tile(cell)
+                if geotiff is None:
+                    sea.append(cell.name)
+                    continue
+
+                # one tile per transaction, a failed sync keeps the tiles loaded before
+                await Queries.Dem.add_tile(cell.name, geotiff, db)
+                await db.commit()
+                loaded.append(cell.name)
+    except httpx.HTTPError as exc:
+        raise APIExceptions.bad_gateway(f"Copernicus DEM request failed after {len(loaded)} new tiles: {exc}")
+
+    terrain_measured = await Queries.Dem.measure_zone_terrain(db)
+    await db.commit()
+
+    return TerrainSyncReport(
+        cells=len(cells),
+        stored=len(cells) - len(missing),
+        loaded=len(loaded),
+        sea=sea,
+        terrain_measured=terrain_measured,
+        attribution=DEM_ATTRIBUTION,
+    )
 
 
 def _own_limit(limit: Optional[int], zone_limit: int) -> Optional[int]:

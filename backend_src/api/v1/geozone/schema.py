@@ -6,7 +6,15 @@ from backend_src.models.enum import GeoZoneActivityMode, GeoZoneActivitySource, 
 from backend_src.models.model import ActivityTime, GeoZone
 from backend_src.integrations.pansa import HeightRule
 from backend_src.integrations.pansa.rules import OPEN_CATEGORY_MAX_M
-from backend_src.api.shared_schemas import Coordinate, FeatureProperties, GeoJson
+from backend_src.api.shared_schemas import BoundingBox, Coordinate, FeatureProperties, GeoJson
+
+
+class MapArea(BoundingBox):
+    height_m: Optional[int] = Field(
+        None, gt=0, le=OPEN_CATEGORY_MAX_M,
+        description="Planned height above ground; zones and activity windows the drone cannot reach "
+                    "anywhere inside the zone are left out",
+    )
 
 
 class FlightPoint(Coordinate):
@@ -15,6 +23,9 @@ class FlightPoint(Coordinate):
 
 class GeozonePointCollection(GeoJson):
     ground_elevation_m: float = Field(description="Ground elevation at the point, metres above mean sea level")
+    ground_elevation_source: str = Field(
+        description="copernicus_dem from the terrain sync, or pansa_srtm where the own DEM has no data"
+    )
     max_altitude_ft: int = Field(description="Top of the flight, feet above mean sea level, "
                                              "zones and windows starting at or above it are left out")
 
@@ -61,6 +72,7 @@ class CatalogSyncReport(BaseModel):
     deleted: int = Field(description="Zones no longer published by PANSA")
     skipped: int = Field(description="Zones with invalid data, see errors")
     parents_linked: int = Field(description="Zones whose parent zone was set or changed")
+    terrain_measured: int = Field(description="New or changed zones whose highest ground was measured, needs the terrain sync")
     errors: list[str]
 
 
@@ -74,6 +86,15 @@ class ActivitySyncReport(BaseModel):
     zones_with_windows: int
     ignored: int = Field(description="Windows of zones that are not scheduled, e.g. CTR hours of service")
     unmatched: list[str] = Field(description="Designators missing from the zone catalog, e.g. reserved sub-sectors")
+
+
+class TerrainSyncReport(BaseModel):
+    cells: int = Field(description="1° x 1° DEM cells that intersect geo-zones")
+    stored: int = Field(description="Tiles that were already stored and were not downloaded again")
+    loaded: int = Field(description="Tiles downloaded and stored by this sync")
+    sea: list[str] = Field(description="Cells without a DEM tile, open sea")
+    terrain_measured: int = Field(description="Zones whose highest ground was measured, e.g. all of them on the first run")
+    attribution: str = Field(description="Credit line required by the Copernicus DEM licence")
 
 
 class GeozoneProperties(FeatureProperties):

@@ -11,6 +11,8 @@ services:
       DATABASE_UPASSWORD: ${DATABASE_UPASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       H3_RESOLUTION: ${H3_RESOLUTION}
+      # PostGIS disables all GDAL drivers by default; GeoTIFF is needed to load DEM tiles
+      POSTGIS_GDAL_ENABLED_DRIVERS: GTiff
     deploy:
       resources:
         limits:

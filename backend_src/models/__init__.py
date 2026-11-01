@@ -1,5 +1,5 @@
 __all__ = [ "Country", 
-    "GeoZone", "GeoZoneH3", "ActivityTime", "GeoZoneType", "GeoZoneActivityMode", "GeoZoneActivitySource",
+    "GeoZone", "GeoZoneH3", "ActivityTime", "Dem", "GeoZoneType", "GeoZoneActivityMode", "GeoZoneActivitySource",
     "Pilot", "Drone", "PilotToFlyingPrivileges", "UserActivity", "FlyingPrivileges",
     "AfdModerator", "VerificationRequest", "VerificationDocument", "Model", "VerificationRequestStatus", "VerificationDocumentType",
     "Mission", "Checkin", "OperationalCategory", "MissionFlightGoal", "MissionStatus", "DroneCategory"
@@ -7,7 +7,7 @@ __all__ = [ "Country",
 
 from .model import (
     Country, 
-    GeoZone, GeoZoneH3, ActivityTime,
+    GeoZone, GeoZoneH3, ActivityTime, Dem,
     Pilot, Drone, PilotToFlyingPrivileges,
     AfdModerator, VerificationRequest, VerificationDocument, Model,
     Mission, Checkin
