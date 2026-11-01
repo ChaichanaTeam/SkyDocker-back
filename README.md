@@ -16,7 +16,7 @@ Each service lives in its own folder with `compose.yml`, `Dockerfile` and init f
 docker-compose.yml            # includes services, declares networks
 docker-compose.override.yml   # local dev overrides, applied automatically
 docker/
-  db/       # Postgres image, init/ - schema scripts (run on empty volume only)
+  db/       # Postgres image, init/ - baseline schema scripts (run on empty volume only)
   redis/    # Redis image, ACL template rendered by entrypoint.sh at start
   app/      # backend image
   test/     # pytest image
@@ -52,7 +52,34 @@ With extensions:
 
 ### Database migrations
 
+For non-core developers:
+Use Tasks in VS Code to migrate your DB to head 
+
+For core developers:
+> [!IMPORTANT]
+> Schema scripts in `docker/db/init` are frozen as revision `0001_baseline`        \
+> Every further schema change is a revision in `alembic/versions`, don't edit init scripts
+
 `Alembic` is present as Python->SQL migration
+
+- New volume: init scripts stamp database with `0001_baseline` automatically
+- Existing volume (created before migrations): stamp it once
+
+```bash
+uv run alembic stamp 0001_baseline
+```
+
+Apply migrations (from host set `DB_HOST=localhost`, `.env` points to `db` container):
+
+```bash
+uv run alembic upgrade head
+```
+
+**!! To read !!** \
+How to write a revision: [alembic/README.md](./alembic/README.md)
+
+> [!CAUTION]
+> Using *sqlacodegen* migration now will make no changes and can lead to destructive behaviour!
 
 If want to easily migrate in another (SQL->Python) way, use `sqlacodegen`:
 
@@ -113,6 +140,7 @@ Can run with VS Code tasks:
 Local run:
 - Uvicorn: Run server app
 - Pytest: Run tests
+- Alembic: Upgrade to head
 
 Docker run:
 - Docker: Run app container with build
