@@ -27,6 +27,7 @@ from .constants import (
     MIN_ZONES_RATIO,
     PANSA_SNAPSHOT_DIR,
 )
+from .activity import reachable, schedule_owner
 from .elevation import ground_elevation
 from .schema import (
     ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
@@ -44,7 +45,7 @@ async def geozone_bbox(area: MapArea, db: AsyncDBSession):
 
     geozones = [
         gz for gz in await Queries.GeoZone.get_all_by_bbox(*area.unpack(), db)
-        if _reachable(gz.lower_limit_ft, ceiling_ft(gz))
+        if reachable(gz.lower_limit_ft, ceiling_ft(gz))
     ]
 
     if len(geozones) == 0:
@@ -79,7 +80,7 @@ async def _geozone_features(
     geozones: list[GeoZone], db: AsyncDBSession, ceiling_ft: Callable[[GeoZone], Optional[int]],
 ) -> list[GeoFeature]:
     now = datetime.now(timezone.utc)
-    owners = {_schedule_owner(gz) for gz in geozones} - {None}
+    owners = {schedule_owner(gz) for gz in geozones} - {None}
     windows: dict[int, list[ActivityTime]] = {}
     for window in await Queries.GeoZone.get_windows_ending_after(owners, now, db):
         windows.setdefault(window.geo_zone_id, []).append(window)
@@ -98,32 +99,15 @@ def _map_ceiling_ft(zone: GeoZone, height_m: Optional[int]) -> Optional[int]:
     return math.ceil((zone.terrain_max_m + height_m + MAP_HEIGHT_MARGIN_M) * FEET_PER_METRE)
 
 
-def _reachable(lower_limit_ft: int, ceiling_ft: Optional[int]) -> bool:
-    """Whether a flight up to the ceiling enters a zone or an activity window starting at the lower limit."""
-    return ceiling_ft is None or lower_limit_ft < ceiling_ft
-
-
-def _schedule_owner(zone: GeoZone) -> Optional[int]:
-    """Zone whose activity windows apply to this one, None for zones that are active all the time."""
-    if zone.activity_mode is GeoZoneActivityMode.SCHEDULED:
-        return zone.id
-
-    # an inherited zone whose parent is missing from the catalog stays active, as a permanent one
-    if zone.activity_mode is GeoZoneActivityMode.INHERITED:
-        return zone.parent_id
-
-    return None
-
-
 def _geozone_properties(
     zone: GeoZone, windows: dict[int, list[ActivityTime]], now: datetime, ceiling_ft: Optional[int],
 ) -> GeozoneProperties:
-    owner = _schedule_owner(zone)
+    owner = schedule_owner(zone)
     owned = windows.get(owner, []) if owner is not None else []
     zone_windows = [ActivityWindow.from_activity_time(window, zone) for window in owned]
 
     # a window reserved only above the drone does not restrict it
-    zone_windows = [window for window in zone_windows if _reachable(window.lower_limit_ft, ceiling_ft)]
+    zone_windows = [window for window in zone_windows if reachable(window.lower_limit_ft, ceiling_ft)]
 
     valid = (zone.valid_from is None or zone.valid_from <= now) and (zone.valid_to is None or zone.valid_to > now)
     scheduled_active = owner is None or any(window.starts_at <= now < window.ends_at for window in zone_windows)

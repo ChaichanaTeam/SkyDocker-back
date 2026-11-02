@@ -19,6 +19,7 @@ class Settings:
     REFRESH_TOKEN_EXPIRE_DAYS       = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "0"))
     RESET_TOKEN_EXPIRE_MINUTES      = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "60"))
     VERIFY_TOKEN_EXPIRE_MINUTES     = int(os.getenv("VERIFY_TOKEN_EXPIRE_MINUTES", "60"))
+    CHECKIN_TOKEN_EXPIRE_SECONDS    = int(os.getenv("CHECKIN_TOKEN_EXPIRE_SECONDS", "60"))
 
     ADMIN_API_KEY                   = os.getenv("ADMIN_API_KEY")
 
