@@ -22,9 +22,9 @@ class CheckinPreviewRequest(BaseModel):
     drone_id: int
     mission_id: Optional[int] = Field(None, description="Takes the flight properties from the mission. Excludes them")
     category: Optional[FlyingPrivileges] = Field(None, description="Flight property. Excludes mission_id")
-    height: Optional[int] = Field(None, ge=30, le=120, description="Metres above ground. Flight property. Excludes mission_id")
-    range: Optional[int] = Field(None, ge=100, le=500, description="Metres from the home point. Flight property. Excludes mission_id")
-    duration: Optional[int] = Field(None, ge=10, le=180, description="Minutes. Flight property. Excludes mission_id")
+    height: Optional[int] = Field(None, ge=5, le=120, description="Metres above ground. Flight property. Excludes mission_id")
+    range: Optional[int] = Field(None, ge=5, le=500, description="Metres from the home point. Flight property. Excludes mission_id")
+    duration: Optional[int] = Field(None, ge=5, le=180, description="Minutes. Flight property. Excludes mission_id")
 
     @property
     def is_mission_related(self) -> bool:

@@ -94,6 +94,7 @@ def test_errors_are_collected(
     pytest.param({"height": None}, id="incomplete-properties"),
     pytest.param({"category": "sts01"}, id="sts-without-mission"),
     pytest.param({"height": 200}, id="height-out-of-range"),
+    pytest.param({"height": 4}, id="height-below-minimum"),
     pytest.param({"country_tag": "XX"}, id="unknown-country-code"),
 ])
 def test_invalid_request(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator, overrides: dict):
