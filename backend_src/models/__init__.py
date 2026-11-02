@@ -1,4 +1,4 @@
-__all__ = [ "Country", 
+__all__ = [ "Country", "CountryBorder", "CountryBorderPart",
     "GeoZone", "GeoZoneH3", "ActivityTime", "Dem", "GeoZoneType", "GeoZoneActivityMode", "GeoZoneActivitySource",
     "Pilot", "Drone", "PilotToFlyingPrivileges", "UserActivity", "FlyingPrivileges",
     "AfdModerator", "VerificationRequest", "VerificationDocument", "Model", "VerificationRequestStatus", "VerificationDocumentType",
@@ -6,7 +6,7 @@ __all__ = [ "Country",
 ]
 
 from .model import (
-    Country, 
+    Country, CountryBorder, CountryBorderPart,
     GeoZone, GeoZoneH3, ActivityTime, Dem,
     Pilot, Drone, PilotToFlyingPrivileges,
     AfdModerator, VerificationRequest, VerificationDocument, Model,

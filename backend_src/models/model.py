@@ -6,7 +6,7 @@ from geoalchemy2 import Raster, RasterElement
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, MultiPolygon
 
 from backend_src.db.base import Base
 from backend_src.db.types import EnumWithUnknown, H3Index, GeometryType
@@ -21,10 +21,33 @@ from .enum import (
 class Country(Base):
     __tablename__ = "country"
 
-    id: Mapped[int] = mapped_column(SMALLINT, primary_key=True)
+    id: Mapped[int]                             = mapped_column(SMALLINT, primary_key=True)
 
-    name: Mapped[str] = mapped_column(VARCHAR(50), nullable=False)
-    country_tag: Mapped[str] = mapped_column(VARCHAR(2), nullable=False)
+    name: Mapped[str]                           = mapped_column(VARCHAR(50), nullable=False)
+    country_tag: Mapped[str]                    = mapped_column(VARCHAR(2), nullable=False)
+
+    border: Mapped[Optional['CountryBorder']]   = relationship(back_populates="country")
+
+
+class CountryBorder(Base):
+    __tablename__ = "country_border"
+
+    country_id: Mapped[int]                 = mapped_column(SMALLINT, ForeignKey("country.id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    border_polygon: Mapped[MultiPolygon]    = mapped_column(GeometryType(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
+
+    source: Mapped[str]                     = mapped_column(VARCHAR(255), nullable=False)
+    uploaded_at: Mapped[datetime]           = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    country: Mapped['Country']              = relationship(back_populates="border")
+
+
+class CountryBorderPart(Base):
+    __tablename__ = "country_border_part"
+
+    id: Mapped[int]                         = mapped_column(BIGINT, primary_key=True)
+
+    country_id: Mapped[int]                 = mapped_column(SMALLINT, ForeignKey("country.id", ondelete="CASCADE"), nullable=False)
+    geom: Mapped[MultiPolygon]              = mapped_column(GeometryType(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
 
 
 class Model(Base):
