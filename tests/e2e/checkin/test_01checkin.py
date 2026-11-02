@@ -30,9 +30,11 @@ def test_create(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCre
     assert tuple(feature["geometry"]["coordinates"]) == POINT, f"Check-in is not at the home point: {r.text}"
 
     properties = feature["properties"]
+    assert isinstance(properties.get("id"), int), f"Check-in should carry its id for the map: {r.text}"
     assert properties["status"] == "created", f"New check-in should be created: {r.text}"
     assert properties["contact"] == pilot["phone_number"], f"Check-in should show the pilot contact: {r.text}"
     assert properties["time"] == 30 * 60, f"Check-in should last the planned 30 minutes: {r.text}"
+    pilot["checkin_id"] = properties["id"]
 
 
 def test_create_again_conflicts(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator):
@@ -44,13 +46,14 @@ def test_visible_in_bbox(client: Client, pilot: PilotInfo, get_endpoint_link: En
     r = checkin_bbox(client, pilot, get_endpoint_link, POINT)
     assert r.status_code == 200, f"Started check-in is not on the map: {r.text}"
 
-    points = [tuple(feature["geometry"]["coordinates"]) for feature in r.json()["features"]]
-    assert POINT in points, f"Started check-in is not on the map: {r.text}"
+    ids = [feature["properties"]["id"] for feature in r.json()["features"]]
+    assert pilot["checkin_id"] in ids, f"Started check-in is not on the map: {r.text}"
 
 
 def test_end(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator):
     r = checkin_end(client, pilot, get_endpoint_link)
     assert r.status_code == 200, f"Check-in was not ended: {r.text}"
+    assert r.json()["properties"]["id"] == pilot["checkin_id"], f"Another check-in was ended: {r.text}"
     assert r.json()["properties"]["status"] == "ended_intime", f"Check-in should end in time: {r.text}"
 
 

@@ -60,7 +60,7 @@ def create_user(**overrides) -> UserInfo:
 
 
 def create_pilot(**overrides) -> PilotInfo:
-    pilot: PilotInfo = {**create_user(), "drone_id": None, "checkin_token": None}  # type: ignore
+    pilot: PilotInfo = {**create_user(), "drone_id": None, "checkin_token": None, "checkin_id": None}  # type: ignore
     pilot.update(overrides)  # type: ignore
 
     return pilot
