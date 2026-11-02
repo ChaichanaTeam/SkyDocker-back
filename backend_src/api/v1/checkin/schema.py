@@ -101,6 +101,7 @@ class CheckinCreateRequest(BaseModel):
 
 
 class CheckinProperties(FeatureProperties):
+    id: int = Field(description="Stable key for the client to track the check-in between bbox requests")
     country_tag: CountryAlpha2
     country: str
     status: MissionStatus
@@ -114,6 +115,7 @@ class CheckinProperties(FeatureProperties):
     @classmethod
     def from_checkin(cls, checkin: Checkin) -> CheckinProperties:
         return cls(
+            id=checkin.id,
             country_tag=checkin.country.country_tag, # type: ignore
             country=checkin.country.name,
             status=checkin.status,
