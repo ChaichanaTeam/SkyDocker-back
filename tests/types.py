@@ -15,6 +15,11 @@ class UserInfo(TypedDict):
     tokens: "TokenContainer"
 
 
+class PilotInfo(UserInfo):
+    drone_id: Optional[int]
+    checkin_token: Optional[str]
+
+
 class TokenContainer(TypedDict):
     type: Literal["Bearer"]
     verify_token: Optional[str]

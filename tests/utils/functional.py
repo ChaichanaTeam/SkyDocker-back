@@ -1,10 +1,11 @@
 import random
 import string
+from typing import Any, Optional
 
 from httpx import Response
 
 from tests import constants
-from tests.types import TokenContainer, UserInfo
+from tests.types import PilotInfo, TokenContainer, UserInfo
 
 def random_local():
     suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
@@ -56,3 +57,31 @@ def create_user(**overrides) -> UserInfo:
     user.update(overrides)  # type: ignore
 
     return user
+
+
+def create_pilot(**overrides) -> PilotInfo:
+    pilot: PilotInfo = {**create_user(), "drone_id": None, "checkin_token": None}  # type: ignore
+    pilot.update(overrides)  # type: ignore
+
+    return pilot
+
+
+def checkin_plan(point: tuple[float, float], drone_id: Optional[int], **overrides) -> dict[str, Any]:
+    """Preview body of a flight that passes in a free zone, an override set to None removes the field."""
+    lon, lat = point
+    plan: dict[str, Any] = {
+        "country_tag": "PL",
+        "home_point": {"lon": lon, "lat": lat},
+        "drone_id": drone_id,
+        "category": "a1",
+        "height": 50,
+        "range": 200,
+        "duration": 30,
+    }
+    plan.update(overrides)
+
+    return {key: value for key, value in plan.items() if value is not None}
+
+
+def error_types(r: Response) -> set[str]:
+    return {error["type"] for error in r.json()["detail"]}
