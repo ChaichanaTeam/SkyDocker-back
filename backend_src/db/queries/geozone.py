@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Collection, Optional
 
-from sqlalchemy import Row, select
+from sqlalchemy import Row, cast, exists, select
 from sqlalchemy.orm import joinedload
-from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
+from geoalchemy2 import Geography
+from geoalchemy2.functions import ST_DWithin, ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
 
 from backend_src.db import AsyncDBSession
 from backend_src.models import ActivityTime, Country, GeoZone
@@ -31,6 +32,34 @@ async def get_all_at_point(lon: float, lat: float, below_ft: int, db: AsyncDBSes
     )
 
     return list(result.scalars().all())
+
+
+async def exists_at_point(lon: float, lat: float, country_id: int, db: AsyncDBSession) -> bool:
+    """Whether any zone of the country covers the point, i.e. the point is in the country airspace."""
+    result = await db.execute(
+        select(exists().where(
+            GeoZone.country_id == country_id,
+            ST_Intersects(GeoZone.zone_polygon, ST_SetSRID(ST_MakePoint(lon, lat), 4326)),
+        ))
+    )
+
+    return bool(result.scalar())
+
+
+async def get_all_in_radius(lon: float, lat: float, radius_m: int, below_ft: int, db: AsyncDBSession) -> list[GeoZone]:
+    """Zones within ``radius_m`` of the point whose lower limit is below ``below_ft`` above mean sea level."""
+    geography = Geography(srid=4326)
+    point = cast(ST_SetSRID(ST_MakePoint(lon, lat), 4326), geography)
+    result = await db.execute(
+        select(GeoZone)
+        .where(
+            ST_DWithin(cast(GeoZone.zone_polygon, geography), point, radius_m),
+            GeoZone.lower_limit_ft < below_ft,
+        )
+        .options(joinedload(GeoZone.country))
+    )
+
+    return list(result.scalars().unique().all())
 
 
 async def get_windows_ending_after(zone_ids: Collection[int], moment: datetime, db: AsyncDBSession) -> list[ActivityTime]:
