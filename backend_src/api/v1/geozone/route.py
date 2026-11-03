@@ -46,3 +46,8 @@ async def geozone_border_sync(country: CountryQuery, db: AsyncDBDep):
 @router.get("/country", **docs.GEOZONE_GET_COUNTRY)
 async def geozone_get_country(coordinates: CoordinateQuery, db: AsyncDBDep, pilot: CurrentPilot):
     return await service.geozone_get_country(coordinates, db)
+
+
+@router.get("/country/supported", **docs.GEOZONE_GET_COUNTRY_SUPPORTED)
+async def geozone_get_country_supported(db: AsyncDBDep, pilot: CurrentPilot):
+    return await service.geozone_get_country_supported(db)

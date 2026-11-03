@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, CountryResolve, GeozonePointCollection, TerrainSyncReport
+from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, CountryResolve, GeozonePointCollection, SupportedCountriesList, TerrainSyncReport
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -141,5 +141,21 @@ GEOZONE_GET_COUNTRY = {
         401: { "description": "Missing or invalid access token" },
         404: { "description": "The point is outside every synced country border, e.g. open sea or a country not synced yet" },
         422: { "description": "Coordinates are missing or outside Europe" }
+    }
+}
+
+
+GEOZONE_GET_COUNTRY_SUPPORTED = {
+    "name": "Get supported countries",
+    "summary": "Get supported countries",
+    "description": "Lists the countries where a check-in can be made: their border is synced from GADM "
+                    "and their geo-zone catalog is stored.\n\n"
+                    "Countries are given as ISO 3166-1 alpha-2 codes, the same `country_tag` the check-in "
+                    "and the country at a point request use.",
+    "response_model": SupportedCountriesList,
+    "responses": {
+        200: { "description": "List of supported countries" },
+        401: { "description": "Missing or invalid access token" },
+        404: { "description": "No country has both a synced border and geo-zones yet" }
     }
 }

@@ -33,7 +33,7 @@ from .activity import reachable, schedule_owner
 from .elevation import ground_elevation
 from .schema import (
     ActivitySyncReport, ActivityWindow, BorderSyncReport, CatalogSyncReport, CountryResolve, FlightPoint, GeozonePointCollection, GeozoneProperties,
-    MapArea, TerrainSyncReport,
+    MapArea, SupportedCountriesList, TerrainSyncReport,
 )
 
 
@@ -466,3 +466,12 @@ async def geozone_get_country(coordinates: Coordinate, db: AsyncDBSession) -> Co
         raise APIExceptions.not_found("Point is outside every synced country border")
 
     return CountryResolve(country_tag=country.country_tag)
+
+
+async def geozone_get_country_supported(db: AsyncDBSession):
+    countries = await Queries.Country.get_supported_countries(db)
+
+    if len(countries) == 0:
+        raise APIExceptions.not_found("No supported countries")
+
+    return SupportedCountriesList(countries=[c.country_tag for c in countries])
