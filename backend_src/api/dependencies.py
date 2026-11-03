@@ -2,6 +2,7 @@ import secrets
 from typing import Annotated, AsyncGenerator, Optional
 from fastapi import Depends, Query
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from pydantic_extra_types.country import CountryAlpha2
 from redis_fastapi import AsyncRedisDep
 from loguru import logger
 
@@ -10,7 +11,7 @@ from backend_src.cache import AsyncRedisSession, get_session_gen
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
 from backend_src.core.config import Settings
 from backend_src.core.security import EmailTokenPayload, TokenType, decode_token
-from backend_src.models import Pilot
+from backend_src.models import Pilot, Country
 from backend_src.api.exceptions import APIExceptions
 
 
@@ -117,6 +118,17 @@ async def verify_admin_key(key: Annotated[Optional[str], Depends(admin_key_schem
         raise APIExceptions.unauthorized("Invalid admin key")
 
 
+async def get_country_from_tag(
+        db: AsyncDBDep,
+        country_tag: Annotated[CountryAlpha2, Query()]
+) -> Country:
+    country = await Queries.Country.get_by_tag(country_tag, db)
+    if country is None:
+        raise APIExceptions.not_found("Unsupported country")
+    return country
+
+
+CountryQuery = Annotated[Country, Depends(get_country_from_tag)]
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
 AdminKey = Depends(verify_admin_key)
 VerifySubject = Annotated[str, Depends(get_verify_subject)]

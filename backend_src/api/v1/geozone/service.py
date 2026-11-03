@@ -8,6 +8,7 @@ import httpx
 from loguru import logger
 from shapely.geometry import Polygon, mapping, shape
 from sqlalchemy import Row, delete, update
+from sqlalchemy.exc import DBAPIError
 
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
@@ -16,6 +17,7 @@ from backend_src.integrations.copernicus import ATTRIBUTION as DEM_ATTRIBUTION, 
 from backend_src.integrations.pansa import (
     Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
 )
+from backend_src.integrations.gadm import ATTRIBUTION as BORDER_ATTRIBUTION, GADMDataClient
 from backend_src.models import ActivityTime, Country, GeoZone, GeoZoneActivityMode, GeoZoneActivitySource
 from .constants import (
     ACTIVITY_HORIZON_DAYS,
@@ -30,7 +32,7 @@ from .constants import (
 from .activity import reachable, schedule_owner
 from .elevation import ground_elevation
 from .schema import (
-    ActivitySyncReport, ActivityWindow, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
+    ActivitySyncReport, ActivityWindow, BorderSyncReport, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
     MapArea, TerrainSyncReport,
 )
 
@@ -82,7 +84,7 @@ async def _geozone_features(
     now = datetime.now(timezone.utc)
     owners = {schedule_owner(gz) for gz in geozones} - {None}
     windows: dict[int, list[ActivityTime]] = {}
-    for window in await Queries.GeoZone.get_windows_ending_after(owners, now, db):
+    for window in await Queries.GeoZone.get_windows_ending_after(owners, now, db): # type: ignore
         windows.setdefault(window.geo_zone_id, []).append(window)
 
     return [
@@ -425,3 +427,33 @@ async def sync_terrain(db: AsyncDBSession) -> TerrainSyncReport:
 def _own_limit(limit: Optional[int], zone_limit: int) -> Optional[int]:
     # Store a reserved limit only when it differs from the zone itself
     return None if limit is None or limit == zone_limit else limit
+
+
+async def sync_border(country: Country, db: AsyncDBSession) -> BorderSyncReport:
+    # read before commit, the session expires the country afterwards
+    country_id, country_tag = country.id, country.country_tag
+
+    try:
+        async with GADMDataClient() as client:
+            source, border = await client.border(country_tag)
+    except ValueError as exc:
+        raise APIExceptions.not_found(str(exc))
+    except httpx.HTTPError as exc:
+        raise APIExceptions.bad_gateway(f"GADM request failed: {exc}")
+
+    # border and its parts change together, a failed sync keeps the previous ones
+    try:
+        await Queries.Country.upsert_border(country_id, border, source, db)
+        parts = await Queries.Country.rebuild_parts(country_id, db)
+        await db.commit()
+    except DBAPIError as exc:
+        await db.rollback()
+        raise APIExceptions.bad_gateway(f"GADM border was rejected by PostGIS: {exc.orig}")
+
+    return BorderSyncReport(
+        country_tag=country_tag,
+        source=source,
+        polygons=len(border.geoms),
+        parts=parts,
+        attribution=BORDER_ATTRIBUTION,
+    )

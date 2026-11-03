@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, CatalogSyncReport, GeozonePointCollection, TerrainSyncReport
+from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, GeozonePointCollection, TerrainSyncReport
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -104,5 +104,24 @@ GEOZONE_TERRAIN_SYNC = {
         401: { "description": "Missing or invalid admin key" },
         409: { "description": "No geo-zones stored yet" },
         502: { "description": "Copernicus DEM is unavailable, tiles loaded before the error are kept" }
+    }
+}
+
+
+GEOZONE_BORDER_SYNC = {
+    "name": "Sync country border from GADM",
+    "summary": "Sync country border from GADM",
+    "description": "Downloads the outline of the country from GADM 4.1 (level 0, about 10 m precision) "
+                    "and stores it, replacing the previous one.\n\n"
+                    "The border is also cut into small parts with `ST_Subdivide`, which the point lookup uses. "
+                    "The border and its parts are replaced in one transaction, so a failed sync keeps the previous ones "
+                    "and the sync can simply be run again.\n\n"
+                    "The country must exist in the database, see the demo country endpoint. Requires the `X-Admin-Key` header.",
+    "response_model": BorderSyncReport,
+    "responses": {
+        200: { "description": "Sync report" },
+        401: { "description": "Missing or invalid admin key" },
+        404: { "description": "The country is not in the database or GADM has no border for it" },
+        502: { "description": "GADM is unavailable or returned a border PostGIS rejected, nothing was changed" }
     }
 }

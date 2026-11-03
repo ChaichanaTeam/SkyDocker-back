@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Query
 
-from backend_src.api.dependencies import AdminKey, AsyncDBDep
+from backend_src.api.dependencies import AdminKey, AsyncDBDep, CountryQuery
 from .schema import FlightPoint, MapArea
 from . import service
 from . import docs
@@ -36,3 +36,8 @@ async def geozone_activity_sync(db: AsyncDBDep):
 @router.post("/terrain/sync", dependencies=[AdminKey], **docs.GEOZONE_TERRAIN_SYNC)
 async def geozone_terrain_sync(db: AsyncDBDep):
     return await service.sync_terrain(db)
+
+
+@router.post("/border/sync", dependencies=[AdminKey], **docs.GEOZONE_BORDER_SYNC)
+async def geozone_border_sync(country: CountryQuery, db: AsyncDBDep):
+    return await service.sync_border(country, db)
