@@ -9,6 +9,7 @@ from tests import constants
 from tests.utils import functional
 from tests.utils.behavioural.registration_behaviour import registration_flow
 from tests.utils.behavioural.checkin_behaviour import pilot_lifetime
+from tests.utils.behavioural.geozone_behaviour import country_at_point
 from tests.config import Config
 
 
@@ -59,6 +60,19 @@ def checkin_env(client: Client, get_endpoint_link: EndpointCreator) -> None:
     )
     if r.status_code != 200:
         pytest.skip("Check-in tests need the geo-zone catalog, run POST /geo-zone/sync")
+
+
+@pytest.fixture(scope="session")
+def borders_env(client: Client, get_endpoint_link: EndpointCreator) -> UserInfo:
+    """Registered user for the country requests, skips when the Polish border is not synced."""
+    user = functional.create_user()
+    assert registration_flow(client, user, get_endpoint_link), "Registration failed"
+
+    r = country_at_point(client, user, get_endpoint_link, constants.COUNTRY_PL_POINT)
+    if r.status_code == 404:
+        pytest.skip("Country tests need the Polish border, run POST /geo-zone/border/sync?country_tag=PL")
+
+    return user
 
 
 @pytest.fixture(scope="module")
