@@ -191,7 +191,7 @@ async def _fetch_zones() -> list[Zone]:
 
 
 async def _resolve_country(db: AsyncDBSession) -> Country:
-    country = await Queries.GeoZone.get_country_by_tag(DEFAULT_COUNTRY_TAG, db)
+    country = await Queries.Country.get_by_tag(DEFAULT_COUNTRY_TAG, db)
 
     if country is None:
         country = Country(name=DEFAULT_COUNTRY_NAME, country_tag=DEFAULT_COUNTRY_TAG)

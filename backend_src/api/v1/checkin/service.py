@@ -67,7 +67,7 @@ async def checkin_create(data: CheckinCreateRequest, pilot: Pilot, db: AsyncDBSe
 
     # the plan was verified by the preview and is signed, only the country row is needed
     plan = payload.checkin
-    country = await Queries.GeoZone.get_country_by_tag(plan.country_tag, db)
+    country = await Queries.Country.get_by_tag(plan.country_tag, db)
     if country is None:
         raise APIExceptions.not_found("Cannot verify fly zone. Unsupported country")
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Collection, Optional
+from typing import Collection
 
 from sqlalchemy import Row, cast, exists, select
 from sqlalchemy.orm import joinedload
@@ -7,7 +7,7 @@ from geoalchemy2 import Geography
 from geoalchemy2.functions import ST_DWithin, ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
 
 from backend_src.db import AsyncDBSession
-from backend_src.models import ActivityTime, Country, GeoZone
+from backend_src.models import ActivityTime, GeoZone
 
 
 async def get_all_by_bbox(x1: float, y1: float, x2: float, y2: float, db: AsyncDBSession) -> list[GeoZone]:
@@ -73,12 +73,6 @@ async def get_windows_ending_after(zone_ids: Collection[int], moment: datetime, 
     )
 
     return list(result.scalars().all())
-
-
-async def get_country_by_tag(tag: str, db: AsyncDBSession) -> Optional[Country]:
-    result = await db.execute(select(Country).where(Country.country_tag == tag))
-
-    return result.scalar_one_or_none()
 
 
 async def get_sync_states(country_id: int, db: AsyncDBSession) -> list[Row]:

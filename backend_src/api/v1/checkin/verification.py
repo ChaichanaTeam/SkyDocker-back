@@ -32,7 +32,7 @@ def _plan_field(data: CheckinPreviewRequest, field: str) -> str:
 
 
 async def check_jurisdiction(data: CheckinPreviewRequest, db: AsyncDBSession) -> Country:
-    country = await Queries.GeoZone.get_country_by_tag(data.country_tag, db)
+    country = await Queries.Country.get_by_tag(data.country_tag, db)
     if country is None:
         raise APIExceptions.not_found("Cannot verify fly zone. Unsupported country")
 
