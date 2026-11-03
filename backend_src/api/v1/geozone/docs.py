@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, GeozonePointCollection, TerrainSyncReport
+from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, CountryResolve, GeozonePointCollection, TerrainSyncReport
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -123,5 +123,23 @@ GEOZONE_BORDER_SYNC = {
         401: { "description": "Missing or invalid admin key" },
         404: { "description": "The country is not in the database or GADM has no border for it" },
         502: { "description": "GADM is unavailable or returned a border PostGIS rejected, nothing was changed" }
+    }
+}
+
+
+GEOZONE_GET_COUNTRY = {
+    "name": "Get country at a point",
+    "summary": "Get country at a point",
+    "description": "Finds the country whose border covers the point, e.g. to choose `country_tag` for a check-in.\n\n"
+                    "Only borders loaded by the border sync are searched (GADM 4.1, about 10 m precision), "
+                    "so a point within a few metres of a border may belong to either country. "
+                    "Where the borders of neighbours overlap, the same country is always returned.\n\n"
+                    "Coordinates must lie in Europe (longitude -9.5 to 31.58, latitude 36 to 70.08).",
+    "response_model": CountryResolve,
+    "responses": {
+        200: { "description": "Country at the point" },
+        401: { "description": "Missing or invalid access token" },
+        404: { "description": "The point is outside every synced country border, e.g. open sea or a country not synced yet" },
+        422: { "description": "Coordinates are missing or outside Europe" }
     }
 }

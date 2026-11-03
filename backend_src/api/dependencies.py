@@ -6,7 +6,7 @@ from pydantic_extra_types.country import CountryAlpha2
 from redis_fastapi import AsyncRedisDep
 from loguru import logger
 
-from backend_src.api.shared_schemas import BoundingBox, normalize_email
+from backend_src.api.shared_schemas import BoundingBox, Coordinate, normalize_email
 from backend_src.cache import AsyncRedisSession, get_session_gen
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
 from backend_src.core.config import Settings
@@ -128,6 +128,7 @@ async def get_country_from_tag(
     return country
 
 
+CoordinateQuery = Annotated[Coordinate, Query()]
 CountryQuery = Annotated[Country, Depends(get_country_from_tag)]
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
 AdminKey = Depends(verify_admin_key)

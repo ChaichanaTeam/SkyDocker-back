@@ -105,6 +105,10 @@ class BorderSyncReport(BaseModel):
     attribution: str = Field(description="Credit line required by the GADM licence")
 
 
+class CountryResolve(BaseModel):
+    country_tag: str
+
+
 class GeozoneProperties(FeatureProperties):
     id: int
     parent_id: Optional[int] = Field(description="Zone this one belongs to, e.g. ATZ EPKP for ATZEPKP1KM")

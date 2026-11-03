@@ -1,13 +1,13 @@
 from typing import Annotated
 from fastapi import APIRouter, Query
 
-from backend_src.api.dependencies import AdminKey, AsyncDBDep, CountryQuery
+from backend_src.api.dependencies import AdminKey, AsyncDBDep, CountryQuery, CoordinateQuery, CurrentPilot
 from .schema import FlightPoint, MapArea
 from . import service
 from . import docs
 
 
-router = APIRouter(prefix="/geo-zone")
+router = APIRouter(prefix="/geo-zone", tags=["geo-zone"])
 
 MapAreaQuery = Annotated[MapArea, Query()]
 FlightPointQuery = Annotated[FlightPoint, Query()]
@@ -41,3 +41,8 @@ async def geozone_terrain_sync(db: AsyncDBDep):
 @router.post("/border/sync", dependencies=[AdminKey], **docs.GEOZONE_BORDER_SYNC)
 async def geozone_border_sync(country: CountryQuery, db: AsyncDBDep):
     return await service.sync_border(country, db)
+
+
+@router.get("/country", **docs.GEOZONE_GET_COUNTRY)
+async def geozone_get_country(coordinates: CoordinateQuery, db: AsyncDBDep, pilot: CurrentPilot):
+    return await service.geozone_get_country(coordinates, db)

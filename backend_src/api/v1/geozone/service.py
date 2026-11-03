@@ -12,7 +12,7 @@ from sqlalchemy.exc import DBAPIError
 
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
-from backend_src.api.shared_schemas import GeoJson, GeoFeature
+from backend_src.api.shared_schemas import Coordinate, GeoJson, GeoFeature
 from backend_src.integrations.copernicus import ATTRIBUTION as DEM_ATTRIBUTION, CopernicusDemClient, TileCell
 from backend_src.integrations.pansa import (
     Activation, DroneMapClient, Notam, Zone, classify, current_notams, height_rule, notam_windows,
@@ -32,7 +32,7 @@ from .constants import (
 from .activity import reachable, schedule_owner
 from .elevation import ground_elevation
 from .schema import (
-    ActivitySyncReport, ActivityWindow, BorderSyncReport, CatalogSyncReport, FlightPoint, GeozonePointCollection, GeozoneProperties,
+    ActivitySyncReport, ActivityWindow, BorderSyncReport, CatalogSyncReport, CountryResolve, FlightPoint, GeozonePointCollection, GeozoneProperties,
     MapArea, TerrainSyncReport,
 )
 
@@ -457,3 +457,12 @@ async def sync_border(country: Country, db: AsyncDBSession) -> BorderSyncReport:
         parts=parts,
         attribution=BORDER_ATTRIBUTION,
     )
+
+
+async def geozone_get_country(coordinates: Coordinate, db: AsyncDBSession) -> CountryResolve:
+    country = await Queries.Country.get_by_coordinates(coordinates.lon, coordinates.lat, db)
+
+    if country is None:
+        raise APIExceptions.not_found("Point is outside every synced country border")
+
+    return CountryResolve(country_tag=country.country_tag)
