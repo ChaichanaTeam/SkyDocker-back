@@ -1,6 +1,7 @@
 from typing import Optional
 
 from shapely.geometry import MultiPolygon
+from geoalchemy2.functions import ST_Intersects, ST_MakePoint, ST_SetSRID
 from sqlalchemy import delete, func, insert, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -10,6 +11,22 @@ from backend_src.models import Country, CountryBorder, CountryBorderPart
 
 # Vertices per border part: fewer make more rows but a cheaper exact check of each
 SUBDIVIDE_MAX_VERTICES = 256
+
+
+async def get_by_coordinates(lon: float, lat: float, db: AsyncDBSession) -> Optional[Country]:
+    """Country whose synced border covers the point, None outside every synced border."""
+    # neighbour borders may overlap by a few metres, the lowest id keeps the answer stable there
+    result = await db.execute(
+        select(Country)
+        .join(CountryBorderPart, CountryBorderPart.country_id == Country.id)
+        .where(
+            ST_Intersects(CountryBorderPart.geom, ST_SetSRID(ST_MakePoint(lon, lat), 4326))
+        )
+        .order_by(Country.id)
+        .limit(1)
+    )
+
+    return result.scalars().first()
 
 
 async def get_by_tag(tag: str, db: AsyncDBSession) -> Optional[Country]:
