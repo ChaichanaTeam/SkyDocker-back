@@ -2,15 +2,27 @@ from typing import Optional
 
 from shapely.geometry import MultiPolygon
 from geoalchemy2.functions import ST_Intersects, ST_MakePoint, ST_SetSRID
-from sqlalchemy import delete, func, insert, select
+from sqlalchemy import delete, exists, func, insert, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from backend_src.db import AsyncDBSession
-from backend_src.models import Country, CountryBorder, CountryBorderPart
+from backend_src.models import Country, CountryBorder, CountryBorderPart, GeoZone
 
 
 # Vertices per border part: fewer make more rows but a cheaper exact check of each
 SUBDIVIDE_MAX_VERTICES = 256
+
+
+async def get_supported_countries(db: AsyncDBSession) -> list[Country]:
+    """Countries with a synced border and geo-zones, i.e. where a check-in can be verified."""
+    result = await db.execute(
+        select(Country)
+        .join(CountryBorder, CountryBorder.country_id == Country.id)
+        .where(exists().where(GeoZone.country_id == Country.id))
+        .order_by(Country.id)
+    )
+
+    return list(result.scalars().all())
 
 
 async def get_by_coordinates(lon: float, lat: float, db: AsyncDBSession) -> Optional[Country]:
