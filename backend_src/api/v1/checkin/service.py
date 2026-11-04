@@ -7,7 +7,7 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.core import security
 from backend_src.core.config import Settings
 from backend_src.db import Queries, AsyncDBSession
-from backend_src.models import Checkin, MissionStatus, Pilot
+from backend_src.models import Checkin, MissionStatus, Pilot, Country
 from . import verification
 from .schema import (
     CheckinCreateRequest, CheckinPreviewRequest, CheckinProperties,
@@ -24,8 +24,8 @@ async def _ensure_no_active(pilot_id: int, db: AsyncDBSession) -> None:
         raise APIExceptions.conflict("Check-in already started. End it to start a new one")
 
 
-async def checkin_bbox(bbox: BoundingBox, db: AsyncDBSession):
-    checkins = await Queries.Checkin.get_all_by_bbox(*bbox.unpack(), db)
+async def checkin_bbox(bbox: BoundingBox, country: Country, db: AsyncDBSession):
+    checkins = await Queries.Checkin.get_all_by_bbox(*bbox.unpack(), country.id, db)
 
     if len(checkins) == 0:
         raise APIExceptions.not_found("No checkins in this region")
@@ -38,7 +38,7 @@ async def checkin_bbox(bbox: BoundingBox, db: AsyncDBSession):
 async def checkin_preview(data: CheckinPreviewRequest, pilot: Pilot, db: AsyncDBSession) -> CheckinTokenResponse:
     pilot_id = pilot.id
     await _ensure_no_active(pilot_id, db)
-    await verification.check_jurisdiction(data, db)
+    country_id = (await verification.check_jurisdiction(data, db)).id
 
     plan, errors = await verification.resolve_plan(data, pilot_id, db)
     if plan is None:
@@ -48,7 +48,7 @@ async def checkin_preview(data: CheckinPreviewRequest, pilot: Pilot, db: AsyncDB
     errors += drone_errors
     errors += verification.check_privilege(data, plan, await Queries.Pilot.get_privileges(pilot_id, db))
     if drone is not None:
-        errors += await verification.check_airspace(data, plan, drone, datetime.now(timezone.utc), db)
+        errors += await verification.check_airspace(data, plan, drone, country_id, datetime.now(timezone.utc), db)
 
     if errors:
         raise APIExceptions.unprocessable(errors)
@@ -67,7 +67,7 @@ async def checkin_create(data: CheckinCreateRequest, pilot: Pilot, db: AsyncDBSe
 
     # the plan was verified by the preview and is signed, only the country row is needed
     plan = payload.checkin
-    country = await Queries.GeoZone.get_country_by_tag(plan.country_tag, db)
+    country = await Queries.Country.get_by_tag(plan.country_tag, db)
     if country is None:
         raise APIExceptions.not_found("Cannot verify fly zone. Unsupported country")
 

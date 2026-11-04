@@ -17,11 +17,11 @@ def _only_error(r) -> dict:
     return errors[0]
 
 
-def test_home_point_outside_country_airspace(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator):
+def test_home_point_outside_country_border(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator):
     plan = functional.checkin_plan(constants.CHECKIN_OUTSIDE_POINT, pilot["drone_id"])
 
     r = checkin_preview(client, pilot, get_endpoint_link, plan)
-    assert r.status_code == 404, f"A flight outside the country airspace cannot be verified: {r.text}"
+    assert r.status_code == 404, f"A flight from outside the country border cannot be verified: {r.text}"
 
 
 def test_unsupported_country(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator):

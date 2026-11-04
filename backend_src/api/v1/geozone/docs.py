@@ -3,7 +3,7 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, CatalogSyncReport, GeozonePointCollection, TerrainSyncReport
+from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, CountryResolve, GeozonePointCollection, SupportedCountriesList, TerrainSyncReport
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
@@ -104,5 +104,58 @@ GEOZONE_TERRAIN_SYNC = {
         401: { "description": "Missing or invalid admin key" },
         409: { "description": "No geo-zones stored yet" },
         502: { "description": "Copernicus DEM is unavailable, tiles loaded before the error are kept" }
+    }
+}
+
+
+GEOZONE_BORDER_SYNC = {
+    "name": "Sync country border from GADM",
+    "summary": "Sync country border from GADM",
+    "description": "Downloads the outline of the country from GADM 4.1 (level 0, about 10 m precision) "
+                    "and stores it, replacing the previous one.\n\n"
+                    "The border is also cut into small parts with `ST_Subdivide`, which the point lookup uses. "
+                    "The border and its parts are replaced in one transaction, so a failed sync keeps the previous ones "
+                    "and the sync can simply be run again.\n\n"
+                    "The country must exist in the database, see the demo country endpoint. Requires the `X-Admin-Key` header.",
+    "response_model": BorderSyncReport,
+    "responses": {
+        200: { "description": "Sync report" },
+        401: { "description": "Missing or invalid admin key" },
+        404: { "description": "The country is not in the database or GADM has no border for it" },
+        502: { "description": "GADM is unavailable or returned a border PostGIS rejected, nothing was changed" }
+    }
+}
+
+
+GEOZONE_GET_COUNTRY = {
+    "name": "Get country at a point",
+    "summary": "Get country at a point",
+    "description": "Finds the country whose border covers the point, e.g. to choose `country_tag` for a check-in.\n\n"
+                    "Only borders loaded by the border sync are searched (GADM 4.1, about 10 m precision), "
+                    "so a point within a few metres of a border may belong to either country. "
+                    "Where the borders of neighbours overlap, the same country is always returned.\n\n"
+                    "Coordinates must lie in Europe (longitude -9.5 to 31.58, latitude 36 to 70.08).",
+    "response_model": CountryResolve,
+    "responses": {
+        200: { "description": "Country at the point" },
+        401: { "description": "Missing or invalid access token" },
+        404: { "description": "The point is outside every synced country border, e.g. open sea or a country not synced yet" },
+        422: { "description": "Coordinates are missing or outside Europe" }
+    }
+}
+
+
+GEOZONE_GET_COUNTRY_SUPPORTED = {
+    "name": "Get supported countries",
+    "summary": "Get supported countries",
+    "description": "Lists the countries where a check-in can be made: their border is synced from GADM "
+                    "and their geo-zone catalog is stored.\n\n"
+                    "Countries are given as ISO 3166-1 alpha-2 codes, the same `country_tag` the check-in "
+                    "and the country at a point request use.",
+    "response_model": SupportedCountriesList,
+    "responses": {
+        200: { "description": "List of supported countries" },
+        401: { "description": "Missing or invalid access token" },
+        404: { "description": "No country has both a synced border and geo-zones yet" }
     }
 }

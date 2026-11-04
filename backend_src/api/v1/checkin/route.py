@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery, CurrentPilot
+from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery, CountryQuery, CurrentPilot
 from .schema import CheckinCreateRequest, CheckinPreviewRequest
 from . import docs
 from . import service
@@ -10,8 +10,8 @@ router = APIRouter(prefix="/check-in", **docs.ROUTER)
 
 
 @router.get("/", **docs.CHECKIN_BBOX)
-async def checkin_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep, pilot: CurrentPilot):
-    return await service.checkin_bbox(bbox, db)
+async def checkin_bbox(bbox: BoundingBoxQuery, country: CountryQuery,  db: AsyncDBDep, pilot: CurrentPilot):
+    return await service.checkin_bbox(bbox, country, db)
 
 
 @router.post("/preview", **docs.CHECKIN_PREVIEW)

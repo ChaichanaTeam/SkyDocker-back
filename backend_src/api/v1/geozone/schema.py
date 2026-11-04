@@ -97,6 +97,22 @@ class TerrainSyncReport(BaseModel):
     attribution: str = Field(description="Credit line required by the Copernicus DEM licence")
 
 
+class BorderSyncReport(BaseModel):
+    country_tag: str
+    source: str = Field(description="GADM file the border was loaded from")
+    polygons: int = Field(description="Separate land areas of the country, e.g. islands and exclaves")
+    parts: int = Field(description="Pieces the border was cut into for the point lookup")
+    attribution: str = Field(description="Credit line required by the GADM licence")
+
+
+class CountryResolve(BaseModel):
+    country_tag: str
+
+
+class SupportedCountriesList(BaseModel):
+    countries: list[str]
+
+
 class GeozoneProperties(FeatureProperties):
     id: int
     parent_id: Optional[int] = Field(description="Zone this one belongs to, e.g. ATZ EPKP for ATZEPKP1KM")

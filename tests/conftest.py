@@ -9,6 +9,7 @@ from tests import constants
 from tests.utils import functional
 from tests.utils.behavioural.registration_behaviour import registration_flow
 from tests.utils.behavioural.checkin_behaviour import pilot_lifetime
+from tests.utils.behavioural.geozone_behaviour import country_at_point
 from tests.config import Config
 
 
@@ -47,15 +48,32 @@ def registered_user(client: Client, test_user: UserInfo, get_endpoint_link: Endp
 
 
 @pytest.fixture(scope="session")
-def checkin_env(client: Client, get_endpoint_link: EndpointCreator) -> None:
+def borders_env(client: Client, get_endpoint_link: EndpointCreator) -> UserInfo:
+    """Registered user for the country requests, skips when the Polish border is not synced."""
+    user = functional.create_user()
+    assert registration_flow(client, user, get_endpoint_link), "Registration failed"
+
+    r = country_at_point(client, user, get_endpoint_link, constants.COUNTRY_PL_POINT)
+    if r.status_code == 404:
+        pytest.skip("Country tests need the Polish border, run POST /geo-zone/border/sync?country_tag=PL")
+
+    return user
+
+
+@pytest.fixture(scope="session")
+def checkin_env(client: Client, get_endpoint_link: EndpointCreator, borders_env: UserInfo) -> None:
     # Privileges and drones are given only through the demo API
     if not Config.is_server_in_debug:
         pytest.skip("Check-in tests need the demo API, run the server with DEBUG")
 
+    # the jurisdiction check needs the Polish border (borders_env) and its geo-zone catalog
     lon, lat = constants.CHECKIN_CONSENT_POINT
     r = client.get(
         get_endpoint_link("live", "geo-zone/"),
-        params={"min_lon": lon - 0.01, "min_lat": lat - 0.01, "max_lon": lon + 0.01, "max_lat": lat + 0.01},
+        params={
+            "country_tag": "PL",
+            "min_lon": lon - 0.01, "min_lat": lat - 0.01, "max_lon": lon + 0.01, "max_lat": lat + 0.01,
+        },
     )
     if r.status_code != 200:
         pytest.skip("Check-in tests need the geo-zone catalog, run POST /geo-zone/sync")

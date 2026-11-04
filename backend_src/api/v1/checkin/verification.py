@@ -32,14 +32,14 @@ def _plan_field(data: CheckinPreviewRequest, field: str) -> str:
 
 
 async def check_jurisdiction(data: CheckinPreviewRequest, db: AsyncDBSession) -> Country:
-    country = await Queries.GeoZone.get_country_by_tag(data.country_tag, db)
-    if country is None:
+    country = await Queries.Country.get_by_tag(data.country_tag, db)
+    if country is None or not await Queries.Country.is_supported(country.id, db):
         raise APIExceptions.not_found("Cannot verify fly zone. Unsupported country")
 
-    # a flight from outside the country airspace cannot follow its rules
+    # a flight from outside the country cannot follow its rules
     point = data.home_point
-    if not await Queries.GeoZone.exists_at_point(point.lon, point.lat, country.id, db):
-        raise APIExceptions.not_found(f"Cannot verify fly zone. Home point is outside {country.name} airspace")
+    if not await Queries.Country.border_covers_point(country.id, point.lon, point.lat, db):
+        raise APIExceptions.not_found(f"Cannot verify fly zone. Home point is outside {country.name}")
 
     return country
 
@@ -101,7 +101,7 @@ def check_privilege(data: CheckinPreviewRequest, plan: CheckinPlan, privileges: 
 
 
 async def check_airspace(
-    data: CheckinPreviewRequest, plan: CheckinPlan, drone: Drone, starts_at: datetime, db: AsyncDBSession,
+    data: CheckinPreviewRequest, plan: CheckinPlan, drone: Drone, country_id: int, starts_at: datetime, db: AsyncDBSession,
 ) -> list[CheckinError]:
     """Height of the flight against the rules of every zone it reaches while the flight lasts."""
     point = plan.home_point
@@ -115,11 +115,11 @@ async def check_airspace(
 
     ends_at = starts_at + timedelta(minutes=plan.duration)
     ceiling_ft = math.ceil((ground.metres + plan.height) * FEET_PER_METRE)
-    zones = await Queries.GeoZone.get_all_in_radius(point.lon, point.lat, plan.range, ceiling_ft, db)
+    zones = await Queries.GeoZone.get_all_in_radius(point.lon, point.lat, plan.range, ceiling_ft, country_id, db)
 
     owners = {schedule_owner(zone) for zone in zones} - {None}
     windows: dict[int, list[ActivityTime]] = {}
-    for window in await Queries.GeoZone.get_windows_ending_after(owners, starts_at, db):
+    for window in await Queries.GeoZone.get_windows_ending_after(owners, starts_at, db): # type: ignore
         windows.setdefault(window.geo_zone_id, []).append(window)
 
     mass_g = drone.mtom_override if drone.mtom_override is not None else drone.model.mtom

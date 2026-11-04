@@ -291,8 +291,8 @@ async def end_checkin(db: AsyncDBSession, checkin_id: int) -> dict[str, Any]:
     }
 
 
-async def checkins_in_bbox(bbox: BoundingBox, db: AsyncDBSession) -> GeoJson:
-    checkins = await Queries.Checkin.get_all_by_bbox(*bbox.unpack(), db)
+async def checkins_in_bbox(bbox: BoundingBox, country_id: int, db: AsyncDBSession) -> GeoJson:
+    checkins = await Queries.Checkin.get_all_by_bbox(*bbox.unpack(), country_id, db)
 
     features = [
         GeoFeature(

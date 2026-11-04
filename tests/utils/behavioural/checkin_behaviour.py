@@ -78,13 +78,17 @@ def checkin_end(client: Client, user: UserInfo, get_endpoint_link: EndpointCreat
 
 
 def checkin_bbox(
-    client: Client, user: UserInfo, get_endpoint_link: EndpointCreator, point: tuple[float, float], margin: float = 0.01
+    client: Client, user: UserInfo, get_endpoint_link: EndpointCreator, point: tuple[float, float],
+    margin: float = 0.01, country_tag: str = "PL"
 ) -> Response:
     lon, lat = point
     request = {
         "url": get_endpoint_link("live", "check-in/"),
         "headers": _auth(user),
-        "params": {"min_lon": lon - margin, "min_lat": lat - margin, "max_lon": lon + margin, "max_lat": lat + margin}
+        "params": {
+            "country_tag": country_tag,
+            "min_lon": lon - margin, "min_lat": lat - margin, "max_lon": lon + margin, "max_lat": lat + margin,
+        }
     }
     r = client.get(**request)
 
