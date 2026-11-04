@@ -2,7 +2,7 @@ from typing import Optional
 
 from shapely.geometry import MultiPolygon
 from geoalchemy2.functions import ST_Intersects, ST_MakePoint, ST_SetSRID
-from sqlalchemy import delete, exists, func, insert, select
+from sqlalchemy import ColumnElement, and_, delete, exists, func, insert, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from backend_src.db import AsyncDBSession
@@ -13,16 +13,41 @@ from backend_src.models import Country, CountryBorder, CountryBorderPart, GeoZon
 SUBDIVIDE_MAX_VERTICES = 256
 
 
+def _is_supported() -> ColumnElement[bool]:
+    # without a border the home point cannot be placed, without geo-zones the airspace cannot be checked
+    return and_(
+        exists().where(CountryBorder.country_id == Country.id),
+        exists().where(GeoZone.country_id == Country.id),
+    )
+
+
 async def get_supported_countries(db: AsyncDBSession) -> list[Country]:
     """Countries with a synced border and geo-zones, i.e. where a check-in can be verified."""
     result = await db.execute(
         select(Country)
-        .join(CountryBorder, CountryBorder.country_id == Country.id)
-        .where(exists().where(GeoZone.country_id == Country.id))
+        .where(_is_supported())
         .order_by(Country.id)
     )
 
     return list(result.scalars().all())
+
+
+async def is_supported(country_id: int, db: AsyncDBSession) -> bool:
+    result = await db.execute(select(_is_supported()).where(Country.id == country_id))
+
+    return bool(result.scalar())
+
+
+async def border_covers_point(country_id: int, lon: float, lat: float, db: AsyncDBSession) -> bool:
+    """Whether the synced border of the country covers the point, a point on the border line counts."""
+    result = await db.execute(
+        select(exists().where(
+            CountryBorderPart.country_id == country_id,
+            ST_Intersects(CountryBorderPart.geom, ST_SetSRID(ST_MakePoint(lon, lat), 4326)),
+        ))
+    )
+
+    return bool(result.scalar())
 
 
 async def get_by_coordinates(lon: float, lat: float, db: AsyncDBSession) -> Optional[Country]:
