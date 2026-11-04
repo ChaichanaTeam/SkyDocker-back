@@ -48,21 +48,6 @@ def registered_user(client: Client, test_user: UserInfo, get_endpoint_link: Endp
 
 
 @pytest.fixture(scope="session")
-def checkin_env(client: Client, get_endpoint_link: EndpointCreator) -> None:
-    # Privileges and drones are given only through the demo API
-    if not Config.is_server_in_debug:
-        pytest.skip("Check-in tests need the demo API, run the server with DEBUG")
-
-    lon, lat = constants.CHECKIN_CONSENT_POINT
-    r = client.get(
-        get_endpoint_link("live", "geo-zone/"),
-        params={"min_lon": lon - 0.01, "min_lat": lat - 0.01, "max_lon": lon + 0.01, "max_lat": lat + 0.01},
-    )
-    if r.status_code != 200:
-        pytest.skip("Check-in tests need the geo-zone catalog, run POST /geo-zone/sync")
-
-
-@pytest.fixture(scope="session")
 def borders_env(client: Client, get_endpoint_link: EndpointCreator) -> UserInfo:
     """Registered user for the country requests, skips when the Polish border is not synced."""
     user = functional.create_user()
@@ -73,6 +58,25 @@ def borders_env(client: Client, get_endpoint_link: EndpointCreator) -> UserInfo:
         pytest.skip("Country tests need the Polish border, run POST /geo-zone/border/sync?country_tag=PL")
 
     return user
+
+
+@pytest.fixture(scope="session")
+def checkin_env(client: Client, get_endpoint_link: EndpointCreator, borders_env: UserInfo) -> None:
+    # Privileges and drones are given only through the demo API
+    if not Config.is_server_in_debug:
+        pytest.skip("Check-in tests need the demo API, run the server with DEBUG")
+
+    # the jurisdiction check needs the Polish border (borders_env) and its geo-zone catalog
+    lon, lat = constants.CHECKIN_CONSENT_POINT
+    r = client.get(
+        get_endpoint_link("live", "geo-zone/"),
+        params={
+            "country_tag": "PL",
+            "min_lon": lon - 0.01, "min_lat": lat - 0.01, "max_lon": lon + 0.01, "max_lat": lat + 0.01,
+        },
+    )
+    if r.status_code != 200:
+        pytest.skip("Check-in tests need the geo-zone catalog, run POST /geo-zone/sync")
 
 
 @pytest.fixture(scope="module")
