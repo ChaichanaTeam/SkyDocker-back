@@ -41,12 +41,12 @@ from .schema import (
 _COMPARED_FIELDS = ("type", "source_type", "activity_mode", "source_modified_at")
 
 
-async def geozone_bbox(area: MapArea, db: AsyncDBSession):
+async def geozone_bbox(area: MapArea, country: Country, db: AsyncDBSession):
     def ceiling_ft(zone: GeoZone) -> Optional[int]:
         return _map_ceiling_ft(zone, area.height_m)
 
     geozones = [
-        gz for gz in await Queries.GeoZone.get_all_by_bbox(*area.unpack(), db)
+        gz for gz in await Queries.GeoZone.get_all_by_bbox(*area.unpack(), country.id, db)
         if reachable(gz.lower_limit_ft, ceiling_ft(gz))
     ]
 
@@ -58,7 +58,7 @@ async def geozone_bbox(area: MapArea, db: AsyncDBSession):
     )
 
 
-async def geozone_point(point: FlightPoint, db: AsyncDBSession) -> GeozonePointCollection:
+async def geozone_point(point: FlightPoint, country: Country, db: AsyncDBSession) -> GeozonePointCollection:
     try:
         ground = await ground_elevation(point.lon, point.lat, db)
     except (httpx.HTTPError, RuntimeError, ValueError) as exc:
@@ -68,7 +68,7 @@ async def geozone_point(point: FlightPoint, db: AsyncDBSession) -> GeozonePointC
         raise APIExceptions.not_found("No ground elevation data for this point")
 
     max_altitude_ft = math.ceil((ground.metres + point.height_m) * FEET_PER_METRE)
-    geozones = await Queries.GeoZone.get_all_at_point(point.lon, point.lat, max_altitude_ft, db)
+    geozones = await Queries.GeoZone.get_all_at_point(point.lon, point.lat, max_altitude_ft, country.id, db)
 
     return GeozonePointCollection(
         features=await _geozone_features(geozones, db, lambda zone: max_altitude_ft),

@@ -35,7 +35,8 @@ CHECKIN_PREVIEW = {
                     "it reaches while it lasts, and issues a short-lived check-in token for POST /check-in.\n\n"
                     "Pass either `mission_id` (the flight properties are taken from the mission) "
                     "or all of `category`, `height`, `range` and `duration`.\n\n"
-                    "The home point must lie inside the airspace of `country_tag`, i.e. over one of its geo-zones.\n\n"
+                    "`country_tag` must be one of GET /geo-zone/country/supported, and the home point must lie "
+                    "inside its border synced from GADM. GET /geo-zone/country tells the country at the home point.\n\n"
                     "Business-rule errors come in the same shape as validation errors: "
                     "`detail[].loc`, `detail[].msg`, `detail[].type` (`checkin.*`), `detail[].input`.\n\n"
                     "Authorization header REQUIRED!",
@@ -43,7 +44,7 @@ CHECKIN_PREVIEW = {
     "response_model": CheckinTokenResponse,
     "responses": {
         200: { "description": "Flight verified, check-in token returned" },
-        404: { "description": "Cannot verify fly zone: unsupported country, home point outside its airspace "
+        404: { "description": "Cannot verify fly zone: unsupported country, home point outside its border "
                               "or no ground elevation data" },
         409: { "description": "Check-in already started. End it to start a new one" },
         422: { "description": "Invalid request or the flight breaks a rule, see detail" },

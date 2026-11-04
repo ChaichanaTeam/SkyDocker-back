@@ -14,13 +14,13 @@ FlightPointQuery = Annotated[FlightPoint, Query()]
 
 
 @router.get("/", **docs.GEOZONE_BBOX)
-async def geozone_bbox(area: MapAreaQuery, db: AsyncDBDep):
-    return await service.geozone_bbox(area, db)
+async def geozone_bbox(area: MapAreaQuery, country: CountryQuery, db: AsyncDBDep):
+    return await service.geozone_bbox(area, country, db)
 
 
 @router.get("/point", **docs.GEOZONE_POINT)
-async def geozone_point(point: FlightPointQuery, db: AsyncDBDep):
-    return await service.geozone_point(point, db)
+async def geozone_point(point: FlightPointQuery, country: CountryQuery, db: AsyncDBDep):
+    return await service.geozone_point(point, country, db)
 
 
 @router.post("/sync", dependencies=[AdminKey], **docs.GEOZONE_SYNC)

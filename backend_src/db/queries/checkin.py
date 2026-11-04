@@ -17,10 +17,14 @@ TERMINAL_STATUSES = frozenset({
 })
 
 
-async def get_all_by_bbox(x1: float, y1: float, x2: float, y2: float, db: AsyncDBSession) -> list[Checkin]:
+async def get_all_by_bbox(x1: float, y1: float, x2: float, y2: float, country_id: int, db: AsyncDBSession) -> list[Checkin]:
     result = await db.execute(
         select(Checkin)
-        .where(ST_Intersects(Checkin.home_point, ST_MakeEnvelope(x1, y1, x2, y2, 4326)))
+        .where(
+            Checkin.country_id == country_id,
+            ST_Intersects(Checkin.home_point, ST_MakeEnvelope(x1, y1, x2, y2, 4326)),
+            Checkin.status.not_in(TERMINAL_STATUSES)
+        )
         .options(joinedload(Checkin.country))
         .options(joinedload(Checkin.pilot))
     )
