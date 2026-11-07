@@ -2,16 +2,21 @@ import asyncio
 import signal
 
 from loguru import logger
+from redis.asyncio import Redis
 
+from backend_src.core.config import Settings
 from backend_src.core.logger import setup_logging
 from .constants import WORKER_LOG_FILE
+from .jobs import register_jobs
 from .scheduler import create_scheduler
 
 
 async def serve() -> None:
     """Runs the scheduled syncs until the worker is stopped."""
     setup_logging(WORKER_LOG_FILE)
+    redis = Redis.from_url(Settings.REDIS_URL) # type: ignore[arg-type]
     scheduler = create_scheduler()
+    register_jobs(scheduler, redis)
 
     scheduler.start()
     logger.info("Worker started")
@@ -19,6 +24,7 @@ async def serve() -> None:
         await _wait_for_stop()
     finally:
         scheduler.shutdown(wait=False)
+        await redis.aclose()
         logger.info("Worker stopped")
 
 

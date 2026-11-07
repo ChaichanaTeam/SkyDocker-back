@@ -7,7 +7,6 @@ services:
     restart: on-failure
     command: ["python", "-m", "backend_src.worker", "serve"]
     environment:
-      DEBUG: ${DEBUG}
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       PANSA_API_URL: ${PANSA_API_URL:-}
@@ -18,6 +17,7 @@ services:
       SYNC_CATALOG_CRON: "${SYNC_CATALOG_CRON-0 3 * * *}"
       SYNC_ACTIVITY_INTERVAL_MINUTES: ${SYNC_ACTIVITY_INTERVAL_MINUTES-360}
       SYNC_BORDER_CRON: "${SYNC_BORDER_CRON-0 4 1 * *}"
+      SYNC_RUN_ON_START: ${SYNC_RUN_ON_START:-1}
     deploy:
       resources:
         limits:

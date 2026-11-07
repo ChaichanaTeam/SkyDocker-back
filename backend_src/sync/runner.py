@@ -14,8 +14,16 @@ Report = TypeVar("Report", bound=BaseModel)
 async def run_sync(
     job: str, lock: str, lock_ttl_seconds: int, action: Callable[[], Awaitable[Report]], redis: AsyncRedisSession,
 ) -> Report:
-    """Runs the sync while holding the lock and logs how it went, SyncBusy when another run holds the lock."""
-    token = await acquire_sync_lock(redis, lock, lock_ttl_seconds)
+    """Runs the sync while holding the lock and logs how it went, SyncBusy when another run holds the lock.
+
+    Whatever it raises is already logged.
+    """
+    try:
+        token = await acquire_sync_lock(redis, lock, lock_ttl_seconds)
+    except Exception:
+        logger.exception(f"Sync {job} did not start, the {lock} lock cannot be taken")
+        raise
+
     if token is None:
         held_by = f"the {job} sync is" if job == lock else f"another {lock} sync is"
         logger.warning(f"Sync {job} skipped, {held_by} already running")
