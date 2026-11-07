@@ -239,6 +239,9 @@ async def sync_activity(db: AsyncDBSession) -> ActivitySyncReport:
     )
     await db.commit()
 
+    if unmatched:
+        logger.warning(f"Activity sync found {len(unmatched)} designators missing from the catalog: {sorted(unmatched)[:MAX_REPORTED_ERRORS]}")
+
     return ActivitySyncReport(
         activations=len(activations),
         notams=len(notams),
