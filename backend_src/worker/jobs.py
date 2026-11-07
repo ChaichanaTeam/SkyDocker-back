@@ -13,6 +13,7 @@ from .scheduler import cron, every, schedule
 def register_jobs(scheduler: AsyncIOScheduler, redis: AsyncRedisSession) -> None:
     schedule(scheduler, "catalog", catalog_job, cron(WorkerSettings.CATALOG_CRON), redis)
     schedule(scheduler, "activity", activity_job, every(WorkerSettings.ACTIVITY_INTERVAL_MINUTES), redis)
+    schedule(scheduler, "border", border_job, cron(WorkerSettings.BORDER_CRON), redis)
 
     if WorkerSettings.RUN_ON_START:
         # without a trigger the job runs once right away
@@ -29,6 +30,12 @@ async def startup_job(redis: AsyncRedisSession) -> None:
         await terrain_job(redis)
     elif WorkerSettings.CATALOG_CRON:
         has_zones = await catalog_job(redis)
+
+    if has_zones and WorkerSettings.BORDER_CRON:
+        async with AsyncSessionMaker() as db:
+            countries = await Queries.Country.get_with_geo_zones(db, without_border=True)
+        for country in countries:
+            await _sync_border(country.country_tag, redis)
 
     # activity windows are matched to stored zones
     if has_zones and WorkerSettings.ACTIVITY_INTERVAL_MINUTES:
@@ -50,6 +57,26 @@ async def terrain_job(redis: AsyncRedisSession) -> None:
 
 async def activity_job(redis: AsyncRedisSession) -> None:
     await _run_job("activity", sync.GEO_ZONE_LOCK, sync.ACTIVITY_LOCK_TTL_SECONDS, sync.sync_activity, redis)
+
+
+async def border_job(redis: AsyncRedisSession) -> None:
+    """Borders of the countries that have geo-zones, check-ins there are verified against them."""
+    async with AsyncSessionMaker() as db:
+        countries = await Queries.Country.get_with_geo_zones(db)
+
+    for country in countries:
+        await _sync_border(country.country_tag, redis)
+
+
+async def _sync_border(country_tag: str, redis: AsyncRedisSession) -> None:
+    async def action(db: AsyncDBSession) -> sync.BorderSyncReport:
+        country = await Queries.Country.get_by_tag(country_tag, db)
+        if country is None:
+            raise sync.NothingToSync(f"Country {country_tag} is not in the database")
+        return await sync.sync_border(country, db)
+
+    lock = sync.border_lock(country_tag)
+    await _run_job(lock, lock, sync.BORDER_LOCK_TTL_SECONDS, action, redis)
 
 
 async def _run_job(
