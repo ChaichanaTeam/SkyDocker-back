@@ -4,6 +4,7 @@ Infrastructure consists of these sevices:
 - `db` - PostGIS/Postgres image with extensions
 - `redis` - caching server
 - `app` - main ASGI server
+- `worker` - scheduled data syncs (geo-zones, terrain, country borders), same image as `app`
 
 Testing environment:
 - `test` - isolated tool for testing endpoints
@@ -19,11 +20,12 @@ docker/
   db/       # Postgres image, init/ - baseline schema scripts (run on empty volume only)
   redis/    # Redis image, ACL template rendered by entrypoint.sh at start
   app/      # backend image
+  worker/   # sync worker, built from the backend image
   test/     # pytest image
 ```
 
 Networks:
-- `backend` - `db`, `redis`, `app`. Storages are reachable only by services that use them
+- `backend` - `db`, `redis`, `app`, `worker`. Storages are reachable only by services that use them
 - `edge` - `app`, `test`. Public facing layer, place for a future CDN / reverse proxy
 
 ### Adding a service
@@ -116,16 +118,16 @@ If running in non-docker environment - before local run setup database and redis
 
 ### Once all set
 
-Docker run (dev: `db` / `redis` ports on `127.0.0.1`, hot reload of `backend_src`):
+Docker run (dev: `db` / `redis` ports on `127.0.0.1`, hot reload of `backend_src` in `app`):
 
 ```bash
-docker compose up --build app
+docker compose up --build app worker
 ```
 
 Docker run without dev overrides (no published `db` / `redis` ports, no reload):
 
 ```bash
-docker compose -f docker-compose.yml up --build app
+docker compose -f docker-compose.yml up --build app worker
 ```
 
 Local run:
@@ -139,13 +141,22 @@ Can run with VS Code tasks:
 
 Local run:
 - Uvicorn: Run server app
+- Worker: Run scheduled syncs
 - Pytest: Run tests
 - Alembic: Upgrade to head
 
 Docker run:
-- Docker: Run app container with build
-- Docker: Run app container cached
+- Docker: Run app and worker containers with build
+- Docker: Run app and worker containers cached
 - Docker: Run test environment
+
+### Sync worker
+
+`worker` keeps geo-zones, their activity, terrain and country borders up to date on a schedule, see `SYNC_*` in [.env.example](./.env.example). An empty cron or `0` minutes disables a job
+
+Without the variables the PANSA syncs run on the normal schedule. `.env.example` disables them, so dev machines do not load the official PANSA API
+
+The worker does not reload code: after a change run `docker compose restart worker`
 
 ### Tests
 
