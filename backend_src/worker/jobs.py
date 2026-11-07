@@ -23,12 +23,22 @@ async def startup_job(redis: AsyncRedisSession) -> None:
     async with AsyncSessionMaker() as db:
         has_zones = await Queries.GeoZone.any_stored(db)
 
-    if not has_zones and WorkerSettings.CATALOG_CRON:
-        await catalog_job(redis)
+    if not has_zones:
+        if WorkerSettings.CATALOG_CRON:
+            await catalog_job(redis)
+    else:
+        # skips stored tiles and measures only zones without a value, cheap when nothing is missing
+        await terrain_job(redis)
 
 
 async def catalog_job(redis: AsyncRedisSession) -> None:
-    await _run_job("catalog", sync.GEO_ZONE_LOCK, sync.CATALOG_LOCK_TTL_SECONDS, sync.sync_catalog, redis)
+    """Catalog sync, then the terrain sync loads tiles for zones in new places and measures new zones."""
+    if await _run_job("catalog", sync.GEO_ZONE_LOCK, sync.CATALOG_LOCK_TTL_SECONDS, sync.sync_catalog, redis):
+        await terrain_job(redis)
+
+
+async def terrain_job(redis: AsyncRedisSession) -> None:
+    await _run_job("terrain", sync.GEO_ZONE_LOCK, sync.TERRAIN_LOCK_TTL_SECONDS, sync.sync_terrain, redis)
 
 
 async def _run_job(
