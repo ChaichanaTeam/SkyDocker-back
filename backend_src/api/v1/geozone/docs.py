@@ -3,7 +3,8 @@
 # https://clupasq.github.io/h3-viewer/
 
 from backend_src.api.shared_schemas import GeoJson
-from .schema import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, CountryResolve, GeozonePointCollection, SupportedCountriesList, TerrainSyncReport
+from backend_src.sync import ActivitySyncReport, BorderSyncReport, CatalogSyncReport, TerrainSyncReport
+from .schema import CountryResolve, GeozonePointCollection, SupportedCountriesList
 
 GEOZONE_BBOX = {
     "name": "Get GeoZone from Bounding Box",
