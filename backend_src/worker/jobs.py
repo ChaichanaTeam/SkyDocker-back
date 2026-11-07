@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from typing import Any, Awaitable, Callable
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -81,15 +82,9 @@ class SyncJobs:
             await self.country_border(country.country_tag)
 
     async def country_border(self, country_tag: str, attempt: int = 0, trigger: sync.Trigger = "schedule") -> None:
-        async def action(db: AsyncDBSession) -> sync.BorderSyncReport:
-            country = await Queries.Country.get_by_tag(country_tag, db)
-            if country is None:
-                raise sync.NothingToSync(f"Country {country_tag} is not in the database")
-            return await sync.sync_border(country, db)
-
         lock = sync.border_lock(country_tag)
         await self._run(
-            lock, lock, sync.BORDER_LOCK_TTL_SECONDS, action,
+            lock, lock, sync.BORDER_LOCK_TTL_SECONDS, partial(sync.sync_border_by_tag, country_tag),
             trigger, WorkerSettings.RETRY_DELAYS_MINUTES, attempt, self.country_border, country_tag,
         )
 

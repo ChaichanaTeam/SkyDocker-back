@@ -10,3 +10,7 @@ HEARTBEAT_TTL_SECONDS = 180
 
 # How long a stopping worker waits for cancelled syncs to release their locks, below the docker stop timeout
 STOP_TIMEOUT_SECONDS = 5
+
+# Exit codes of `run`: the sync failed, or it did not start because another run holds its lock
+EXIT_FAILED = 1
+EXIT_BUSY = 2

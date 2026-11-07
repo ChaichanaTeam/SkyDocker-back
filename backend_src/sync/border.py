@@ -4,7 +4,7 @@ from sqlalchemy.exc import DBAPIError
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.integrations.gadm import ATTRIBUTION, GADMDataClient
 from backend_src.models import Country
-from .errors import NotPublished, SyncAborted, UpstreamUnavailable
+from .errors import NothingToSync, NotPublished, SyncAborted, UpstreamUnavailable
 from .reports import BorderSyncReport
 
 
@@ -36,3 +36,11 @@ async def sync_border(country: Country, db: AsyncDBSession) -> BorderSyncReport:
         parts=parts,
         attribution=ATTRIBUTION,
     )
+
+
+async def sync_border_by_tag(country_tag: str, db: AsyncDBSession) -> BorderSyncReport:
+    country = await Queries.Country.get_by_tag(country_tag, db)
+    if country is None:
+        raise NothingToSync(f"Country {country_tag} is not in the database")
+
+    return await sync_border(country, db)

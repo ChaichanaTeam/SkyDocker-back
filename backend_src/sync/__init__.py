@@ -1,5 +1,5 @@
 __all__ = [
-    "sync_catalog", "sync_activity", "sync_terrain", "sync_border", "run_sync",
+    "sync_catalog", "sync_activity", "sync_terrain", "sync_border", "sync_border_by_tag", "run_sync",
     "SyncStatus", "Trigger", "record_retry",
     "SyncError", "UpstreamUnavailable", "SyncAborted", "NothingToSync", "NotPublished", "SyncBusy",
     "CatalogSyncReport", "ActivitySyncReport", "TerrainSyncReport", "BorderSyncReport",
@@ -9,7 +9,7 @@ __all__ = [
 
 from .geozone import sync_catalog, sync_activity
 from .terrain import sync_terrain
-from .border import sync_border
+from .border import sync_border, sync_border_by_tag
 from .runner import run_sync
 from .status import SyncStatus, Trigger, record_retry
 from .errors import SyncError, UpstreamUnavailable, SyncAborted, NothingToSync, NotPublished, SyncBusy
