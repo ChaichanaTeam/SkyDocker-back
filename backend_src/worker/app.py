@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 from backend_src.core.config import Settings
 from backend_src.core.logger import setup_logging
 from .constants import WORKER_LOG_FILE
-from .jobs import register_jobs
+from .jobs import SyncJobs
 from .scheduler import create_scheduler
 
 
@@ -16,7 +16,7 @@ async def serve() -> None:
     setup_logging(WORKER_LOG_FILE)
     redis = Redis.from_url(Settings.REDIS_URL) # type: ignore[arg-type]
     scheduler = create_scheduler()
-    register_jobs(scheduler, redis)
+    SyncJobs(scheduler, redis).register()
 
     scheduler.start()
     logger.info("Worker started")
