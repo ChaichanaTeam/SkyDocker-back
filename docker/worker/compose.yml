@@ -26,6 +26,12 @@ services:
           memory: 1G
     networks:
       - backend
+    healthcheck:
+      test: ["CMD", "python", "-m", "backend_src.worker", "health"]
+      interval: 60s
+      start_period: 30s
+      timeout: 15s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy

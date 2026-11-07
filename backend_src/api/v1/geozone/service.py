@@ -118,21 +118,21 @@ def _sync_errors_as_http() -> Iterator[None]:
 async def sync_catalog(db: AsyncDBSession, redis: AsyncRedisSession) -> sync.CatalogSyncReport:
     with _sync_errors_as_http():
         return await sync.run_sync(
-            "catalog", sync.GEO_ZONE_LOCK, sync.CATALOG_LOCK_TTL_SECONDS, lambda: sync.sync_catalog(db), redis,
+            "catalog", sync.GEO_ZONE_LOCK, sync.CATALOG_LOCK_TTL_SECONDS, lambda: sync.sync_catalog(db), redis, "admin",
         )
 
 
 async def sync_activity(db: AsyncDBSession, redis: AsyncRedisSession) -> sync.ActivitySyncReport:
     with _sync_errors_as_http():
         return await sync.run_sync(
-            "activity", sync.GEO_ZONE_LOCK, sync.ACTIVITY_LOCK_TTL_SECONDS, lambda: sync.sync_activity(db), redis,
+            "activity", sync.GEO_ZONE_LOCK, sync.ACTIVITY_LOCK_TTL_SECONDS, lambda: sync.sync_activity(db), redis, "admin",
         )
 
 
 async def sync_terrain(db: AsyncDBSession, redis: AsyncRedisSession) -> sync.TerrainSyncReport:
     with _sync_errors_as_http():
         return await sync.run_sync(
-            "terrain", sync.GEO_ZONE_LOCK, sync.TERRAIN_LOCK_TTL_SECONDS, lambda: sync.sync_terrain(db), redis,
+            "terrain", sync.GEO_ZONE_LOCK, sync.TERRAIN_LOCK_TTL_SECONDS, lambda: sync.sync_terrain(db), redis, "admin",
         )
 
 
@@ -140,7 +140,7 @@ async def sync_border(country: Country, db: AsyncDBSession, redis: AsyncRedisSes
     lock = sync.border_lock(country.country_tag)
     with _sync_errors_as_http():
         return await sync.run_sync(
-            lock, lock, sync.BORDER_LOCK_TTL_SECONDS, lambda: sync.sync_border(country, db), redis,
+            lock, lock, sync.BORDER_LOCK_TTL_SECONDS, lambda: sync.sync_border(country, db), redis, "admin",
         )
 
 
