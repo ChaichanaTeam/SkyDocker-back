@@ -41,6 +41,7 @@ test = [
     "pytest-html>=4.2.0",
     "pytest-order>=1.5.0",
     "httpx>=0.28.1",
+    "fakeredis[lua]>=2.32",
 ]
 
 all = [
@@ -70,4 +71,5 @@ all = [
     "greenlet>=3.5.3",
     "sqlacodegen>=4.0.4",
     "apscheduler>=3.11,<4",
+    "fakeredis[lua]>=2.32",
 ]

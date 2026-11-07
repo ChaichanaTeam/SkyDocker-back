@@ -6,6 +6,7 @@ services:
     environment:
       BASE_HOST: app
       OTP_CODE: ${OTP_CODE}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
       RATE_LIMIT_THRESHOLD: ${RATE_LIMIT_THRESHOLD:-5}
       TEST_SUITE: ${TEST_SUITE:-smoke}
       TEST_MODULES: ${TEST_MODULES:-}
