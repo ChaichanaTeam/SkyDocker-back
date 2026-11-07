@@ -65,6 +65,7 @@ GEOZONE_SYNC = {
     "responses": {
         200: { "description": "Sync report" },
         401: { "description": "Missing or invalid admin key" },
+        409: { "description": "Another catalog, activity or terrain sync is running, this one did not start" },
         502: { "description": "PANSA is unavailable or returned a suspiciously short zone list, nothing was changed" }
     }
 }
@@ -83,6 +84,7 @@ GEOZONE_ACTIVITY_SYNC = {
     "responses": {
         200: { "description": "Sync report" },
         401: { "description": "Missing or invalid admin key" },
+        409: { "description": "Another catalog, activity or terrain sync is running, this one did not start" },
         502: { "description": "PANSA is unavailable, nothing was changed" }
     }
 }
@@ -103,7 +105,7 @@ GEOZONE_TERRAIN_SYNC = {
     "responses": {
         200: { "description": "Sync report" },
         401: { "description": "Missing or invalid admin key" },
-        409: { "description": "No geo-zones stored yet" },
+        409: { "description": "No geo-zones stored yet, or another catalog, activity or terrain sync is running" },
         502: { "description": "Copernicus DEM is unavailable, tiles loaded before the error are kept" }
     }
 }
@@ -123,6 +125,7 @@ GEOZONE_BORDER_SYNC = {
         200: { "description": "Sync report" },
         401: { "description": "Missing or invalid admin key" },
         404: { "description": "The country is not in the database or GADM has no border for it" },
+        409: { "description": "A sync of the same border is running, this one did not start" },
         502: { "description": "GADM is unavailable or returned a border PostGIS rejected, nothing was changed" }
     }
 }

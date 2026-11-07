@@ -9,6 +9,8 @@ __all__ = [
     "get_session_gen",
     "revoke_all_sessions",
     "rate_limit",
+    "acquire_sync_lock",
+    "release_sync_lock",
     "AsyncRedisSession",
 ]
 
@@ -25,3 +27,4 @@ from .sessions import (
     get_session_gen,
     revoke_all_sessions,
 )
+from .sync_lock import acquire_sync_lock, release_sync_lock

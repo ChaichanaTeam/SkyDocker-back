@@ -9,6 +9,7 @@ from shapely.geometry import mapping
 from backend_src.api.exceptions import APIExceptions
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.api.shared_schemas import Coordinate, GeoJson, GeoFeature
+from backend_src.cache import AsyncRedisSession
 from backend_src.integrations.pansa import height_rule
 from backend_src.models import ActivityTime, Country, GeoZone
 from backend_src import sync
@@ -106,7 +107,7 @@ def _sync_errors_as_http() -> Iterator[None]:
     """Answers a failed sync with the HTTP error the admin endpoints have always returned."""
     try:
         yield
-    except sync.NothingToSync as exc:
+    except (sync.NothingToSync, sync.SyncBusy) as exc:
         raise APIExceptions.conflict(str(exc))
     except sync.NotPublished as exc:
         raise APIExceptions.not_found(str(exc))
@@ -114,24 +115,33 @@ def _sync_errors_as_http() -> Iterator[None]:
         raise APIExceptions.bad_gateway(str(exc))
 
 
-async def sync_catalog(db: AsyncDBSession) -> sync.CatalogSyncReport:
+async def sync_catalog(db: AsyncDBSession, redis: AsyncRedisSession) -> sync.CatalogSyncReport:
     with _sync_errors_as_http():
-        return await sync.sync_catalog(db)
+        return await sync.run_sync(
+            "catalog", sync.GEO_ZONE_LOCK, sync.CATALOG_LOCK_TTL_SECONDS, lambda: sync.sync_catalog(db), redis,
+        )
 
 
-async def sync_activity(db: AsyncDBSession) -> sync.ActivitySyncReport:
+async def sync_activity(db: AsyncDBSession, redis: AsyncRedisSession) -> sync.ActivitySyncReport:
     with _sync_errors_as_http():
-        return await sync.sync_activity(db)
+        return await sync.run_sync(
+            "activity", sync.GEO_ZONE_LOCK, sync.ACTIVITY_LOCK_TTL_SECONDS, lambda: sync.sync_activity(db), redis,
+        )
 
 
-async def sync_terrain(db: AsyncDBSession) -> sync.TerrainSyncReport:
+async def sync_terrain(db: AsyncDBSession, redis: AsyncRedisSession) -> sync.TerrainSyncReport:
     with _sync_errors_as_http():
-        return await sync.sync_terrain(db)
+        return await sync.run_sync(
+            "terrain", sync.GEO_ZONE_LOCK, sync.TERRAIN_LOCK_TTL_SECONDS, lambda: sync.sync_terrain(db), redis,
+        )
 
 
-async def sync_border(country: Country, db: AsyncDBSession) -> sync.BorderSyncReport:
+async def sync_border(country: Country, db: AsyncDBSession, redis: AsyncRedisSession) -> sync.BorderSyncReport:
+    lock = sync.border_lock(country.country_tag)
     with _sync_errors_as_http():
-        return await sync.sync_border(country, db)
+        return await sync.run_sync(
+            lock, lock, sync.BORDER_LOCK_TTL_SECONDS, lambda: sync.sync_border(country, db), redis,
+        )
 
 
 async def geozone_get_country(coordinates: Coordinate, db: AsyncDBSession) -> CountryResolve:

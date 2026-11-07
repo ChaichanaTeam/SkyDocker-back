@@ -21,3 +21,7 @@ class NothingToSync(SyncError):
 
 class NotPublished(SyncError):
     """The data source has nothing for the request, e.g. GADM has no border for the country."""
+
+
+class SyncBusy(SyncError):
+    """Another run of a sync that writes the same data holds the lock, this one did not start."""
