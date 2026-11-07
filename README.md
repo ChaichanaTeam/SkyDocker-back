@@ -158,6 +158,14 @@ Without the variables the PANSA syncs run on the normal schedule. `.env.example`
 
 The worker does not reload code: after a change run `docker compose restart worker`
 
+Run a sync right away, without retries (`catalog`, `terrain`, `activity`, `border` or `all`, e.g. to fill a new database):
+
+```bash
+docker compose exec worker python -m backend_src.worker run all
+```
+
+Exit code: `0` ok, `1` the sync failed, `2` it did not start because another sync of the same data is running. `GET /api/v1/health` shows whether the worker is up and the last run of every sync
+
 ### Tests
 
 Tests are split into suites: `smoke`, `e2e`, `integration`      \
