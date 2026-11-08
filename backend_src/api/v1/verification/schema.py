@@ -1,62 +1,58 @@
 from __future__ import annotations
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Literal, Optional
 
-from fastapi import File, Form, UploadFile
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from fastapi import Header
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend_src.api.shared_schemas import E164PhoneNumber
+from backend_src.core.security import TokenPayload, TokenType
 from backend_src.models import VerificationDocumentType, VerificationRequestStatus
+from backend_src.storage import MAX_DOCUMENTS
 
 
-@dataclass
-class VerificationForm:
+VerificationToken = Annotated[str, Header(alias="X-Verification-Token", description="Token issued by POST /verification-requests/preview")]
+
+
+class VerificationPreviewRequest(BaseModel):
+    """What the pilot is going to submit. Files follow only after this passes."""
+
+    first_name: str = Field(min_length=1, max_length=255)
+    last_name: str = Field(min_length=1, max_length=255)
+    phone_number: E164PhoneNumber = Field(description="Pilot's phone, written to the profile on approval")
+    pilot_number: Optional[str] = Field(None, min_length=1, max_length=255, description="Number from the operator_number document. Only for a pilot without a number")
+    keep_documents: bool = Field(False, description="Keep the documents in the pilot's organizer after approval. When false they are deleted")
+    document_types: list[VerificationDocumentType] = Field(min_length=1, max_length=MAX_DOCUMENTS, description="Types of the files that will be uploaded, one file per type")
+
+    @field_validator("document_types")
+    @classmethod
+    def validate_document_types(cls, document_types: list[VerificationDocumentType]) -> list[VerificationDocumentType]:
+        if VerificationDocumentType.UNKNOWN in document_types:
+            raise ValueError("Unknown document type")
+        if len(set(document_types)) != len(document_types):
+            raise ValueError("One file per document type")
+        return document_types
+
+
+class VerificationPlan(BaseModel):
+    """Verified request, the only data the token carries and the request is created from."""
+
     first_name: str
     last_name: str
-    email: Optional[str]
     phone_number: str
     pilot_number: str
     keep_documents: bool
-    documents: dict[VerificationDocumentType, UploadFile]
+    document_types: list[VerificationDocumentType]
 
 
-def _document(description: str):
-    return File(None, description=f"{description}. PDF, JPEG or PNG up to 10 MB")
+class VerificationTokenPayload(TokenPayload):
+    type: Literal[TokenType.VERIFICATION_REQUEST] = TokenType.VERIFICATION_REQUEST
+    plan: VerificationPlan
 
 
-async def verification_form(
-    operator_number: UploadFile = File(description="Document issuing the pilot number. PDF, JPEG or PNG up to 10 MB"),
-    privilege_a1: Optional[UploadFile] = _document("A1 training certificate"),
-    privilege_a2: Optional[UploadFile] = _document("A2 training certificate"),
-    privilege_a3: Optional[UploadFile] = _document("A3 training certificate"),
-    privilege_sts01: Optional[UploadFile] = _document("STS-01 training certificate"),
-    privilege_sts02: Optional[UploadFile] = _document("STS-02 training certificate"),
-    first_name: str = Form(min_length=1, max_length=255),
-    last_name: str = Form(min_length=1, max_length=255),
-    phone_number: E164PhoneNumber = Form(description="Pilot's phone, written to the profile on approval"),
-    pilot_number: str = Form(min_length=1, max_length=255, description="Number from the operator_number document"),
-    email: Optional[EmailStr] = Form(None, description="Contact email for this request. Defaults to the pilot's email"),
-    keep_documents: bool = Form(False, description="Keep the documents in the pilot's organizer after approval. When false they are deleted"),
-) -> VerificationForm:
-    uploads = {
-        VerificationDocumentType.OPERATOR_NUMBER: operator_number,
-        VerificationDocumentType.PRIVILEGE_A1: privilege_a1,
-        VerificationDocumentType.PRIVILEGE_A2: privilege_a2,
-        VerificationDocumentType.PRIVILEGE_A3: privilege_a3,
-        VerificationDocumentType.PRIVILEGE_STS01: privilege_sts01,
-        VerificationDocumentType.PRIVILEGE_STS02: privilege_sts02,
-    }
-
-    return VerificationForm(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        phone_number=phone_number,
-        pilot_number=pilot_number,
-        keep_documents=keep_documents,
-        documents={doc_type: upload for doc_type, upload in uploads.items() if upload is not None},
-    )
+class VerificationTokenResponse(BaseModel):
+    verification_token: str = Field(..., description="Pass this token in X-Verification-Token to POST /verification-requests/")
+    expires_in: int = Field(..., description="Seconds the token stays valid")
 
 
 class VerificationDocumentRead(BaseModel):
@@ -76,7 +72,6 @@ class VerificationRequestRead(BaseModel):
 
     first_name: str
     last_name: str
-    email: str
     phone_number: str
     pilot_number: str
     keep_documents: bool
