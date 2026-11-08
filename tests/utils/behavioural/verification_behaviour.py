@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from httpx import Response, Client
 
 from tests.types import UserInfo, EndpointCreator
@@ -7,10 +7,11 @@ from tests.types import UserInfo, EndpointCreator
 PDF = b"%PDF-1.4 test document"
 PNG = b"\x89PNG\r\n\x1a\n test image"
 
-DocumentFiles = dict[str, tuple[str, bytes, str]]
+DocumentFile = tuple[str, bytes, str]
+Documents = dict[str, DocumentFile]
 
 
-def pdf(name: str = "document.pdf", body: bytes = PDF) -> tuple[str, bytes, str]:
+def pdf(name: str = "document.pdf", body: bytes = PDF) -> DocumentFile:
     return name, body, "application/pdf"
 
 
@@ -18,19 +19,43 @@ def _auth(user: UserInfo) -> dict[str, str]:
     return {"Authorization": f"{user['tokens']['type']} {user['tokens']['access_token']}"}
 
 
-def create_request(
+def preview_request(
     client: Client, user: UserInfo, get_endpoint_link: EndpointCreator,
-    files: DocumentFiles, fields: Optional[dict[str, str]] = None, auth: bool = True,
+    fields: dict[str, Any], document_types: list[str], auth: bool = True,
 ) -> Response:
     request = {
-        "url": get_endpoint_link("live", "verification-requests/"),
+        "url": get_endpoint_link("live", "verification-requests/preview"),
         "headers": _auth(user) if auth else {},
-        "files": files,
-        "data": fields or {},
+        "json": {**fields, "document_types": document_types},
     }
     r = client.post(**request)
 
     return r
+
+
+def upload_documents(
+    client: Client, user: UserInfo, get_endpoint_link: EndpointCreator,
+    token: str, documents: Documents, document_types: Optional[list[str]] = None,
+) -> Response:
+    request = {
+        "url": get_endpoint_link("live", "verification-requests/"),
+        "headers": {**_auth(user), "X-Verification-Token": token},
+        "data": {"document_types": document_types if document_types is not None else list(documents)},
+        "files": [("files", file) for file in documents.values()],
+    }
+    r = client.post(**request)
+
+    return r
+
+
+def submit_request(
+    client: Client, user: UserInfo, get_endpoint_link: EndpointCreator,
+    documents: Documents, fields: dict[str, Any],
+) -> Response:
+    r = preview_request(client, user, get_endpoint_link, fields, list(documents))
+    assert r.status_code == 200, f"Preview failed: {r.text}"
+
+    return upload_documents(client, user, get_endpoint_link, r.json()["verification_token"], documents)
 
 
 def withdraw_request(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator, request_id: int) -> Response:
