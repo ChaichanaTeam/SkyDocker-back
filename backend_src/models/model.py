@@ -284,7 +284,6 @@ class VerificationRequest(Base):
 
     first_name: Mapped[str]                                                     = mapped_column(VARCHAR(255), nullable=False)
     last_name: Mapped[str]                                                      = mapped_column(VARCHAR(255), nullable=False)
-    email: Mapped[str]                                                          = mapped_column(VARCHAR(255), nullable=False)
     phone_number: Mapped[str]                                                   = mapped_column(VARCHAR(15), nullable=False)
     pilot_number: Mapped[str]                                                   = mapped_column(VARCHAR(255), nullable=False)
     keep_documents: Mapped[bool]                                                = mapped_column(Boolean, server_default="false", nullable=False)

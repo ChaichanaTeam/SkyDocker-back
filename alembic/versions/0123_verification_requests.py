@@ -41,7 +41,6 @@ def upgrade() -> None:
 
     op.add_column('verification_request', sa.Column('first_name', sa.VARCHAR(255), nullable=False, comment="Identity data snapshot at submission"))
     op.add_column('verification_request', sa.Column('last_name', sa.VARCHAR(255), nullable=False))
-    op.add_column('verification_request', sa.Column('email', sa.VARCHAR(255), nullable=False, comment="Contact email for this request. Filled from pilot profile when not provided"))
     op.add_column('verification_request', sa.Column('phone_number', sa.VARCHAR(15), nullable=False, comment="Written to pilot profile on approval"))
     op.add_column('verification_request', sa.Column('pilot_number', sa.VARCHAR(255), nullable=False, comment="Pilot number from the operator registration document. Written to pilot profile on approval"))
     op.add_column('verification_request', sa.Column('keep_documents', sa.BOOLEAN, server_default=sa.false(), nullable=False, comment="Pilot consent to keep documents in the organizer after approval. When false they are deleted"))
@@ -124,7 +123,6 @@ def downgrade() -> None:
     op.drop_column('verification_request', 'keep_documents')
     op.drop_column('verification_request', 'pilot_number')
     op.drop_column('verification_request', 'phone_number')
-    op.drop_column('verification_request', 'email')
     op.drop_column('verification_request', 'last_name')
     op.drop_column('verification_request', 'first_name')
 
