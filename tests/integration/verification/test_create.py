@@ -142,15 +142,33 @@ def test_upload_must_match_preview(client: Client, pilot: UserInfo, get_endpoint
     assert error_types(r.json()) == {"verification.files_mismatch"}
 
 
-def test_upload_is_single_use_while_pending(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_token_works_once(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     r = preview_request(client, pilot, get_endpoint_link, request_fields(), OPERATOR_ONLY)
     token = r.json()["verification_token"]
 
     r = upload_documents(client, pilot, get_endpoint_link, token, {"operator_number": pdf()})
     assert r.status_code == 201, f"Request was not created: {r.text}"
+    request_id = r.json()["id"]
 
     r = upload_documents(client, pilot, get_endpoint_link, token, {"operator_number": pdf()})
-    assert r.status_code == 409, f"Second upload must be rejected: {r.text}"
+    assert r.status_code == 404, f"Used token must be rejected: {r.text}"
+
+    r = withdraw_request(client, pilot, get_endpoint_link, request_id)
+    assert r.status_code == 200, f"Withdraw failed: {r.text}"
+
+    r = upload_documents(client, pilot, get_endpoint_link, token, {"operator_number": pdf()})
+    assert r.status_code == 404, f"Used token must stay rejected after withdraw: {r.text}"
+
+
+def test_token_survives_failed_upload(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+    r = preview_request(client, pilot, get_endpoint_link, request_fields(), OPERATOR_ONLY)
+    token = r.json()["verification_token"]
+
+    r = upload_documents(client, pilot, get_endpoint_link, token, {"operator_number": pdf(body=b"not a pdf")})
+    assert r.status_code == 422, f"Bad file must be rejected: {r.text}"
+
+    r = upload_documents(client, pilot, get_endpoint_link, token, {"operator_number": pdf()})
+    assert r.status_code == 201, f"Token must survive a failed upload: {r.text}"
 
 
 def test_file_type_detected_by_content(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):

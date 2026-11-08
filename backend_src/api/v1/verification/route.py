@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request
+from redis_fastapi import AsyncRedisDep
 
 from backend_src.api.dependencies import AsyncDBDep, CurrentPilot, StorageDep
 from backend_src.cache import rate_limit
@@ -20,9 +21,9 @@ async def preview_request(data: VerificationPreviewRequest, pilot: CurrentPilot,
 @router.post("/", dependencies=[Depends(rate_limit(RateLimits.CREATE_REQUEST))], **docs.CREATE_REQUEST)
 async def create_request(
     request: Request, token: VerificationToken,
-    pilot: CurrentPilot, db: AsyncDBDep, storage: StorageDep
+    pilot: CurrentPilot, db: AsyncDBDep, redis: AsyncRedisDep, storage: StorageDep
 ):
-    return await service.create_request(request, token, pilot, db, storage)
+    return await service.create_request(request, token, pilot, db, redis, storage)
 
 
 @router.post("/{request_id}/withdraw", dependencies=[Depends(rate_limit(RateLimits.WITHDRAW_REQUEST))], **docs.WITHDRAW_REQUEST)

@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
+from redis_fastapi import AsyncRedisDep
 
 from backend_src.api.dependencies import AsyncDBDep, StorageDep
 from backend_src.api.shared_schemas import NormalizedEmailStr
@@ -25,10 +26,10 @@ async def preview_request(data: VerificationPreviewRequest, db: AsyncDBDep, emai
 @router.post("/", **docs.CREATE_REQUEST)
 async def create_request(
     request: Request, token: VerificationToken,
-    db: AsyncDBDep, storage: StorageDep,
+    db: AsyncDBDep, redis: AsyncRedisDep, storage: StorageDep,
     email: Optional[NormalizedEmailStr] = _PILOT_EMAIL,
 ):
-    return await service.create_request(request, token, email, db, storage)
+    return await service.create_request(request, token, email, db, redis, storage)
 
 
 @router.get("/", **docs.LIST_REQUESTS)

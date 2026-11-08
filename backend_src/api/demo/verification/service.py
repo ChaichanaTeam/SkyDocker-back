@@ -10,6 +10,7 @@ from backend_src.api.v1.verification import service as live
 from backend_src.api.v1.verification.schema import (
     VerificationPreviewRequest, VerificationRequestRead, VerificationTokenResponse
 )
+from backend_src.cache import AsyncRedisSession
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import (
     Pilot, PilotToFlyingPrivileges, VerificationRequest,
@@ -64,9 +65,11 @@ async def preview_request(data: VerificationPreviewRequest, email: Optional[str]
     return await live.preview_request(data, pilot, db)
 
 
-async def create_request(request: Request, token: str, email: Optional[str], db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
+async def create_request(
+    request: Request, token: str, email: Optional[str], db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage
+) -> VerificationRequestRead:
     pilot = await _resolve_pilot(db, email)
-    return await live.create_request(request, token, pilot, db, storage)
+    return await live.create_request(request, token, pilot, db, redis, storage)
 
 
 async def list_requests(status: Optional[VerificationRequestStatus], db: AsyncDBSession) -> list[VerificationRequestRead]:

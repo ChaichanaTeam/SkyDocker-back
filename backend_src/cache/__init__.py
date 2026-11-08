@@ -8,6 +8,9 @@ __all__ = [
     "verify_refresh_token",
     "get_session_gen",
     "revoke_all_sessions",
+    "is_verification_token_used",
+    "claim_verification_token",
+    "release_verification_token",
     "rate_limit",
     "AsyncRedisSession",
 ]
@@ -24,4 +27,9 @@ from .sessions import (
     verify_refresh_token,
     get_session_gen,
     revoke_all_sessions,
+)
+from .verification import (
+    is_verification_token_used,
+    claim_verification_token,
+    release_verification_token,
 )

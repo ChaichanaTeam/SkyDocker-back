@@ -64,7 +64,8 @@ PREVIEW_REQUEST = {
 CREATE_REQUEST = {
     "summary": "Upload documents and create the request",
     "description": "Creates the request verified by POST /verification-requests/preview. "
-                    "The token goes in `X-Verification-Token` and is valid for 15 minutes.\n\n"
+                    "The token goes in `X-Verification-Token`, is valid for 15 minutes and works once. "
+                    "A failed upload does not use it up.\n\n"
                     "Documents are two repeated multipart fields paired by position: `document_types` and `files`.\n\n"
                     "File type is detected by content, not by name.",
     "response_description": "Created request with its documents",
@@ -73,7 +74,7 @@ CREATE_REQUEST = {
     "openapi_extra": UPLOAD_BODY,
     "responses": {
         201: { "description": "Request created, documents stored" },
-        404: { "description": "No verified request: the token is invalid, expired or issued to another pilot" },
+        404: { "description": "No verified request: the token is invalid, expired, already used or issued to another pilot" },
         409: { "description": "Pilot already has a pending request" },
         413: { "description": "A file is larger than 10 MB" },
         422: { "description": "Files differ from the preview or have an unsupported type, see detail" }

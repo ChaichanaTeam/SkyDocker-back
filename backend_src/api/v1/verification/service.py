@@ -5,6 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from starlette.datastructures import FormData, UploadFile as StarletteUploadFile
 
 from backend_src.api.exceptions import APIExceptions, EntityError
+from backend_src.cache import (
+    AsyncRedisSession, claim_verification_token, is_verification_token_used, release_verification_token
+)
 from backend_src.core import security
 from backend_src.core.config import Settings
 from backend_src.db import AsyncDBSession, Queries
@@ -69,12 +72,16 @@ async def preview_request(data: VerificationPreviewRequest, pilot: Pilot, db: As
     return VerificationTokenResponse(verification_token=token.token, expires_in=Settings.VERIFICATION_TOKEN_EXPIRE_MINUTES * 60)
 
 
-def _load_plan(token: str, pilot_id: int) -> VerificationPlan:
-    payload = security.decode_token(token, VerificationTokenPayload)
-    if payload is None or payload.sub != str(pilot_id):
-        raise APIExceptions.not_found("No verified request. Run the preview again")
+def _no_verified_request():
+    return APIExceptions.not_found("No verified request. Run the preview again")
 
-    return payload.plan
+
+async def _load_token(token: str, pilot_id: int, redis: AsyncRedisSession) -> VerificationTokenPayload:
+    payload = security.decode_token(token, VerificationTokenPayload)
+    if payload is None or payload.sub != str(pilot_id) or await is_verification_token_used(redis, payload.jti):
+        raise _no_verified_request()
+
+    return payload
 
 
 def _check_content_length(request: Request, plan: VerificationPlan) -> None:
@@ -157,15 +164,22 @@ async def keep_documents_in_organizer(request: VerificationRequest, storage: Sto
     return copied
 
 
-async def create_request(http_request: Request, token: str, pilot: Pilot, db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
+async def create_request(
+    http_request: Request, token: str, pilot: Pilot, db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage
+) -> VerificationRequestRead:
     # Cheapest checks first: the body is not touched until the token and the pending check pass
     pilot_id = pilot.id
-    plan = _load_plan(token, pilot_id)
+    payload = await _load_token(token, pilot_id, redis)
+    plan = payload.plan
     await _ensure_no_pending(pilot_id, db)
     _check_content_length(http_request, plan)
 
     async with http_request.form(max_files=MAX_DOCUMENTS, max_fields=MAX_DOCUMENTS) as form:
         documents = await _read_documents(_match_files(form, plan))
+
+    # Claimed only after the files pass, so a bad file can be replaced without a new preview
+    if not await claim_verification_token(redis, payload.jti):
+        raise _no_verified_request()
 
     request = VerificationRequest(
         pilot_id=pilot_id,
@@ -193,6 +207,7 @@ async def create_request(http_request: Request, token: str, pilot: Pilot, db: As
     except Exception as e:
         await db.rollback()
         await storage.delete_objects(VERIFICATION_BUCKET, uploaded)
+        await release_verification_token(redis, payload.jti)
 
         # The partial index catches a concurrent request that passed the check above
         if isinstance(e, IntegrityError):
