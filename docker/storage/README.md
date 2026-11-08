@@ -38,7 +38,8 @@ Which prefix a user may touch (`requests/{id}` for the assigned moderator, `pilo
 
 ## Uploads and downloads
 
-- Uploads are multipart requests to the backend (`backend_src/storage/files.py`): up to 10 MB, PDF, JPEG or PNG detected by file signature, not by name or `Content-Type`
+- Uploads go through the backend in two steps: a JSON preview checks the form and issues a token, then multipart `document_types` + `files` with that token. Files are read only after the token passes
+- Limits (`backend_src/storage/files.py`): up to 10 MB, PDF, JPEG or PNG detected by file signature, not by name or `Content-Type`
 - Downloads are presigned GET URLs with lifetime up to 5 minutes
 - URLs are signed for `STORAGE_PUBLIC_URL`, the backend itself talks to `STORAGE_URL`
 
