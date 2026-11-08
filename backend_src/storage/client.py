@@ -31,6 +31,9 @@ class Storage:
     async def put_object(self, bucket: str, key: str, body: bytes, content_type: str) -> None:
         await self._s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
 
+    async def copy_object(self, source_bucket: str, source_key: str, bucket: str, key: str) -> None:
+        await self._s3.copy_object(CopySource={"Bucket": source_bucket, "Key": source_key}, Bucket=bucket, Key=key)
+
     async def delete_objects(self, bucket: str, keys: list[str]) -> None:
         for key in keys:
             await self._s3.delete_object(Bucket=bucket, Key=key)
