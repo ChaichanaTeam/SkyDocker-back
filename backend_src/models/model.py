@@ -1,5 +1,6 @@
 from sqlalchemy import (
-    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, REAL, DateTime, func, Boolean, ForeignKey, TEXT, Uuid
+    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, REAL, DateTime, func, Boolean, ForeignKey, TEXT, Uuid,
+    Index, UniqueConstraint, text
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Raster, RasterElement
@@ -263,6 +264,9 @@ class PilotToFlyingPrivileges(Base):
 
 class VerificationRequest(Base):
     __tablename__ = "verification_request"
+    __table_args__ = (
+        Index("verification_request_one_pending_per_pilot", "pilot_id", unique=True, postgresql_where=text("status = 'pending'")),
+    )
 
     id: Mapped[int]                                                             = mapped_column(BIGINT, primary_key=True)
     pilot_id: Mapped[int]                                                       = mapped_column(BIGINT, ForeignKey("pilot.id"), nullable=False)
@@ -281,8 +285,9 @@ class VerificationRequest(Base):
     first_name: Mapped[str]                                                     = mapped_column(VARCHAR(255), nullable=False)
     last_name: Mapped[str]                                                      = mapped_column(VARCHAR(255), nullable=False)
     email: Mapped[str]                                                          = mapped_column(VARCHAR(255), nullable=False)
-    phone_number: Mapped[Optional[str]]                                         = mapped_column(VARCHAR(15))
+    phone_number: Mapped[str]                                                   = mapped_column(VARCHAR(15), nullable=False)
     pilot_number: Mapped[str]                                                   = mapped_column(VARCHAR(255), nullable=False)
+    keep_documents: Mapped[bool]                                                = mapped_column(Boolean, server_default="false", nullable=False)
 
     reason: Mapped[Optional[str]]                                                = mapped_column(TEXT)
     verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("afd_moderator.id"))
@@ -297,6 +302,9 @@ class VerificationRequest(Base):
 
 class VerificationDocument(Base):
     __tablename__ = "verification_document"
+    __table_args__ = (
+        UniqueConstraint("request_id", "document_type", name="verification_document_request_id_document_type_key"),
+    )
 
     id: Mapped[int]                                                         = mapped_column(BIGINT, primary_key=True)
     request_id: Mapped[int]                                                 = mapped_column(BIGINT, ForeignKey("verification_request.id"), nullable=False)

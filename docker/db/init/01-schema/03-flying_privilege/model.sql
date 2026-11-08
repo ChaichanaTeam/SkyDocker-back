@@ -16,12 +16,6 @@ CREATE TABLE verification_request (
     pilot_id        bigint NOT NULL,
 
     status          verification_request_status DEFAULT 'pending' NOT NULL,
-
-    first_name      character varying(255) NOT NULL,
-    last_name       character varying(255) NOT NULL,
-    email           character varying(255) NOT NULL,
-    phone_number    character varying(15),
-    pilot_number    character varying(255) NOT NULL,
     
     reason          TEXT,
     verified_by     integer,
@@ -33,15 +27,9 @@ CREATE TABLE verification_request (
     FOREIGN KEY (verified_by) REFERENCES afd_moderator(id)
 );
 
-CREATE UNIQUE INDEX verification_request_one_pending_per_pilot
-    ON verification_request (pilot_id)
-    WHERE status = 'pending';
-
 COMMENT ON TABLE  public.verification_request IS 'Request which pilot submitting to get verification and privileges.
                                             If status is verified, user becomes full-fledged pilot with appropriate priveleges and access';
-COMMENT ON COLUMN public.verification_request.status IS 'Only one pending request per pilot. Rejected and withdrawn requests lose their documents, approved ones keep them until the pilot moves them to the organizer';
-COMMENT ON COLUMN public.verification_request.first_name IS 'Contact data snapshot at submission. Filled from pilot profile when not provided';
-COMMENT ON COLUMN public.verification_request.pilot_number IS 'Pilot number from the operator registration document. Copied to pilot on approval';
+COMMENT ON COLUMN public.verification_request.status IS 'If status is in complete state [rejected, apporoved] the request will be deleted with associated documents';
 COMMENT ON COLUMN public.verification_request.reason IS 'Optional field. If status is obligated to be precised, like _rejected_, so will be a reason';
 
 
@@ -54,10 +42,9 @@ CREATE TABLE verification_document (
     
     created_at          timestamptz(0) DEFAULT now() NOT NULL,
 
-    FOREIGN KEY (request_id) REFERENCES verification_request(id),
-    UNIQUE (request_id, document_type)
+    FOREIGN KEY (request_id) REFERENCES verification_request(id)
 );
 
 COMMENT ON TABLE  public.verification_document IS 'Temporary table for documents which confirms user privileges to be verified pilot';
-COMMENT ON COLUMN public.verification_document.document_path IS 'Object key in the verification bucket of storage, without bucket name';
-COMMENT ON COLUMN public.verification_document.document_type IS 'One document per type: privilege_* training certificates and operator_number registration document';
+COMMENT ON COLUMN public.verification_document.document_path IS 'Path for document to which admin need to get access in CDN';
+COMMENT ON COLUMN public.verification_document.document_type IS 'Enum to identify document, such as _drone pilot exam_ and _drone operator registration_';
