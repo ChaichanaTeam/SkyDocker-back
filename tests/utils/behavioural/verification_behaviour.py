@@ -68,8 +68,13 @@ def withdraw_request(client: Client, user: UserInfo, get_endpoint_link: Endpoint
     return r
 
 
-def approve_request(client: Client, get_endpoint_link: EndpointCreator, request_id: int) -> Response:
-    r = client.post(get_endpoint_link("demo", f"verification-requests/{request_id}/approve"))
+def approve_request(
+    client: Client, get_endpoint_link: EndpointCreator, request_id: int, privilege_expiry: Optional[dict[str, str]] = None,
+) -> Response:
+    r = client.post(
+        get_endpoint_link("demo", f"verification-requests/{request_id}/approve"),
+        json={"privilege_expiry": privilege_expiry or {}},
+    )
 
     return r
 
