@@ -11,6 +11,7 @@ _SIGNATURES = (
     (b"\x89PNG\r\n\x1a\n", "image/png", "png"),
     (b"\xff\xd8\xff", "image/jpeg", "jpg"),
 )
+_SIGNATURE_LENGTH = max(len(signature) for signature, _, _ in _SIGNATURES)
 
 
 class DocumentTooLarge(ValueError):
@@ -22,20 +23,29 @@ class UnsupportedDocument(ValueError):
 
 
 @dataclass(frozen=True)
+class DocumentFormat:
+    content_type: str
+    ext: str
+
+
+@dataclass(frozen=True)
 class Document:
     body: bytes
     content_type: str
     ext: str
 
 
-async def read_document(upload: UploadFile) -> Document:
-    body = await upload.read(MAX_DOCUMENT_SIZE + 1)
-
-    if len(body) > MAX_DOCUMENT_SIZE:
+def check_document_size(upload: UploadFile) -> None:
+    if upload.size is None or upload.size > MAX_DOCUMENT_SIZE:
         raise DocumentTooLarge(f"File is larger than {MAX_DOCUMENT_SIZE // (1024 * 1024)} MB")
 
+
+async def detect_document_format(upload: UploadFile) -> DocumentFormat:
+    head = await upload.read(_SIGNATURE_LENGTH)
+    await upload.seek(0)
+
     for signature, content_type, ext in _SIGNATURES:
-        if body.startswith(signature):
-            return Document(body=body, content_type=content_type, ext=ext)
+        if head.startswith(signature):
+            return DocumentFormat(content_type=content_type, ext=ext)
 
     raise UnsupportedDocument("Only PDF, JPEG and PNG files are accepted")
