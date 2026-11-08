@@ -1,11 +1,14 @@
 from typing import Any, Optional
 
+from fastapi import Request
 from sqlalchemy import select
 
 from backend_src.api.exceptions import APIExceptions
 from backend_src.api.shared_schemas import normalize_email
 from backend_src.api.v1.verification import service as live
-from backend_src.api.v1.verification.schema import VerificationForm, VerificationRequestRead
+from backend_src.api.v1.verification.schema import (
+    VerificationPreviewRequest, VerificationRequestRead, VerificationTokenResponse
+)
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import (
     Pilot, PilotToFlyingPrivileges, VerificationRequest,
@@ -55,9 +58,14 @@ async def _pending_request(request_id: int, db: AsyncDBSession) -> VerificationR
     return request
 
 
-async def create_request(form: VerificationForm, email: Optional[str], db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
+async def preview_request(data: VerificationPreviewRequest, email: Optional[str], db: AsyncDBSession) -> VerificationTokenResponse:
     pilot = await _resolve_pilot(db, email)
-    return await live.create_request(form, pilot, db, storage)
+    return await live.preview_request(data, pilot, db)
+
+
+async def create_request(request: Request, token: str, email: Optional[str], db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
+    pilot = await _resolve_pilot(db, email)
+    return await live.create_request(request, token, pilot, db, storage)
 
 
 async def list_requests(status: Optional[VerificationRequestStatus], db: AsyncDBSession) -> list[VerificationRequestRead]:

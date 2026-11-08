@@ -1,10 +1,10 @@
-from typing import Annotated, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query, Request
 
 from backend_src.api.dependencies import AsyncDBDep, StorageDep
 from backend_src.api.shared_schemas import NormalizedEmailStr
-from backend_src.api.v1.verification.schema import VerificationForm, verification_form
+from backend_src.api.v1.verification.schema import VerificationPreviewRequest, VerificationToken
 from backend_src.models import VerificationRequestStatus
 from . import docs
 from . import service
@@ -13,13 +13,21 @@ from . import service
 router = APIRouter(prefix="/verification-requests", tags=["verification"])
 
 
+_PILOT_EMAIL = Query(None, description="Email of an existing pilot. Defaults to the demo pilot")
+
+
+@router.post("/preview", **docs.PREVIEW_REQUEST)
+async def preview_request(data: VerificationPreviewRequest, db: AsyncDBDep, email: Optional[NormalizedEmailStr] = _PILOT_EMAIL):
+    return await service.preview_request(data, email, db)
+
+
 @router.post("/", **docs.CREATE_REQUEST)
 async def create_request(
-    form: Annotated[VerificationForm, Depends(verification_form)],
+    request: Request, token: VerificationToken,
     db: AsyncDBDep, storage: StorageDep,
-    email: Optional[NormalizedEmailStr] = Query(None, description="Email of an existing pilot. Defaults to the demo pilot"),
+    email: Optional[NormalizedEmailStr] = _PILOT_EMAIL,
 ):
-    return await service.create_request(form, email, db, storage)
+    return await service.create_request(request, token, email, db, storage)
 
 
 @router.get("/", **docs.LIST_REQUESTS)
