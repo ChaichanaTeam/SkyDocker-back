@@ -11,7 +11,7 @@ from backend_src.models import (
     Pilot, PilotToFlyingPrivileges, VerificationRequest,
     FlyingPrivileges, VerificationRequestStatus
 )
-from backend_src.storage import Storage, VERIFICATION_BUCKET
+from backend_src.storage import ORGANIZER_BUCKET, Storage, VERIFICATION_BUCKET
 from backend_src.api.demo.checkin.constants import (
     DEMO_PILOT_EMAIL,
     DEMO_PILOT_FIRST_NAME,
@@ -42,6 +42,7 @@ async def _resolve_pilot(db: AsyncDBSession, email: Optional[str]) -> Pilot:
         )
         db.add(pilot)
         await db.commit()
+        await db.refresh(pilot)
 
     return pilot
 
@@ -75,8 +76,9 @@ async def get_request(request_id: int, db: AsyncDBSession, storage: Storage) -> 
     return result
 
 
-async def approve_request(request_id: int, db: AsyncDBSession) -> dict[str, Any]:
+async def approve_request(request_id: int, db: AsyncDBSession, storage: Storage) -> dict[str, Any]:
     request = await _pending_request(request_id, db)
+    kept = await live.keep_documents_in_organizer(request, storage) if request.keep_documents else []
 
     privileges = {
         FlyingPrivileges(document.document_type.removeprefix(_PRIVILEGE_PREFIX))
@@ -91,19 +93,32 @@ async def approve_request(request_id: int, db: AsyncDBSession) -> dict[str, Any]
     ).scalars().all())
     granted = sorted(privileges - existing)
 
-    db.add_all(
-        PilotToFlyingPrivileges(pilot_id=request.pilot_id, flying_privilege=privilege) for privilege in granted
-    )
+    try:
+        db.add_all(
+            PilotToFlyingPrivileges(pilot_id=request.pilot_id, flying_privilege=privilege) for privilege in granted
+        )
 
-    pilot = await Queries.Pilot.get_by_id(request.pilot_id, db)
-    pilot.pilot_number = request.pilot_number # type: ignore
-    request.status = VerificationRequestStatus.APPROVED
-    await db.commit()
+        pilot = await Queries.Pilot.get_by_id(request.pilot_id, db)
+        pilot.pilot_number = request.pilot_number # type: ignore
+        pilot.phone_number = request.phone_number # type: ignore
+        pilot.first_name = pilot.first_name or request.first_name # type: ignore
+        pilot.last_name = pilot.last_name or request.last_name # type: ignore
+
+        keys = live.detach_documents(request)
+        request.status = VerificationRequestStatus.APPROVED
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        await storage.delete_objects(ORGANIZER_BUCKET, kept)
+        raise
+
+    await storage.delete_objects(VERIFICATION_BUCKET, keys)
 
     return {
         "request": VerificationRequestRead.model_validate(await live.get_request(request_id, db)),
         "granted": granted,
         "privileges": sorted(existing | privileges),
+        "kept_documents": kept,
     }
 
 

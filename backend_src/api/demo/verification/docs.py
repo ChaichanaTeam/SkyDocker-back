@@ -5,8 +5,7 @@ CREATE_REQUEST = {
     "summary": "Submit a verification request without auth",
     "description": "Same as live `POST /verification-requests/`, but the pilot is taken from `?email=` "
                     "instead of the access token.\n\n"
-                    "Without `email` the demo pilot is used (created on first use). "
-                    "It has no pilot number, so pass `pilot_number`.",
+                    "Without `email` the demo pilot is used (created on first use).",
     "response_model": VerificationRequestRead,
     "status_code": 201,
     "responses": {
@@ -34,9 +33,9 @@ GET_REQUEST = {
 APPROVE_REQUEST = {
     "summary": "Approve a request",
     "description": "Moderator simulation. Grants the privileges of the submitted `privilege_*` certificates "
-                    "and copies `pilot_number` to the pilot.\n\n"
-                    "Documents are kept: later the pilot decides whether to move them to the organizer. "
-                    "The verification bucket removes them after 30 days anyway",
+                    "and writes `pilot_number` and `phone_number` to the pilot, names only if the profile has none.\n\n"
+                    "With `keep_documents` the documents are copied to the organizer, `kept_documents` lists their keys. "
+                    "The originals are deleted either way",
     "responses": {
         404: { "description": "Request not found" },
         409: { "description": "Request is not pending" }

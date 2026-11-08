@@ -33,8 +33,8 @@ async def get_request(request_id: int, db: AsyncDBDep, storage: StorageDep):
 
 
 @router.post("/{request_id}/approve", **docs.APPROVE_REQUEST)
-async def approve_request(request_id: int, db: AsyncDBDep):
-    return await service.approve_request(request_id, db)
+async def approve_request(request_id: int, db: AsyncDBDep, storage: StorageDep):
+    return await service.approve_request(request_id, db, storage)
 
 
 @router.post("/{request_id}/reject", **docs.REJECT_REQUEST)
