@@ -1,10 +1,10 @@
 from sqlalchemy import (
     FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, REAL, DateTime, func, Boolean, ForeignKey, TEXT, Uuid,
-    Index, UniqueConstraint, text
+    Index, UniqueConstraint, text, Date
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Raster, RasterElement
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 from shapely.geometry import Point, Polygon, MultiPolygon
@@ -260,6 +260,7 @@ class PilotToFlyingPrivileges(Base):
         ),
         nullable=False
     )
+    expires_at: Mapped[Optional[date]]              = mapped_column(Date)
 
 
 class VerificationRequest(Base):
