@@ -41,3 +41,25 @@ def withdraw_request(client: Client, user: UserInfo, get_endpoint_link: Endpoint
     r = client.post(**request)
 
     return r
+
+
+def approve_request(client: Client, get_endpoint_link: EndpointCreator, request_id: int) -> Response:
+    r = client.post(get_endpoint_link("demo", f"verification-requests/{request_id}/approve"))
+
+    return r
+
+
+def reject_request(client: Client, get_endpoint_link: EndpointCreator, request_id: int) -> Response:
+    r = client.post(get_endpoint_link("demo", f"verification-requests/{request_id}/reject"), params={"reason": "Unreadable scan"})
+
+    return r
+
+
+def pilot_profile(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator) -> Response:
+    # The grant endpoint returns the profile contact, there is no live profile endpoint yet
+    r = client.post(
+        get_endpoint_link("demo", "flying-privilege/grant"),
+        params={"email": user["email"], "privileges": ["a1"]},
+    )
+
+    return r
