@@ -49,10 +49,14 @@ APPROVE_REQUEST = {
     "description": "Moderator simulation. Grants the privileges of the submitted `privilege_*` certificates "
                     "and writes `pilot_number` and `phone_number` to the pilot, names only if the profile has none.\n\n"
                     "With `keep_documents` the documents are copied to the organizer, `kept_documents` lists their keys. "
-                    "The originals are deleted either way",
+                    "The originals are deleted either way.\n\n"
+                    "`privilege_expiry` holds the last valid day of every submitted certificate, read by the moderator from the document, "
+                    "for example `{\"a1\": \"2031-05-01\"}`. A request with only `operator_number` passes `{}`. "
+                    "An existing privilege gets the new date. A daily job removes privileges after their last valid day.",
     "responses": {
         404: { "description": "Request not found" },
-        409: { "description": "Request is not pending" }
+        409: { "description": "Request is not pending" },
+        422: { "description": "Expiry date is missing, unexpected or in the past, see detail" }
     }
 }
 

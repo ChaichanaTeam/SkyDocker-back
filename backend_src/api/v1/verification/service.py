@@ -23,7 +23,7 @@ from .schema import (
 )
 
 
-def _error(field: str, msg: str, type: str, input: Any) -> EntityError:
+def verification_error(field: str, msg: str, type: str, input: Any) -> EntityError:
     return {
         "type": f"verification.{type}",
         "loc": ["body", field],
@@ -43,15 +43,15 @@ def _resolve_pilot_number(data: VerificationPreviewRequest, pilot: Pilot) -> tup
 
     if pilot.pilot_number is None:
         if data.pilot_number is None:
-            errors.append(_error("pilot_number", "Pilot has no number yet, it is required", "pilot_number_required", None))
+            errors.append(verification_error("pilot_number", "Pilot has no number yet, it is required", "pilot_number_required", None))
         if not has_document:
-            errors.append(_error("document_types", "Pilot has no number yet, operator_number document is required", "operator_number_required", data.document_types))
+            errors.append(verification_error("document_types", "Pilot has no number yet, operator_number document is required", "operator_number_required", data.document_types))
         return data.pilot_number, errors
 
     if data.pilot_number is not None:
-        errors.append(_error("pilot_number", "Pilot already has a number", "pilot_number_already_set", data.pilot_number))
+        errors.append(verification_error("pilot_number", "Pilot already has a number", "pilot_number_already_set", data.pilot_number))
     if has_document:
-        errors.append(_error("document_types", "Pilot already has a number, operator_number document is not accepted", "operator_number_already_set", data.document_types))
+        errors.append(verification_error("document_types", "Pilot already has a number, operator_number document is not accepted", "operator_number_already_set", data.document_types))
     return pilot.pilot_number, errors
 
 
@@ -91,9 +91,9 @@ def _match_files(form: FormData, plan: VerificationPlan) -> dict[VerificationDoc
     errors: list[EntityError] = []
 
     if sorted(types) != sorted(plan.document_types):
-        errors.append(_error("document_types", "Document types differ from the preview", "document_types_mismatch", types))
+        errors.append(verification_error("document_types", "Document types differ from the preview", "document_types_mismatch", types))
     if len(files) != len(types) or not all(isinstance(file, StarletteUploadFile) for file in files):
-        errors.append(_error("files", "Pass exactly one file for every document type", "files_mismatch", len(files)))
+        errors.append(verification_error("files", "Pass exactly one file for every document type", "files_mismatch", len(files)))
 
     if errors:
         raise APIExceptions.unprocessable(errors)
@@ -114,7 +114,7 @@ async def _read_documents(uploads: dict[VerificationDocumentType, UploadFile]) -
         try:
             formats[doc_type] = await detect_document_format(upload)
         except UnsupportedDocument as e:
-            errors.append(_error("files", f"{doc_type}: {e}", "unsupported_file", upload.filename))
+            errors.append(verification_error("files", f"{doc_type}: {e}", "unsupported_file", upload.filename))
 
     if errors:
         raise APIExceptions.unprocessable(errors)

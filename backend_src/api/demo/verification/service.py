@@ -1,9 +1,10 @@
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from fastapi import Request
 from sqlalchemy import select
 
-from backend_src.api.exceptions import APIExceptions
+from backend_src.api.exceptions import APIExceptions, EntityError
 from backend_src.api.shared_schemas import normalize_email
 from backend_src.api.v1.verification import service as live
 from backend_src.api.v1.verification.schema import (
@@ -84,26 +85,50 @@ async def get_request(request_id: int, db: AsyncDBSession, storage: Storage) -> 
     return result
 
 
-async def approve_request(request_id: int, db: AsyncDBSession, storage: Storage) -> dict[str, Any]:
+def _check_expiry(privileges: set[FlyingPrivileges], expiry: dict[FlyingPrivileges, date]) -> None:
+    today = datetime.now(timezone.utc).date()
+    errors: list[EntityError] = []
+
+    for privilege in sorted(privileges - expiry.keys()):
+        errors.append(live.verification_error("privilege_expiry", f"Expiry date of {privilege} is required", "expiry_missing", privilege))
+    for privilege in sorted(expiry.keys() - privileges):
+        errors.append(live.verification_error("privilege_expiry", f"Request has no {privilege} certificate", "expiry_unexpected", privilege))
+    for privilege, expires_at in expiry.items():
+        if expires_at < today:
+            errors.append(live.verification_error("privilege_expiry", f"Certificate {privilege} has already expired", "expiry_in_past", expires_at.isoformat()))
+
+    if errors:
+        raise APIExceptions.unprocessable(errors)
+
+
+async def approve_request(request_id: int, expiry: dict[FlyingPrivileges, date], db: AsyncDBSession, storage: Storage) -> dict[str, Any]:
     request = await _pending_request(request_id, db)
-    kept = await live.keep_documents_in_organizer(request, storage) if request.keep_documents else []
 
     privileges = {
         FlyingPrivileges(document.document_type.removeprefix(_PRIVILEGE_PREFIX))
         for document in request.verification_document
         if document.document_type.startswith(_PRIVILEGE_PREFIX)
     }
-    existing = set((
-        await db.execute(
-            select(PilotToFlyingPrivileges.flying_privilege)
-            .where(PilotToFlyingPrivileges.pilot_id == request.pilot_id)
-        )
-    ).scalars().all())
-    granted = sorted(privileges - existing)
+    _check_expiry(privileges, expiry)
+
+    existing = {
+        row.flying_privilege: row
+        for row in (
+            await db.execute(select(PilotToFlyingPrivileges).where(PilotToFlyingPrivileges.pilot_id == request.pilot_id))
+        ).scalars().all()
+    }
+    granted = sorted(privileges - existing.keys())
+    renewed = sorted(privileges & existing.keys())
+    held = sorted(privileges | existing.keys())
+
+    kept = await live.keep_documents_in_organizer(request, storage) if request.keep_documents else []
 
     try:
+        for privilege in renewed:
+            existing[privilege].expires_at = expiry[privilege]
         db.add_all(
-            PilotToFlyingPrivileges(pilot_id=request.pilot_id, flying_privilege=privilege) for privilege in granted
+            PilotToFlyingPrivileges(pilot_id=request.pilot_id, flying_privilege=privilege, expires_at=expiry[privilege])
+            for privilege in granted
         )
 
         pilot = await Queries.Pilot.get_by_id(request.pilot_id, db)
@@ -125,7 +150,8 @@ async def approve_request(request_id: int, db: AsyncDBSession, storage: Storage)
     return {
         "request": VerificationRequestRead.model_validate(await live.get_request(request_id, db)),
         "granted": granted,
-        "privileges": sorted(existing | privileges),
+        "renewed": renewed,
+        "privileges": held,
         "kept_documents": kept,
     }
 

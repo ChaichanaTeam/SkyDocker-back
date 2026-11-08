@@ -6,6 +6,7 @@ from backend_src.api.dependencies import AsyncDBDep, StorageDep
 from backend_src.api.shared_schemas import NormalizedEmailStr
 from backend_src.api.v1.verification.schema import VerificationPreviewRequest, VerificationToken
 from backend_src.models import VerificationRequestStatus
+from .schema import VerificationApproval
 from . import docs
 from . import service
 
@@ -41,8 +42,8 @@ async def get_request(request_id: int, db: AsyncDBDep, storage: StorageDep):
 
 
 @router.post("/{request_id}/approve", **docs.APPROVE_REQUEST)
-async def approve_request(request_id: int, db: AsyncDBDep, storage: StorageDep):
-    return await service.approve_request(request_id, db, storage)
+async def approve_request(request_id: int, data: VerificationApproval, db: AsyncDBDep, storage: StorageDep):
+    return await service.approve_request(request_id, data.privilege_expiry, db, storage)
 
 
 @router.post("/{request_id}/reject", **docs.REJECT_REQUEST)
