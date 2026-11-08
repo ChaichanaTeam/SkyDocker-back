@@ -1,5 +1,4 @@
 from __future__ import annotations
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Optional, Union, TypeVar, Self, overload
@@ -20,6 +19,7 @@ class TokenType(str, Enum):
     RESET = "reset"
     VERIFY = "verify"
     REGISTER = "register"
+    CHECKIN = "checkin"
 
 
 class TokenPayload(BaseModel):
@@ -144,6 +144,16 @@ def create_register_token(normalized: str, original: str) -> IssuedToken:
         token_type=TokenType.REGISTER,
         payload_cls=EmailTokenPayload,
         email=original
+    )
+
+
+def create_checkin_token(pilot_id: str, payload_cls: type[TokenPayload], **claims) -> IssuedToken:
+    return _create_token(
+        subject=pilot_id,
+        expires_delta=timedelta(seconds=Settings.CHECKIN_TOKEN_EXPIRE_SECONDS),
+        token_type=TokenType.CHECKIN,
+        payload_cls=payload_cls,
+        **claims
     )
 
 

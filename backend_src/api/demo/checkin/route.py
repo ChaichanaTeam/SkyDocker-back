@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 
-from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery
+from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery, CountryQuery
 from . import docs
 from . import service
 from .schema import CheckinInput
@@ -29,5 +29,5 @@ async def end_checkin(checkin_id: int, db: AsyncDBDep):
 
 
 @router.get("/bbox", **docs.CHECKIN_BBOX)
-async def checkins_in_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep):
-    return await service.checkins_in_bbox(bbox, db)
+async def checkins_in_bbox(bbox: BoundingBoxQuery, country: CountryQuery, db: AsyncDBDep):
+    return await service.checkins_in_bbox(bbox, country.id, db)

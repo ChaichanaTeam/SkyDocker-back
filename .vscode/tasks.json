@@ -25,6 +25,21 @@
             }
         },
         {
+            "label": "Alembic: Upgrade to head",
+            "type": "shell",
+            "command": "uv run alembic upgrade head",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "DB_HOST": "localhost"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
             "label": "Docker: Run app container with build",
             "type": "shell",
             "command": "docker compose up --build app",

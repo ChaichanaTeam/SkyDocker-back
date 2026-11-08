@@ -1,4 +1,13 @@
+from typing import Any, TypedDict
 from fastapi import HTTPException, status
+
+
+class EntityError(TypedDict):
+    type: str
+    loc: list[str]
+    msg: str
+    input: Any
+
 
 class APIExceptions:
     @staticmethod
@@ -37,10 +46,11 @@ class APIExceptions:
         )
 
     @staticmethod
-    def unprocessable(detail: str) -> HTTPException:
+    def unprocessable(errors: list[EntityError]) -> HTTPException:
+        """Business-rule errors in the same shape as FastAPI request validation errors."""
         return HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=detail,
+            detail=errors,
         )
 
     @staticmethod
