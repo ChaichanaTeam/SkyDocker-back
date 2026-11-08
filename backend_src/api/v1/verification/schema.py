@@ -12,11 +12,12 @@ from backend_src.models import VerificationDocumentType, VerificationRequestStat
 
 @dataclass
 class VerificationForm:
-    first_name: Optional[str]
-    last_name: Optional[str]
+    first_name: str
+    last_name: str
     email: Optional[str]
-    phone_number: Optional[str]
-    pilot_number: Optional[str]
+    phone_number: str
+    pilot_number: str
+    keep_documents: bool
     documents: dict[VerificationDocumentType, UploadFile]
 
 
@@ -31,11 +32,12 @@ async def verification_form(
     privilege_a3: Optional[UploadFile] = _document("A3 training certificate"),
     privilege_sts01: Optional[UploadFile] = _document("STS-01 training certificate"),
     privilege_sts02: Optional[UploadFile] = _document("STS-02 training certificate"),
-    first_name: Optional[str] = Form(None, min_length=1, max_length=255, description="Defaults to the pilot's first name"),
-    last_name: Optional[str] = Form(None, min_length=1, max_length=255, description="Defaults to the pilot's last name"),
+    first_name: str = Form(min_length=1, max_length=255),
+    last_name: str = Form(min_length=1, max_length=255),
+    phone_number: E164PhoneNumber = Form(description="Pilot's phone, written to the profile on approval"),
+    pilot_number: str = Form(min_length=1, max_length=255, description="Number from the operator_number document"),
     email: Optional[EmailStr] = Form(None, description="Contact email for this request. Defaults to the pilot's email"),
-    phone_number: Optional[E164PhoneNumber] = Form(None, description="Contact phone for this request. Defaults to the pilot's phone"),
-    pilot_number: Optional[str] = Form(None, min_length=1, max_length=255, description="Number from the operator_number document. Defaults to the pilot's number"),
+    keep_documents: bool = Form(False, description="Keep the documents in the pilot's organizer after approval. When false they are deleted"),
 ) -> VerificationForm:
     uploads = {
         VerificationDocumentType.OPERATOR_NUMBER: operator_number,
@@ -52,6 +54,7 @@ async def verification_form(
         email=email,
         phone_number=phone_number,
         pilot_number=pilot_number,
+        keep_documents=keep_documents,
         documents={doc_type: upload for doc_type, upload in uploads.items() if upload is not None},
     )
 
@@ -74,8 +77,9 @@ class VerificationRequestRead(BaseModel):
     first_name: str
     last_name: str
     email: str
-    phone_number: Optional[str]
+    phone_number: str
     pilot_number: str
+    keep_documents: bool
 
     reason: Optional[str]
     verified_at: Optional[datetime]

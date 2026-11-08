@@ -8,7 +8,8 @@ from backend_src.models import (
 )
 from backend_src.storage import (
     Document, DocumentTooLarge, Storage, UnsupportedDocument,
-    VERIFICATION_BUCKET, read_document, verification_key
+    ORGANIZER_BUCKET, VERIFICATION_BUCKET,
+    organizer_key, read_document, verification_key
 )
 from .schema import VerificationForm, VerificationRequestRead
 
@@ -43,11 +44,23 @@ def detach_documents(request: VerificationRequest) -> list[str]:
     return keys
 
 
-async def create_request(form: VerificationForm, pilot: Pilot, db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
-    pilot_number = form.pilot_number or pilot.pilot_number
-    if pilot_number is None:
-        raise APIExceptions.unprocessable("pilot_number is required: the pilot has no number yet")
+async def keep_documents_in_organizer(request: VerificationRequest, storage: Storage) -> list[str]:
+    copied: list[str] = []
 
+    try:
+        for document in request.verification_document:
+            ext = document.document_path.rsplit(".", 1)[-1]
+            key = organizer_key(request.pilot_id, document.document_type, ext)
+            await storage.copy_object(VERIFICATION_BUCKET, document.document_path, ORGANIZER_BUCKET, key)
+            copied.append(key)
+    except Exception:
+        await storage.delete_objects(ORGANIZER_BUCKET, copied)
+        raise
+
+    return copied
+
+
+async def create_request(form: VerificationForm, pilot: Pilot, db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
     if await Queries.Verification.get_pending_by_pilot(pilot.id, db) is not None:
         raise APIExceptions.conflict("Pilot already has a pending verification request")
 
@@ -55,11 +68,12 @@ async def create_request(form: VerificationForm, pilot: Pilot, db: AsyncDBSessio
 
     request = VerificationRequest(
         pilot_id=pilot.id,
-        first_name=form.first_name or pilot.first_name,
-        last_name=form.last_name or pilot.last_name,
+        first_name=form.first_name,
+        last_name=form.last_name,
         email=form.email or pilot.email,
-        phone_number=form.phone_number or pilot.phone_number,
-        pilot_number=pilot_number,
+        phone_number=form.phone_number,
+        pilot_number=form.pilot_number,
+        keep_documents=form.keep_documents,
     )
     uploaded: list[str] = []
 
