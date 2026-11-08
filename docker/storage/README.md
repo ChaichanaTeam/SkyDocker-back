@@ -12,16 +12,16 @@ documents are uploaded through the backend, downloads go through short-lived pre
 verification/                                   private, SSE-S3, objects expire after 30 days
   requests/{request_id}/{document_type}/{uuid}.{ext}
 organizer/                                      private, SSE-S3, no expiration
-  pilots/{pilot_id}/{uuid}.{ext}
+  pilots/{pilot_id}/{document_type}/{uuid}.{ext}
 wiki/                                           public read
   (layout is defined by the wiki ticket)
 ```
 
 - `verification` - documents of a `verification_request`, visible only to the moderator who reviews it.
   `{document_type}` matches `verification_document_type` enum (`privilege_a1` ... `privilege_sts02`, `operator_number`).
-  Rejected and withdrawn requests delete their documents explicitly, approved ones keep them until the pilot decides. TTL is a safety net
+  Every closed request deletes its documents explicitly. TTL is a safety net
 - `organizer` - pilot's personal documents, visible only to the pilot.
-  After approval the pilot may keep verification documents: server-side copy from `verification/` to `organizer/`, then delete the original
+  On approval documents of a request with `keep_documents` are copied from `verification/` to `organizer/`, then the originals are deleted. Without the flag nothing is kept
 - Object names are random UUIDs. Original file names live only in the database, keys contain no personal data
 - `verification_document.document_path` stores the key without the bucket name
 
