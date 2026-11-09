@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 from backend_src.models.enum import UserActivity
-from backend_src.api.shared_schemas import E164PhoneNumber
+from backend_src.api.shared_schemas import StoredPhoneNumber
 
 
 class PilotRead(BaseModel):
@@ -11,31 +11,25 @@ class PilotRead(BaseModel):
 
     id: int
 
-    first_name: str
-    last_name: str
+    first_name: Optional[str]
+    last_name: Optional[str]
 
     email: EmailStr
-    phone_number: E164PhoneNumber
-    pilot_number: Optional[str] = None
+    phone_number: Optional[str]
+    pilot_number: Optional[str]
 
-    country_id: Optional[int]
-    show_to_public: bool = Field(default=False, description="[Could have] Whether the profile is visible in public")
-    activity: Optional[UserActivity] = Field(default=None, description="[Could have] Pilot's occupation/hobby")
+    show_to_public: bool = Field(description="[Could have] Whether the profile is visible in public")
+    activity: Optional[UserActivity] = Field(description="[Could have] Pilot's occupation/hobby")
     flight_time: int = Field(description="Total flight time")
 
-    verified: bool
     created_at: datetime
 
 
 class PilotUpdate(BaseModel):
-    first_name: Optional[str] = Field(default=None, max_length=255)
-    last_name: Optional[str] = Field(default=None, max_length=255)
+    """Partial update: a field can be left out, but not set to null."""
 
-    phone_number: Optional[E164PhoneNumber]
-    pilot_number: Optional[str] = Field(default=None, max_length=255)
-
-    country_id: Optional[int] = None
-    show_to_public: Optional[bool] = Field(default=None, description="Whether the profile should be visible publicly")
+    phone_number: StoredPhoneNumber = Field(default=None, description="Pilot's contact, a check-in shows it")
+    show_to_public: bool = Field(default=None, description="Whether the profile should be visible publicly")
 
 
 class PilotPublicRead(BaseModel):
@@ -43,9 +37,8 @@ class PilotPublicRead(BaseModel):
 
     id: int
 
-    first_name: str
-    last_name: str
+    first_name: Optional[str]
+    last_name: Optional[str]
 
-    country_id: Optional[int]
-    activity: Optional[UserActivity] = None
+    activity: Optional[UserActivity]
     flight_time: int
