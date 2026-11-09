@@ -33,6 +33,7 @@ backend = [
     "greenlet>=3.5.3",
     "sqlacodegen>=4.0.4",
     "httpx>=0.28.1",
+    "aioboto3>=15.5.0",
     "apscheduler>=3.11,<4",
 ]
 
@@ -70,6 +71,7 @@ all = [
     "alembic>=1.20.0",
     "greenlet>=3.5.3",
     "sqlacodegen>=4.0.4",
+    "aioboto3>=15.5.0",
     "apscheduler>=3.11,<4",
     "fakeredis[lua]>=2.32",
 ]

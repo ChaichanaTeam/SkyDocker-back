@@ -1,9 +1,10 @@
 from sqlalchemy import (
-    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, REAL, DateTime, func, Boolean, ForeignKey, TEXT, Uuid
+    FetchedValue, Integer, SMALLINT, INTEGER, BIGINT, VARCHAR, REAL, DateTime, func, Boolean, ForeignKey, TEXT, Uuid,
+    Index, UniqueConstraint, text, Date
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Raster, RasterElement
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 from shapely.geometry import Point, Polygon, MultiPolygon
@@ -259,10 +260,14 @@ class PilotToFlyingPrivileges(Base):
         ),
         nullable=False
     )
+    expires_at: Mapped[Optional[date]]              = mapped_column(Date)
 
 
 class VerificationRequest(Base):
     __tablename__ = "verification_request"
+    __table_args__ = (
+        Index("verification_request_one_pending_per_pilot", "pilot_id", unique=True, postgresql_where=text("status = 'pending'")),
+    )
 
     id: Mapped[int]                                                             = mapped_column(BIGINT, primary_key=True)
     pilot_id: Mapped[int]                                                       = mapped_column(BIGINT, ForeignKey("pilot.id"), nullable=False)
@@ -277,6 +282,13 @@ class VerificationRequest(Base):
         server_default="pending",
         nullable=False
     )
+
+    first_name: Mapped[str]                                                     = mapped_column(VARCHAR(255), nullable=False)
+    last_name: Mapped[str]                                                      = mapped_column(VARCHAR(255), nullable=False)
+    phone_number: Mapped[str]                                                   = mapped_column(VARCHAR(15), nullable=False)
+    pilot_number: Mapped[str]                                                   = mapped_column(VARCHAR(255), nullable=False)
+    keep_documents: Mapped[bool]                                                = mapped_column(Boolean, server_default="false", nullable=False)
+
     reason: Mapped[Optional[str]]                                                = mapped_column(TEXT)
     verified_by: Mapped[Optional[int]]                                           = mapped_column(INTEGER, ForeignKey("afd_moderator.id"))
     verified_at: Mapped[Optional[datetime]]                                      = mapped_column(DateTime(timezone=True))
@@ -285,11 +297,14 @@ class VerificationRequest(Base):
 
     pilot: Mapped['Pilot']                                                       = relationship('Pilot', back_populates='verification_request')
     afd_moderator: Mapped[Optional['AfdModerator']]                              = relationship()
-    verification_document: Mapped[list['VerificationDocument']]                  = relationship()
+    verification_document: Mapped[list['VerificationDocument']]                  = relationship(cascade="all, delete-orphan")
 
 
 class VerificationDocument(Base):
     __tablename__ = "verification_document"
+    __table_args__ = (
+        UniqueConstraint("request_id", "document_type", name="verification_document_request_id_document_type_key"),
+    )
 
     id: Mapped[int]                                                         = mapped_column(BIGINT, primary_key=True)
     request_id: Mapped[int]                                                 = mapped_column(BIGINT, ForeignKey("verification_request.id"), nullable=False)

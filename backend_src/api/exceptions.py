@@ -39,6 +39,13 @@ class APIExceptions:
         )
 
     @staticmethod
+    def content_too_large(detail: str) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=detail,
+        )
+
+    @staticmethod
     def unprocessable(errors: list[EntityError]) -> HTTPException:
         """Business-rule errors in the same shape as FastAPI request validation errors."""
         return HTTPException(

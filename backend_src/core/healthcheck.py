@@ -5,6 +5,7 @@ from redis import asyncio
 from sqlalchemy import text
 
 from backend_src.db.session import AsyncSessionMaker
+from backend_src.storage import VERIFICATION_BUCKET, get_storage
 from .config import Settings
 
 @dataclass(frozen=True)
@@ -37,6 +38,11 @@ class BackendHealthMixin():
         if not await self._verify_redis_connection():
             BackendHealthMixin.status = HealthStatus.CRITICAL
             logger.warning("Server cannot function without redis")
+            return False
+
+        if not await self._verify_storage_connection():
+            BackendHealthMixin.status = HealthStatus.CRITICAL
+            logger.warning("Server cannot function without storage")
             return False
 
         return True
@@ -88,4 +94,15 @@ class BackendHealthMixin():
             if redis is not None:
                 await redis.close()
         
+        return True
+
+    async def _verify_storage_connection(self) -> bool:
+        try:
+            async for storage in get_storage():
+                await storage.bucket_exists(VERIFICATION_BUCKET)
+        except Exception as e:
+            logger.error(f"Cannot connect to Storage")
+            logger.debug(f"{e}")
+            return False
+
         return True

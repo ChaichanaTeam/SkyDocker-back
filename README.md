@@ -3,6 +3,7 @@
 Infrastructure consists of these sevices:
 - `db` - PostGIS/Postgres image with extensions
 - `redis` - caching server
+- `storage` - SeaweedFS object storage (S3 API), see [docker/storage](docker/storage/README.md)
 - `app` - main ASGI server
 - `worker` - scheduled data syncs (geo-zones, terrain, country borders), same image as `app`
 
@@ -19,14 +20,15 @@ docker-compose.override.yml   # local dev overrides, applied automatically
 docker/
   db/       # Postgres image, init/ - baseline schema scripts (run on empty volume only)
   redis/    # Redis image, ACL template rendered by entrypoint.sh at start
+  storage/  # SeaweedFS image, S3 identities rendered at start, init.sh sets up buckets
   app/      # backend image
   worker/   # sync worker, built from the backend image
   test/     # pytest image
 ```
 
 Networks:
-- `backend` - `db`, `redis`, `app`, `worker`. Storages are reachable only by services that use them
-- `edge` - `app`, `test`. Public facing layer, place for a future CDN / reverse proxy
+- `backend` - `db`, `redis`, `storage`, `app`, `worker`. Storages are reachable only by services that use them
+- `edge` - `app`, `storage`, `test`. Public facing layer, place for a CDN / reverse proxy
 
 ### Adding a service
 

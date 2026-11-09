@@ -20,6 +20,7 @@ class TokenType(str, Enum):
     VERIFY = "verify"
     REGISTER = "register"
     CHECKIN = "checkin"
+    VERIFICATION_REQUEST = "verification_request"
 
 
 class TokenPayload(BaseModel):
@@ -152,6 +153,16 @@ def create_checkin_token(pilot_id: str, payload_cls: type[TokenPayload], **claim
         subject=pilot_id,
         expires_delta=timedelta(seconds=Settings.CHECKIN_TOKEN_EXPIRE_SECONDS),
         token_type=TokenType.CHECKIN,
+        payload_cls=payload_cls,
+        **claims
+    )
+
+
+def create_verification_token(pilot_id: str, payload_cls: type[TokenPayload], **claims) -> IssuedToken:
+    return _create_token(
+        subject=pilot_id,
+        expires_delta=timedelta(minutes=Settings.VERIFICATION_TOKEN_EXPIRE_MINUTES),
+        token_type=TokenType.VERIFICATION_REQUEST,
         payload_cls=payload_cls,
         **claims
     )

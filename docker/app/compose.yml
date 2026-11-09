@@ -22,6 +22,10 @@ services:
       PANSA_API_URL: ${PANSA_API_URL:-}
       PANSA_API_KEY: ${PANSA_API_KEY}
       PANSA_USER_AGENT: ${PANSA_USER_AGENT:-}
+      STORAGE_URL: ${STORAGE_URL}
+      STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL}
+      STORAGE_APP_KEY: ${STORAGE_APP_KEY}
+      STORAGE_APP_SECRET: ${STORAGE_APP_SECRET}
     deploy:
       resources:
         limits:
@@ -43,3 +47,5 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully

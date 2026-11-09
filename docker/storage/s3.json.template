@@ -1,0 +1,22 @@
+{
+  "identities": [
+    {
+      "name": "admin",
+      "credentials": [{ "accessKey": "${STORAGE_ADMIN_KEY}", "secretKey": "${STORAGE_ADMIN_SECRET}" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    },
+    {
+      "name": "app",
+      "credentials": [{ "accessKey": "${STORAGE_APP_KEY}", "secretKey": "${STORAGE_APP_SECRET}" }],
+      "actions": [
+        "Read:verification", "Write:verification", "List:verification", "Tagging:verification",
+        "Read:organizer", "Write:organizer", "List:organizer", "Tagging:organizer",
+        "Read:wiki", "Write:wiki", "List:wiki", "Tagging:wiki"
+      ]
+    },
+    {
+      "name": "anonymous",
+      "actions": ["Read:wiki"]
+    }
+  ]
+}

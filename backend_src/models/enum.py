@@ -57,14 +57,20 @@ class FlyingPrivileges(StrEnum):
 
 class VerificationDocumentType(StrEnum):
     UNKNOWN = "unknown"
-    OPERATOR_REGISTRATION = 'operator_registration'
-    CERTIFICATE = 'certificate'
+    PRIVILEGE_A1 = 'privilege_a1'
+    PRIVILEGE_A2 = 'privilege_a2'
+    PRIVILEGE_A3 = 'privilege_a3'
+    PRIVILEGE_STS01 = 'privilege_sts01'
+    PRIVILEGE_STS02 = 'privilege_sts02'
+    OPERATOR_NUMBER = 'operator_number'
 
 
 class VerificationRequestStatus(StrEnum):
     UNKNOWN = "unknown"
     PENDING = 'pending'
+    APPROVED = 'approved'
     REJECTED = 'rejected'
+    WITHDRAWN = 'withdrawn'
 
 
 class OperationalCategory(StrEnum):

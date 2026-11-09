@@ -1,4 +1,4 @@
-__all__ = [ "Pilot", "Drone", "Mission", "GeoZone", "Checkin", "Dem", "Country" ]
+__all__ = [ "Pilot", "Drone", "Mission", "GeoZone", "Checkin", "Dem", "Country", "Verification" ]
 
 
 from . import pilot as Pilot
@@ -8,3 +8,4 @@ from . import checkin as Checkin
 from . import geozone as GeoZone
 from . import dem as Dem
 from . import country as Country
+from . import verification as Verification
