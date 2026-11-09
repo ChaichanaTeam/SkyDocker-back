@@ -9,6 +9,13 @@ __all__ = [
     "get_session_gen",
     "revoke_all_sessions",
     "rate_limit",
+    "acquire_sync_lock",
+    "release_sync_lock",
+    "save_sync_status",
+    "get_sync_status",
+    "get_sync_statuses",
+    "beat_worker_heartbeat",
+    "is_worker_alive",
     "AsyncRedisSession",
 ]
 
@@ -25,3 +32,5 @@ from .sessions import (
     get_session_gen,
     revoke_all_sessions,
 )
+from .sync_lock import acquire_sync_lock, release_sync_lock
+from .sync_status import save_sync_status, get_sync_status, get_sync_statuses, beat_worker_heartbeat, is_worker_alive

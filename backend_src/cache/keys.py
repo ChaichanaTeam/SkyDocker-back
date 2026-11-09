@@ -8,3 +8,15 @@ def otp_key(purpose: str, subject: str) -> str:
 
 def session_gen_key(pilot_id: str) -> str:
     return f"session_gen:{pilot_id}"
+
+
+def sync_lock_key(name: str) -> str:
+    return f"sync:lock:{name}"
+
+
+def sync_status_key() -> str:
+    return "sync:status"
+
+
+def worker_heartbeat_key() -> str:
+    return "sync:worker:heartbeat"

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Collection
 
-from sqlalchemy import Row, cast, select
+from sqlalchemy import Row, cast, exists, select
 from sqlalchemy.orm import joinedload
 from geoalchemy2 import Geography
 from geoalchemy2.functions import ST_DWithin, ST_Intersects, ST_MakeEnvelope, ST_MakePoint, ST_SetSRID
@@ -102,3 +102,10 @@ async def get_activity_windows(country_id: int, db: AsyncDBSession) -> list[Row]
     )
 
     return list(result.all())
+
+
+async def any_stored(db: AsyncDBSession) -> bool:
+    """Whether the catalog sync has stored any geo-zone yet."""
+    result = await db.execute(select(exists().where(GeoZone.id.is_not(None))))
+
+    return bool(result.scalar())

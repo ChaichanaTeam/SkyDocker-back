@@ -1,5 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Query
+from redis_fastapi import AsyncRedisDep
 
 from backend_src.api.dependencies import AdminKey, AsyncDBDep, CountryQuery, CoordinateQuery, CurrentPilot
 from .schema import FlightPoint, MapArea
@@ -24,23 +25,23 @@ async def geozone_point(point: FlightPointQuery, country: CountryQuery, db: Asyn
 
 
 @router.post("/sync", dependencies=[AdminKey], **docs.GEOZONE_SYNC)
-async def geozone_sync(db: AsyncDBDep):
-    return await service.sync_catalog(db)
+async def geozone_sync(db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.sync_catalog(db, redis)
 
 
 @router.post("/activity/sync", dependencies=[AdminKey], **docs.GEOZONE_ACTIVITY_SYNC)
-async def geozone_activity_sync(db: AsyncDBDep):
-    return await service.sync_activity(db)
+async def geozone_activity_sync(db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.sync_activity(db, redis)
 
 
 @router.post("/terrain/sync", dependencies=[AdminKey], **docs.GEOZONE_TERRAIN_SYNC)
-async def geozone_terrain_sync(db: AsyncDBDep):
-    return await service.sync_terrain(db)
+async def geozone_terrain_sync(db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.sync_terrain(db, redis)
 
 
 @router.post("/border/sync", dependencies=[AdminKey], **docs.GEOZONE_BORDER_SYNC)
-async def geozone_border_sync(country: CountryQuery, db: AsyncDBDep):
-    return await service.sync_border(country, db)
+async def geozone_border_sync(country: CountryQuery, db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.sync_border(country, db, redis)
 
 
 @router.get("/country", **docs.GEOZONE_GET_COUNTRY)

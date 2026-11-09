@@ -13,6 +13,18 @@
             }
         },
         {
+            "label": "Worker: Run scheduled syncs",
+            "type": "shell",
+            "command": "uv run python -m backend_src.worker serve",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
             "label": "Pytest: Run tests",
             "type": "shell",
             "command": "uv run pytest -v -x --capture=tee-sys --suite ${input:testSuite} ${input:testArgs}",
@@ -40,9 +52,9 @@
             }
         },
         {
-            "label": "Docker: Run app container with build",
+            "label": "Docker: Run app and worker containers with build",
             "type": "shell",
-            "command": "docker compose up --build app",
+            "command": "docker compose up --build app worker",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -52,9 +64,9 @@
             }
         },
         {
-            "label": "Docker: Run app container cached",
+            "label": "Docker: Run app and worker containers cached",
             "type": "shell",
-            "command": "docker compose up app",
+            "command": "docker compose up app worker",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

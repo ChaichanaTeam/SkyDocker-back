@@ -1,0 +1,39 @@
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: docker/app/Dockerfile
+    container_name: skydocker_worker
+    restart: on-failure
+    command: ["python", "-m", "backend_src.worker", "serve"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      PANSA_API_URL: ${PANSA_API_URL:-}
+      PANSA_API_KEY: ${PANSA_API_KEY}
+      PANSA_USER_AGENT: ${PANSA_USER_AGENT:-}
+      # "-" keeps a variable set empty in .env empty, that disables the job; an unset one falls back to the default
+      SYNC_TIMEZONE: ${SYNC_TIMEZONE:-Europe/Warsaw}
+      SYNC_CATALOG_CRON: "${SYNC_CATALOG_CRON-0 3 * * *}"
+      SYNC_ACTIVITY_INTERVAL_MINUTES: ${SYNC_ACTIVITY_INTERVAL_MINUTES-360}
+      SYNC_BORDER_CRON: "${SYNC_BORDER_CRON-0 4 1 * *}"
+      SYNC_RETRY_DELAYS_MINUTES: ${SYNC_RETRY_DELAYS_MINUTES-5,15,45}
+      SYNC_ACTIVITY_RETRY_DELAYS_MINUTES: ${SYNC_ACTIVITY_RETRY_DELAYS_MINUTES-15}
+      SYNC_RUN_ON_START: ${SYNC_RUN_ON_START:-1}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-m", "backend_src.worker", "health"]
+      interval: 60s
+      start_period: 30s
+      timeout: 15s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
