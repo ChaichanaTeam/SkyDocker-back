@@ -5,6 +5,7 @@ Infrastructure consists of these sevices:
 - `redis` - caching server
 - `storage` - SeaweedFS object storage (S3 API), see [docker/storage](docker/storage/README.md)
 - `app` - main ASGI server
+- `worker` - scheduled data syncs (geo-zones, terrain, country borders), same image as `app`
 
 Testing environment:
 - `test` - isolated tool for testing endpoints
@@ -21,12 +22,13 @@ docker/
   redis/    # Redis image, ACL template rendered by entrypoint.sh at start
   storage/  # SeaweedFS image, S3 identities rendered at start, init.sh sets up buckets
   app/      # backend image
+  worker/   # sync worker, built from the backend image
   test/     # pytest image
 ```
 
 Networks:
-- `backend` - `db`, `redis`, `storage`, `app`. Storages are reachable only by services that use them
-- `edge` - `app`, `storage`, `test`. Public facing layer, place for a future CDN / reverse proxy
+- `backend` - `db`, `redis`, `storage`, `app`, `worker`. Storages are reachable only by services that use them
+- `edge` - `app`, `storage`, `test`. Public facing layer, place for a CDN / reverse proxy
 
 ### Adding a service
 
@@ -118,16 +120,16 @@ If running in non-docker environment - before local run setup database and redis
 
 ### Once all set
 
-Docker run (dev: `db` / `redis` ports on `127.0.0.1`, hot reload of `backend_src`):
+Docker run (dev: `db` / `redis` ports on `127.0.0.1`, hot reload of `backend_src` in `app`):
 
 ```bash
-docker compose up --build app
+docker compose up --build app worker
 ```
 
 Docker run without dev overrides (no published `db` / `redis` ports, no reload):
 
 ```bash
-docker compose -f docker-compose.yml up --build app
+docker compose -f docker-compose.yml up --build app worker
 ```
 
 Local run:
@@ -141,13 +143,30 @@ Can run with VS Code tasks:
 
 Local run:
 - Uvicorn: Run server app
+- Worker: Run scheduled syncs
 - Pytest: Run tests
 - Alembic: Upgrade to head
 
 Docker run:
-- Docker: Run app container with build
-- Docker: Run app container cached
+- Docker: Run app and worker containers with build
+- Docker: Run app and worker containers cached
 - Docker: Run test environment
+
+### Sync worker
+
+`worker` keeps geo-zones, their activity, terrain and country borders up to date on a schedule, see `SYNC_*` in [.env.example](./.env.example). An empty cron or `0` minutes disables a job
+
+Without the variables the PANSA syncs run on the normal schedule. `.env.example` disables them, so dev machines do not load the official PANSA API
+
+The worker does not reload code: after a change run `docker compose restart worker`
+
+Run a sync right away, without retries (`catalog`, `terrain`, `activity`, `border` or `all`, e.g. to fill a new database):
+
+```bash
+docker compose exec worker python -m backend_src.worker run all
+```
+
+Exit code: `0` ok, `1` the sync failed, `2` it did not start because another sync of the same data is running. `GET /api/v1/health` shows whether the worker is up and the last run of every sync
 
 ### Tests
 

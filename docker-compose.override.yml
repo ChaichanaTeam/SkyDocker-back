@@ -20,3 +20,8 @@ services:
       - ./backend_src/logging.json
     volumes:
       - ./backend_src:/app/backend_src
+
+  worker:
+    # no reload: every restart runs the start-up syncs again, restart by hand with `docker compose restart worker`
+    volumes:
+      - ./backend_src:/app/backend_src

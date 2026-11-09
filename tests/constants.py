@@ -11,6 +11,8 @@ LIVE_API_LINK = httpx.URL(f"http://{BASE_HOST}:8000/api/v1/")
 DEMO_API_LINK = httpx.URL(f"http://{BASE_HOST}:8000/api/demo/")
 OTP_CODE = os.getenv("OTP_CODE")
 RATE_LIMIT_THRESHOLD = int(os.getenv("RATE_LIMIT_THRESHOLD", 5))
+# Optional, admin endpoint tests are skipped without it
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
 
 # Check-in points, (lon, lat), they depend on the PANSA zone catalog
 CHECKIN_CLEAN_POINT = (17.0, 53.5)          # no restrictions for a1, 50 m, 200 m

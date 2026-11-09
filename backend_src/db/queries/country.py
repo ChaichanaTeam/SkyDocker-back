@@ -32,6 +32,17 @@ async def get_supported_countries(db: AsyncDBSession) -> list[Country]:
     return list(result.scalars().all())
 
 
+async def get_with_geo_zones(db: AsyncDBSession, without_border: bool = False) -> list[Country]:
+    """Countries whose border the sync keeps, optionally only those with no border stored yet."""
+    statement = select(Country).where(exists().where(GeoZone.country_id == Country.id))
+    if without_border:
+        statement = statement.where(~exists().where(CountryBorder.country_id == Country.id))
+
+    result = await db.execute(statement.order_by(Country.id))
+
+    return list(result.scalars().all())
+
+
 async def is_supported(country_id: int, db: AsyncDBSession) -> bool:
     result = await db.execute(select(_is_supported()).where(Country.id == country_id))
 
