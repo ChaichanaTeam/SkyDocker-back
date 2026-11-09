@@ -43,6 +43,19 @@ async def get_by_id(id: int, db: AsyncDBSession) -> Optional[Checkin]:
     return result.scalar_one_or_none()
 
 
+async def get_pilot_checkins(pilot_id: int, limit: int, offset: int, db: AsyncDBSession) -> list[Checkin]:
+    result = await db.execute(
+        select(Checkin)
+        .where(Checkin.pilot_id == pilot_id)
+        .order_by(Checkin.starts_at.desc(), Checkin.id.desc())
+        .limit(limit)
+        .offset(offset)
+        .options(joinedload(Checkin.country))
+    )
+
+    return list(result.scalars().all())
+
+
 async def get_active_by_pilot(pilot_id: int, db: AsyncDBSession) -> Optional[Checkin]:
     """Check-in of the pilot that is not ended yet, a pilot can have only one."""
     result = await db.execute(
