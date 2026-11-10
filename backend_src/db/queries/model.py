@@ -1,10 +1,10 @@
 from typing import Optional
 
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import delete, exists, or_, select, update
 from sqlalchemy.orm import joinedload
 
 from backend_src.db import AsyncDBSession
-from backend_src.models import Drone, Model
+from backend_src.models import Checkin, Drone, Mission, Model
 
 
 async def get_verified(db: AsyncDBSession) -> list[Model]:
@@ -69,3 +69,21 @@ async def replace(model_id: int, by_model_id: int, db: AsyncDBSession) -> None:
     """Moves every drone, deleted ones included, to the other model and removes this one."""
     await db.execute(update(Drone).where(Drone.model_id == model_id).values(model_id=by_model_id))
     await db.execute(delete(Model).where(Model.id == model_id))
+
+
+async def delete_unused(model_id: int, db: AsyncDBSession) -> bool:
+    """Removes the model with its deleted drones, False when a drone in a drone park or a flight still uses it."""
+    in_use = exists().where(
+        Drone.model_id == model_id,
+        or_(
+            Drone.is_deleted.is_(False),
+            exists().where(Checkin.drone_id == Drone.id),
+            exists().where(Mission.drone_id == Drone.id),
+        ),
+    )
+    if (await db.execute(select(in_use))).scalar():
+        return False
+
+    await db.execute(delete(Drone).where(Drone.model_id == model_id))
+    await db.execute(delete(Model).where(Model.id == model_id))
+    return True

@@ -22,3 +22,8 @@ async def approve(model_id: int, correction: ModelCorrection, db: AsyncDBDep):
 @router.post("/{model_id}/replace", **docs.REPLACE)
 async def replace(model_id: int, replacement: ModelReplacement, db: AsyncDBDep):
     return await service.replace(model_id, replacement, db)
+
+
+@router.delete("/{model_id}", **docs.DELETE)
+async def delete(model_id: int, db: AsyncDBDep):
+    return await service.delete(model_id, db)

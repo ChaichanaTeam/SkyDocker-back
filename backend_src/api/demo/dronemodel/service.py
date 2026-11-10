@@ -51,6 +51,17 @@ async def replace(model_id: int, replacement: ModelReplacement, db: AsyncDBSessi
     return await _review(replacement.model_id, db, moved)
 
 
+async def delete(model_id: int, db: AsyncDBSession) -> dict[str, str]:
+    if await Queries.Model.get_by_id(model_id, db) is None:
+        raise APIExceptions.not_found("Drone model not found")
+
+    if not await Queries.Model.delete_unused(model_id, db):
+        raise APIExceptions.conflict("A drone in a drone park or a check-in or mission uses the drone model")
+
+    await db.commit()
+    return {"message": f"Drone model {model_id} deleted"}
+
+
 async def _unverified_model(model_id: int, db: AsyncDBSession) -> Model:
     model = await Queries.Model.get_by_id(model_id, db)
     if model is None:

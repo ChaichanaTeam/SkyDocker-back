@@ -25,6 +25,17 @@ APPROVE = {
     }
 }
 
+DELETE = {
+    "summary": "Delete a drone model",
+    "description": "Cleanup for tests and demos. Removes the model, verified or not, together with its drones "
+                    "that pilots already deleted, when no drone in a drone park and no check-in or mission uses it",
+    "responses": {
+        200: { "description": "Drone model deleted" },
+        404: { "description": "Drone model not found" },
+        409: { "description": "The drone model is still in use" }
+    }
+}
+
 REPLACE = {
     "summary": "Replace a typed-in drone model with a catalog model",
     "description": "Moderator simulation. For a model that is in the catalog already under another spelling: "
