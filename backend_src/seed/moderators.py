@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 
 from pydantic import BaseModel, EmailStr, Field, ValidationError, field_validator
-from sqlalchemy import text
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 
 from backend_src.core.security import hash_password
 from backend_src.db import AsyncDBSession, Queries
@@ -77,19 +76,21 @@ async def seed_moderators(profiles: list[SeedModerator], db: AsyncDBSession) -> 
             report.skipped.append(profile.email)
             continue
 
-        # Another run may have created it meanwhile, the unique index skips it then
-        created = await db.scalar(
-            insert(AfdModerator)
-            .values(
-                email=profile.email,
-                first_name=profile.first_name,
-                last_name=profile.last_name,
-                password_hash=hash_password(profile.password),
-            )
-            .on_conflict_do_nothing(index_elements=[text("lower(email)")])
-            .returning(AfdModerator.id)
+        moderator = AfdModerator(
+            email=profile.email,
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+            password_hash=hash_password(profile.password),
         )
-        (report.created if created is not None else report.skipped).append(profile.email)
+        # Another run may have created it meanwhile, the unique index (0145) rejects it then
+        try:
+            async with db.begin_nested():
+                db.add(moderator)
+        except IntegrityError:
+            report.skipped.append(profile.email)
+            continue
+
+        report.created.append(profile.email)
 
     await db.commit()
     return report
