@@ -13,7 +13,7 @@ def _pilot_id(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator
     return r.json()["id"]
 
 
-@pytest.mark.parametrize("path", ["me", "me/privileges", "me/drones", "me/missions", "me/check-ins", "me/check-ins/active", "1"])
+@pytest.mark.parametrize("path", ["me", "me/privileges", "me/drones", "me/missions", "me/check-ins", "me/check-ins/active", "me/documents", "1"])
 def test_requires_token(client: Client, get_endpoint_link: EndpointCreator, path: str):
     r = pilot_get(client, None, get_endpoint_link, path)
     assert r.status_code in (401, 403), f"{path} must need a token: {r.text}"
