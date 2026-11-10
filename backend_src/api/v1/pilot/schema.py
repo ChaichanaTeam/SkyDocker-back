@@ -133,6 +133,36 @@ class DroneCreate(BaseModel):
         return self
 
 
+class DroneUpdate(BaseModel):
+    """Only the passed fields change; switching is_drone_modified off clears mtom_override."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    model_id: Optional[int] = Field(None, ge=1, description="Model from GET /drone-models. Excludes custom_model")
+    custom_model: Optional[CustomDroneModel] = Field(None, description="The pilot's own model when it is not listed. Excludes model_id")
+    serial_number: Optional[str] = Field(None, min_length=1, max_length=255, description="Unique among all drones, case is ignored")
+    category: Optional[DroneCategory] = Field(None, description="Class mark from the drone's label, pb for a privately built drone")
+
+    is_drone_modified: Optional[bool] = None
+    mtom_override: Optional[int] = Field(
+        None, ge=1, le=MAX_TAKE_OFF_MASS_G, description="Actual take-off mass in grams, required exactly when the drone is modified",
+    )
+
+    @model_validator(mode="after")
+    def validate_drone(self) -> "DroneUpdate":
+        if self.model_id is not None and self.custom_model is not None:
+            raise ValueError("Pass either model_id or custom_model")
+
+        if self.category is DroneCategory.UNKNOWN:
+            raise ValueError("Unknown drone class")
+
+        for field in ("serial_number", "category", "is_drone_modified"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+
+        return self
+
+
 class FlightProperties(FeatureProperties):
     id: int
     drone_id: int

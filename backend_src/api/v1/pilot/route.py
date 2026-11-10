@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Query, status
 
 from backend_src.api.dependencies import AsyncDBDep, CurrentPilot, StorageDep
 from .constants import BIGINT_MAX, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-from .schema import DroneCreate, PilotUpdate
+from .schema import DroneCreate, DroneUpdate, PilotUpdate
 from . import docs
 from . import drone_park
 from . import service
@@ -46,6 +46,11 @@ async def add_drone(data: DroneCreate, pilot: CurrentPilot, db: AsyncDBDep):
 @router.get("/me/drones/{drone_id}", **docs.GET_DRONE)
 async def get_drone(drone_id: EntityId, pilot: CurrentPilot, db: AsyncDBDep):
     return await service.get_drone(drone_id, pilot, db)
+
+
+@router.patch("/me/drones/{drone_id}", **docs.UPDATE_DRONE)
+async def update_drone(drone_id: EntityId, data: DroneUpdate, pilot: CurrentPilot, db: AsyncDBDep):
+    return await drone_park.update_drone(drone_id, data, pilot, db)
 
 
 @router.get("/me/missions", **docs.GET_MISSIONS)
