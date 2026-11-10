@@ -7,6 +7,7 @@ from .pilot import PilotRouter
 from .geozone import GeoZoneRouter
 from .checkin import CheckinRouter
 from .verification import VerificationRouter
+from .moderator import ModeratorRouter
 
 
-BusinessRouters = (AuthRouter, PilotRouter, CheckinRouter, GeoZoneRouter, VerificationRouter)
+BusinessRouters = (AuthRouter, PilotRouter, CheckinRouter, GeoZoneRouter, VerificationRouter, ModeratorRouter)

@@ -7,20 +7,22 @@ from redis_fastapi import AsyncRedisDep
 from loguru import logger
 
 from backend_src.api.shared_schemas import BoundingBox, Coordinate, normalize_email
-from backend_src.cache import AsyncRedisSession, get_session_gen
+from backend_src.cache import AsyncRedisSession, get_session_gen, MODERATOR_SCOPE
 from backend_src.db import Queries, AsyncDBSession, AsyncSessionMaker
 from backend_src.core.config import Settings
 from backend_src.core.security import EmailTokenPayload, TokenType, decode_token
-from backend_src.models import Pilot, Country
+from backend_src.models import Pilot, Country, AfdModerator
 from backend_src.storage import Storage, get_storage
 from backend_src.api.exceptions import APIExceptions
 
 
 bearer_scheme = HTTPBearer()
+moderator_bearer_scheme = HTTPBearer(scheme_name="ModeratorBearer")
 admin_key_scheme = APIKeyHeader(name="X-Admin-Key", auto_error=False)
 
 
 HeaderAuthorization = Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)]
+ModeratorAuthorization = Annotated[HTTPAuthorizationCredentials, Depends(moderator_bearer_scheme)]
 
 
 async def get_db() -> AsyncGenerator[AsyncDBSession, None]:
@@ -85,6 +87,29 @@ async def get_current_pilot(
     return await _pilot_from_token(db, credentials, TokenType.ACCESS, redis)
 
 
+async def get_current_moderator(
+    db: AsyncDBDep,
+    redis: AsyncRedisDep,
+    credentials: ModeratorAuthorization,
+) -> AfdModerator:
+    # Only moderator access tokens pass, pilot tokens carry another type
+    payload = decode_token(credentials.credentials)
+    if payload is None or payload.type != TokenType.MODERATOR_ACCESS.value:
+        raise APIExceptions.credentials_exception
+
+    if not payload.sub.isdigit():
+        raise APIExceptions.credentials_exception
+
+    if payload.gen != await get_session_gen(redis, payload.sub, MODERATOR_SCOPE):
+        raise APIExceptions.credentials_exception
+
+    moderator = await Queries.Moderator.get_by_id(int(payload.sub), db)
+    if moderator is None:
+        raise APIExceptions.credentials_exception
+
+    return moderator
+
+
 async def get_verify_subject(
     credentials: HeaderAuthorization,
 ) -> str:
@@ -134,6 +159,7 @@ async def get_country_from_tag(
 CoordinateQuery = Annotated[Coordinate, Query()]
 CountryQuery = Annotated[Country, Depends(get_country_from_tag)]
 CurrentPilot = Annotated[Pilot, Depends(get_current_pilot)]
+CurrentModerator = Annotated[AfdModerator, Depends(get_current_moderator)]
 AdminKey = Depends(verify_admin_key)
 VerifySubject = Annotated[str, Depends(get_verify_subject)]
 ResetPilot = Annotated[Pilot, Depends(get_reset_pilot)]

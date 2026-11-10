@@ -1,4 +1,4 @@
-from typing import Any, TypedDict
+from typing import Any, Optional, TypedDict
 from fastapi import HTTPException, status
 
 
@@ -11,10 +11,11 @@ class EntityError(TypedDict):
 
 class APIExceptions:
     @staticmethod
-    def unauthorized(detail: str) -> HTTPException:
+    def unauthorized(detail: str, headers: Optional[dict[str, str]] = None) -> HTTPException:
         return HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=detail,
+            headers=headers,
         )
 
     @staticmethod
