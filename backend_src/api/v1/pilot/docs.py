@@ -116,6 +116,22 @@ UPDATE_DRONE = {
 }
 
 
+DELETE_DRONE = {
+    "summary": "Delete own drone",
+    "description": "Removes the drone from the drone park: it is no longer listed and cannot be used for a check-in. "
+                    "Check-ins and missions flown with it keep referring to it, "
+                    "and its serial number can be registered again.\n\n"
+                    "A drone with an unfinished check-in or a pending, accepted or active mission that has not ended "
+                    "cannot be deleted.\n\n"
+                    "Authorization header REQUIRED!",
+    "responses": {
+        204: { "description": "Drone deleted" },
+        404: { "description": "Drone does not exist, was already deleted or belongs to another pilot" },
+        409: { "description": "The drone is in use by a check-in or mission" },
+    }
+}
+
+
 GET_DRONE = {
     "summary": "Get own drone",
     "description": "Authorization header REQUIRED!",

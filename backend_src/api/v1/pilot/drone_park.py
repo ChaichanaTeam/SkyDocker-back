@@ -97,6 +97,13 @@ async def update_drone(drone_id: int, data: DroneUpdate, pilot: Pilot, db: Async
     return await Queries.Drone.get_pilot_drone(drone_id, pilot_id, db) # type: ignore[return-value]
 
 
+async def delete_drone(drone_id: int, pilot: Pilot, db: AsyncDBSession) -> None:
+    """Hides the drone from the drone park, its check-ins and missions keep referring to it."""
+    drone = await _own_free_drone(drone_id, pilot.id, db)
+    drone.is_deleted = True
+    await db.commit()
+
+
 async def _own_free_drone(drone_id: int, pilot_id: int, db: AsyncDBSession) -> Drone:
     """The pilot's drone that no check-in or mission is using, a flight in progress keeps its drone as planned."""
     drone = await Queries.Drone.get_pilot_drone(drone_id, pilot_id, db)

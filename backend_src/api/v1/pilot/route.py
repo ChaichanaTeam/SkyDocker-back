@@ -53,6 +53,11 @@ async def update_drone(drone_id: EntityId, data: DroneUpdate, pilot: CurrentPilo
     return await drone_park.update_drone(drone_id, data, pilot, db)
 
 
+@router.delete("/me/drones/{drone_id}", status_code=status.HTTP_204_NO_CONTENT, **docs.DELETE_DRONE)
+async def delete_drone(drone_id: EntityId, pilot: CurrentPilot, db: AsyncDBDep):
+    await drone_park.delete_drone(drone_id, pilot, db)
+
+
 @router.get("/me/missions", **docs.GET_MISSIONS)
 async def get_missions(pilot: CurrentPilot, db: AsyncDBDep, limit: Limit = DEFAULT_PAGE_SIZE, offset: Offset = 0):
     return await service.get_missions(pilot, limit, offset, db)
