@@ -1,6 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import delete, exists, select
+from sqlalchemy.orm import joinedload
 
 from backend_src.db import AsyncDBSession
 from backend_src.models import Drone, Model
@@ -33,3 +34,26 @@ async def delete_if_unused_unverified(model_id: int, db: AsyncDBSession) -> None
             ~exists().where(Drone.model_id == Model.id),
         )
     )
+
+
+async def get_unverified(db: AsyncDBSession) -> list[Model]:
+    """Models pilots typed in, the oldest first, as a moderator's queue."""
+    result = await db.execute(
+        select(Model)
+        .where(Model.is_model_verified.is_(False))
+        .order_by(Model.created_at, Model.id)
+    )
+
+    return list(result.scalars().all())
+
+
+async def get_drones_of(model_ids: list[int], db: AsyncDBSession) -> list[Drone]:
+    """Drones in drone parks that use the models, with their pilots."""
+    result = await db.execute(
+        select(Drone)
+        .where(Drone.model_id.in_(model_ids), Drone.is_deleted.is_(False))
+        .order_by(Drone.id)
+        .options(joinedload(Drone.pilot), joinedload(Drone.model))
+    )
+
+    return list(result.scalars().all())
