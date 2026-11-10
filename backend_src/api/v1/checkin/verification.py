@@ -10,6 +10,7 @@ from backend_src.api.v1.geozone.elevation import ground_elevation
 from backend_src.api.v1.geozone.schema import ActivityWindow
 from backend_src.db import Queries, AsyncDBSession
 from backend_src.db.queries.checkin import TERMINAL_STATUSES
+from backend_src.dronepark import take_off_mass
 from backend_src.integrations.pansa import height_rule
 from backend_src.models import ActivityTime, Country, Drone, FlyingPrivileges, GeoZone
 from .schema import CheckinPlan, CheckinPreviewRequest
@@ -122,7 +123,7 @@ async def check_airspace(
     for window in await Queries.GeoZone.get_windows_ending_after(owners, starts_at, db): # type: ignore
         windows.setdefault(window.geo_zone_id, []).append(window)
 
-    mass_g = drone.mtom_override if drone.mtom_override is not None else drone.model.mtom
+    mass_g = take_off_mass(drone)
     field = _plan_field(data, "height")
 
     errors: list[CheckinError] = []
