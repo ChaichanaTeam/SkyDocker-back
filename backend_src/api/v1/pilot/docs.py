@@ -74,6 +74,27 @@ GET_DRONES = {
 }
 
 
+ADD_DRONE = {
+    "summary": "Add a drone to own drone park",
+    "description": "The model is either chosen from GET /drone-models by `model_id`, or typed in as `custom_model` "
+                    "with every value from its official specification when it is not listed. "
+                    "Such a model is unchecked (`is_model_verified` false) until a moderator approves it "
+                    "or replaces it with a catalog model; the drone can fly meanwhile.\n\n"
+                    "The class mark must fit the take-off mass (C0 below 250 g, C1 below 900 g, C2 below 4 kg, "
+                    "C3 and C4 below 25 kg): `mtom_override` of a modified drone, otherwise the model's `mtom`.\n\n"
+                    "Authorization header REQUIRED!",
+    "response_description": "Added drone with its model",
+    "response_model": DroneRead,
+    "responses": {
+        201: { "description": "Drone added" },
+        404: { "description": "`model_id` is not in the catalog" },
+        409: { "description": "The serial number is already registered, or `custom_model` is in the catalog: "
+                              "`detail.model_id` is the model to choose" },
+        422: { "description": "Invalid request, or the class does not fit the mass: `drone.class_mass_mismatch`" },
+    }
+}
+
+
 GET_DRONE = {
     "summary": "Get own drone",
     "description": "Authorization header REQUIRED!",

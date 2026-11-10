@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlalchemy import select
 
 from backend_src.db import AsyncDBSession
@@ -14,3 +16,9 @@ async def get_verified(db: AsyncDBSession) -> list[Model]:
 
     return list(result.scalars().all())
 
+
+
+async def get_verified_by_id(model_id: int, db: AsyncDBSession) -> Optional[Model]:
+    result = await db.execute(select(Model).where(Model.id == model_id, Model.is_model_verified.is_(True)))
+
+    return result.scalar_one_or_none()

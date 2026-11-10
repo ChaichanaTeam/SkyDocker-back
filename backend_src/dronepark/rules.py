@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from backend_src.models import Drone, DroneCategory
@@ -29,3 +30,8 @@ def class_mass_conflict(category: DroneCategory, mass_g: int) -> Optional[str]:
         return None
 
     return f"Class {category.value} needs a take-off mass below {limit} g, the drone has {mass_g} g"
+
+
+def model_key(manufacturer: str, model_name: str) -> str:
+    """Manufacturer and model compared without case, spaces, dashes and underscores, "dji mini-4 pro" = "DJI Mini 4 Pro"."""
+    return re.sub(r"[\s\-_]+", "", f"{manufacturer}{model_name}".lower())

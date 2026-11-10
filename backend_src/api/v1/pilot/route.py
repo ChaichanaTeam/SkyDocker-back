@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Path, Query
+from fastapi import APIRouter, Path, Query, status
 
 from backend_src.api.dependencies import AsyncDBDep, CurrentPilot, StorageDep
 from .constants import BIGINT_MAX, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-from .schema import PilotUpdate
+from .schema import DroneCreate, PilotUpdate
 from . import docs
+from . import drone_park
 from . import service
 
 
@@ -35,6 +36,11 @@ async def get_privileges(pilot: CurrentPilot, db: AsyncDBDep):
 @router.get("/me/drones", **docs.GET_DRONES)
 async def get_drones(pilot: CurrentPilot, db: AsyncDBDep):
     return await service.get_drones(pilot, db)
+
+
+@router.post("/me/drones", status_code=status.HTTP_201_CREATED, **docs.ADD_DRONE)
+async def add_drone(data: DroneCreate, pilot: CurrentPilot, db: AsyncDBDep):
+    return await drone_park.add_drone(data, pilot, db)
 
 
 @router.get("/me/drones/{drone_id}", **docs.GET_DRONE)

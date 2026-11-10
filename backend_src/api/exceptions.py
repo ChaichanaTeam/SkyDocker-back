@@ -25,7 +25,7 @@ class APIExceptions:
         )
 
     @staticmethod
-    def conflict(detail: str) -> HTTPException:
+    def conflict(detail: str | dict[str, Any]) -> HTTPException:
         return HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=detail,
