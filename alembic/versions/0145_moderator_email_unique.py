@@ -1,7 +1,7 @@
 """afd_moderator: unique email
 
 Revision ID: 0145_moderator_email_unique
-Revises: 0134_country_borders
+Revises: 0123_privilege_expiry
 Create Date: 2026-11-11 12:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '0145_moderator_email_unique'
-down_revision: Union[str, Sequence[str], None] = '0134_country_borders'
+down_revision: Union[str, Sequence[str], None] = '0123_privilege_expiry'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
