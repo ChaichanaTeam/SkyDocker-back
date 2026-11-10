@@ -5,8 +5,9 @@ from shapely.geometry import mapping
 from backend_src.api.exceptions import APIExceptions
 from backend_src.api.shared_schemas import FeatureProperties, GeoFeature, GeoJson
 from backend_src.db import AsyncDBSession, Queries
-from backend_src.models import Checkin, Drone, Mission, Pilot, PilotToFlyingPrivileges
-from .schema import PilotCheckinProperties, PilotMissionProperties, PilotUpdate
+from backend_src.models import Checkin, Drone, Mission, Pilot, PilotToFlyingPrivileges, VerificationDocumentType
+from backend_src.storage import ORGANIZER_BUCKET, Storage, organizer_prefix
+from .schema import OrganizerDocumentRead, PilotCheckinProperties, PilotMissionProperties, PilotUpdate
 
 
 def _feature(flight: Union[Mission, Checkin], properties: FeatureProperties) -> GeoFeature:
@@ -75,6 +76,22 @@ async def get_checkins(pilot: Pilot, limit: int, offset: int, db: AsyncDBSession
     checkins = await Queries.Checkin.get_pilot_checkins(pilot.id, limit, offset, db)
 
     return GeoJson(features=[_checkin_feature(checkin) for checkin in checkins])
+
+
+async def get_documents(pilot: Pilot, storage: Storage) -> list[OrganizerDocumentRead]:
+    objects = await storage.list_objects(ORGANIZER_BUCKET, organizer_prefix(pilot.id))
+    objects.sort(key=lambda stored: stored.last_modified, reverse=True)
+
+    return [
+        OrganizerDocumentRead(
+            # pilots/{pilot_id}/{document_type}/{uuid}.{ext}
+            document_type=VerificationDocumentType(stored.key.split("/")[2]),
+            size=stored.size,
+            uploaded_at=stored.last_modified,
+            url=await storage.presigned_get(ORGANIZER_BUCKET, stored.key),
+        )
+        for stored in objects
+    ]
 
 
 async def get_active_checkin(pilot: Pilot, db: AsyncDBSession) -> GeoFeature:

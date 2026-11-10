@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Query
 
-from backend_src.api.dependencies import AsyncDBDep, CurrentPilot
+from backend_src.api.dependencies import AsyncDBDep, CurrentPilot, StorageDep
 from .constants import BIGINT_MAX, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from .schema import PilotUpdate
 from . import docs
@@ -60,6 +60,11 @@ async def get_checkins(pilot: CurrentPilot, db: AsyncDBDep, limit: Limit = DEFAU
 @router.get("/me/check-ins/active", **docs.GET_ACTIVE_CHECKIN)
 async def get_active_checkin(pilot: CurrentPilot, db: AsyncDBDep):
     return await service.get_active_checkin(pilot, db)
+
+
+@router.get("/me/documents", **docs.GET_DOCUMENTS)
+async def get_documents(pilot: CurrentPilot, storage: StorageDep):
+    return await service.get_documents(pilot, storage)
 
 
 @router.get("/{pilot_id}", **docs.GET_PUBLIC)

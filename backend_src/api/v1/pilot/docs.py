@@ -1,5 +1,5 @@
 from backend_src.api.shared_schemas import GeoFeature, GeoJson
-from .schema import DroneRead, PilotPublicRead, PilotRead, PrivilegeRead
+from .schema import DroneRead, OrganizerDocumentRead, PilotPublicRead, PilotRead, PrivilegeRead
 
 
 ROUTER = {
@@ -52,6 +52,16 @@ GET_PRIVILEGES = {
                     "Authorization header REQUIRED!",
     "response_description": "Privileges of the pilot",
     "response_model": list[PrivilegeRead],
+}
+
+
+GET_DOCUMENTS = {
+    "summary": "List own documents from the organizer",
+    "description": "Documents kept after an approved verification request with `keep_documents`, the newest first.\n\n"
+                    "Every `url` is a download link valid for 5 minutes, request the list again for fresh links.\n\n"
+                    "Authorization header REQUIRED!",
+    "response_description": "Documents of the pilot with download links",
+    "response_model": list[OrganizerDocumentRead],
 }
 
 

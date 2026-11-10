@@ -4,7 +4,8 @@ from typing import Any, Optional, Union
 from datetime import date, datetime
 
 from backend_src.models.enum import (
-    DroneCategory, FlyingPrivileges, MissionFlightGoal, MissionStatus, OperationalCategory, UserActivity
+    DroneCategory, FlyingPrivileges, MissionFlightGoal, MissionStatus, OperationalCategory, UserActivity,
+    VerificationDocumentType
 )
 from backend_src.models.model import Checkin, Mission
 from backend_src.api.shared_schemas import FeatureProperties, StoredPhoneNumber
@@ -46,6 +47,13 @@ class PilotPublicRead(BaseModel):
 
     activity: Optional[UserActivity]
     flight_time: int
+
+
+class OrganizerDocumentRead(BaseModel):
+    document_type: VerificationDocumentType
+    size: int = Field(description="Bytes")
+    uploaded_at: datetime
+    url: str = Field(description="Presigned download link, valid for 5 minutes")
 
 
 class PrivilegeRead(BaseModel):
