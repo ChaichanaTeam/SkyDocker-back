@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from datetime import datetime
 from typing import AsyncGenerator
 
 import aioboto3
@@ -22,6 +24,13 @@ def _client(endpoint_url: str | None):
     )
 
 
+@dataclass(frozen=True)
+class StoredObject:
+    key: str
+    size: int
+    last_modified: datetime
+
+
 class Storage:
     def __init__(self, s3, signer) -> None:
         self._s3 = s3
@@ -37,6 +46,15 @@ class Storage:
     async def delete_objects(self, bucket: str, keys: list[str]) -> None:
         for key in keys:
             await self._s3.delete_object(Bucket=bucket, Key=key)
+
+    async def list_objects(self, bucket: str, prefix: str) -> list[StoredObject]:
+        paginator = self._s3.get_paginator("list_objects_v2")
+
+        return [
+            StoredObject(key=item["Key"], size=item["Size"], last_modified=item["LastModified"])
+            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix)
+            for item in page.get("Contents", [])
+        ]
 
     async def presigned_get(self, bucket: str, key: str, expires: int = PRESIGNED_TTL_SECONDS) -> str:
         return await self._signer.generate_presigned_url(

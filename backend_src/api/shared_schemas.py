@@ -7,6 +7,19 @@ class E164PhoneNumber(PhoneNumber):
     phone_format = "E164"
 
 
+PHONE_COLUMN_LENGTH = 15
+
+
+def _fits_phone_column(phone: str) -> str:
+    if len(phone) > PHONE_COLUMN_LENGTH:
+        raise ValueError(f"Phone number is longer than {PHONE_COLUMN_LENGTH} characters")
+    return phone
+
+
+# The validator accepts numbers that do not fit the VARCHAR(15) column
+StoredPhoneNumber = Annotated[E164PhoneNumber, AfterValidator(_fits_phone_column)]
+
+
 _GMAIL = {"gmail.com", "googlemail.com"}
 _PLUS_ONLY = {
     "outlook.com", "hotmail.com", "live.com", "msn.com",

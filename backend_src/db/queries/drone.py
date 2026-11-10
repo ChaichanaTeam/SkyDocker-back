@@ -7,6 +7,17 @@ from backend_src.db import AsyncDBSession
 from backend_src.models import Drone
 
 
+async def get_pilot_drones(pilot_id: int, db: AsyncDBSession) -> list[Drone]:
+    result = await db.execute(
+        select(Drone)
+        .where(Drone.pilot_id == pilot_id)
+        .order_by(Drone.id)
+        .options(joinedload(Drone.model))
+    )
+
+    return list(result.scalars().all())
+
+
 async def get_pilot_drone(drone_id: int, pilot_id: int, db: AsyncDBSession) -> Optional[Drone]:
     result = await db.execute(
         select(Drone)
