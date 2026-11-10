@@ -57,3 +57,9 @@ async def get_drones_of(model_ids: list[int], db: AsyncDBSession) -> list[Drone]
     )
 
     return list(result.scalars().all())
+
+
+async def get_by_id(model_id: int, db: AsyncDBSession) -> Optional[Model]:
+    result = await db.execute(select(Model).where(Model.id == model_id))
+
+    return result.scalar_one_or_none()
