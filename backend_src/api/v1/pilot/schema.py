@@ -70,6 +70,7 @@ class DroneModelRead(BaseModel):
     manufacturer: str
     model_name: str
     category: OperationalCategory
+    is_model_verified: bool = Field(description="False for a model the pilot typed in, until a moderator checks it")
 
     speed: int = Field(description="Metres per second")
     mtom: int = Field(description="Maximum take-off mass in grams")
