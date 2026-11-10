@@ -2,7 +2,7 @@ from backend_src.api.exceptions import APIExceptions
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.dronepark import class_mass_conflict, model_key, take_off_mass
 from backend_src.models import Drone, Model
-from .schema import ClassConflict, ModelCorrection, ModelDroneRead, ModelReview, UnverifiedModelRead
+from .schema import ClassConflict, ModelCorrection, ModelDroneRead, ModelReplacement, ModelReview, UnverifiedModelRead
 
 
 async def list_unverified(db: AsyncDBSession) -> list[UnverifiedModelRead]:
@@ -38,6 +38,19 @@ async def approve(model_id: int, correction: ModelCorrection, db: AsyncDBSession
     return await _review(model_id, db)
 
 
+async def replace(model_id: int, replacement: ModelReplacement, db: AsyncDBSession) -> ModelReview:
+    await _unverified_model(model_id, db)
+
+    if await Queries.Model.get_verified_by_id(replacement.model_id, db) is None:
+        raise APIExceptions.not_found("Catalog drone model not found")
+
+    moved = {drone.id for drone in await Queries.Model.get_drones_of([model_id], db)}
+    await Queries.Model.replace(model_id, replacement.model_id, db)
+    await db.commit()
+
+    return await _review(replacement.model_id, db, moved)
+
+
 async def _unverified_model(model_id: int, db: AsyncDBSession) -> Model:
     model = await Queries.Model.get_by_id(model_id, db)
     if model is None:
@@ -49,9 +62,13 @@ async def _unverified_model(model_id: int, db: AsyncDBSession) -> Model:
     return model
 
 
-async def _review(model_id: int, db: AsyncDBSession) -> ModelReview:
+async def _review(model_id: int, db: AsyncDBSession, drone_ids: set[int] | None = None) -> ModelReview:
+    """The model with the class conflicts of its drones, only of the given ones when passed."""
     model = await Queries.Model.get_by_id(model_id, db)
-    drones = await Queries.Model.get_drones_of([model_id], db)
+    drones = [
+        drone for drone in await Queries.Model.get_drones_of([model_id], db)
+        if drone_ids is None or drone.id in drone_ids
+    ]
 
     return ModelReview(model=model, class_conflicts=[c for drone in drones if (c := _class_conflict(drone))]) # type: ignore[arg-type]
 

@@ -61,6 +61,10 @@ class ModelCorrection(BaseModel):
         return category
 
 
+class ModelReplacement(BaseModel):
+    model_id: int = Field(ge=1, description="Catalog model that takes the place of the typed-in one")
+
+
 class ClassConflict(BaseModel):
     """Drone whose class mark no longer fits its take-off mass after the model changed."""
 

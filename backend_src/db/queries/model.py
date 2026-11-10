@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.orm import joinedload
 
 from backend_src.db import AsyncDBSession
@@ -63,3 +63,9 @@ async def get_by_id(model_id: int, db: AsyncDBSession) -> Optional[Model]:
     result = await db.execute(select(Model).where(Model.id == model_id))
 
     return result.scalar_one_or_none()
+
+
+async def replace(model_id: int, by_model_id: int, db: AsyncDBSession) -> None:
+    """Moves every drone, deleted ones included, to the other model and removes this one."""
+    await db.execute(update(Drone).where(Drone.model_id == model_id).values(model_id=by_model_id))
+    await db.execute(delete(Model).where(Model.id == model_id))

@@ -24,3 +24,18 @@ APPROVE = {
         422: { "description": "Invalid values" }
     }
 }
+
+REPLACE = {
+    "summary": "Replace a typed-in drone model with a catalog model",
+    "description": "Moderator simulation. For a model that is in the catalog already under another spelling: "
+                    "every drone that uses the typed-in model gets the catalog model, and the typed-in model is removed.\n\n"
+                    "The catalog mass can make the class mark of a moved drone wrong, such drones are listed in "
+                    "`class_conflicts` and stay as they are",
+    "response_model": ModelReview,
+    "responses": {
+        200: { "description": "Drones moved to the catalog model" },
+        404: { "description": "Typed-in model or catalog model not found" },
+        409: { "description": "The model to replace is in the catalog already" },
+        422: { "description": "Invalid request" }
+    }
+}
