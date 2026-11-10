@@ -10,7 +10,7 @@ from backend_src.models import Drone
 async def get_pilot_drones(pilot_id: int, db: AsyncDBSession) -> list[Drone]:
     result = await db.execute(
         select(Drone)
-        .where(Drone.pilot_id == pilot_id)
+        .where(Drone.pilot_id == pilot_id, Drone.is_deleted.is_(False))
         .order_by(Drone.id)
         .options(joinedload(Drone.model))
     )
@@ -21,7 +21,7 @@ async def get_pilot_drones(pilot_id: int, db: AsyncDBSession) -> list[Drone]:
 async def get_pilot_drone(drone_id: int, pilot_id: int, db: AsyncDBSession) -> Optional[Drone]:
     result = await db.execute(
         select(Drone)
-        .where(Drone.id == drone_id, Drone.pilot_id == pilot_id)
+        .where(Drone.id == drone_id, Drone.pilot_id == pilot_id, Drone.is_deleted.is_(False))
         .options(joinedload(Drone.model))
     )
 
