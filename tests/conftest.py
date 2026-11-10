@@ -10,6 +10,7 @@ from tests.utils import functional
 from tests.utils.behavioural.registration_behaviour import registration_flow
 from tests.utils.behavioural.checkin_behaviour import pilot_lifetime
 from tests.utils.behavioural.geozone_behaviour import country_at_point
+from tests.utils.behavioural.dronepark_behaviour import drone_models, seed_models
 from tests.config import Config
 
 
@@ -82,6 +83,27 @@ def checkin_env(client: Client, get_endpoint_link: EndpointCreator, borders_env:
 @pytest.fixture(scope="module")
 def pilot(client: Client, get_endpoint_link: EndpointCreator, checkin_env: None) -> Iterator[PilotInfo]:
     yield from pilot_lifetime(client, get_endpoint_link)
+
+
+@pytest.fixture(scope="module")
+def drone_owner(client: Client, get_endpoint_link: EndpointCreator) -> UserInfo:
+    """Registered pilot whose drone park the tests fill."""
+    user = functional.create_user()
+    assert registration_flow(client, user, get_endpoint_link), "Registration failed"
+
+    return user
+
+
+@pytest.fixture(scope="module")
+def drone_catalog(client: Client, get_endpoint_link: EndpointCreator, drone_owner: UserInfo) -> dict[str, dict]:
+    """Catalog drone models by "manufacturer model_name", seeded through the demo API."""
+    if not Config.is_server_in_debug:
+        pytest.skip("Drone park tests need the demo API, run the server with DEBUG")
+
+    assert seed_models(client, get_endpoint_link).status_code == 200, "Seeding the drone models failed"
+
+    r = drone_models(client, drone_owner, get_endpoint_link)
+    return {f"{model['manufacturer']} {model['model_name']}": model for model in r.json()}
 
 
 def check_backend() -> None:
