@@ -6,9 +6,9 @@ from backend_src.models import AfdModerator
 
 
 async def get_by_email(email: str, db: AsyncDBSession) -> Optional[AfdModerator]:
-    # The email column is not normalized, so the match ignores the case
+    # The email is unique ignoring the case (afd_moderator_email_lower_key)
     result = await db.execute(select(AfdModerator).where(func.lower(AfdModerator.email) == email.lower()))
-    return result.scalars().first()
+    return result.scalar_one_or_none()
 
 
 async def get_by_id(id: int, db: AsyncDBSession) -> Optional[AfdModerator]:
