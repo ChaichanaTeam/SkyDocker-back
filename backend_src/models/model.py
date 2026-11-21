@@ -238,6 +238,7 @@ class Drone(Base):
 
     flight_time: Mapped[int]                = mapped_column(INTEGER, server_default="0", nullable=False)
     mtom_override: Mapped[Optional[int]]    = mapped_column(Integer)
+    is_deleted: Mapped[bool]                = mapped_column(Boolean, server_default="false", nullable=False)
 
     model: Mapped['Model']                  = relationship()
     pilot: Mapped['Pilot']                  = relationship('Pilot', back_populates='drone')
