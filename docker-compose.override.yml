@@ -9,7 +9,7 @@ services:
 
   storage:
     ports:
-      - "127.0.0.1:8333:8333"
+      - "${STORAGE_BIND_HOST:-0.0.0.0}:8333:8333"
 
   app:
     command:
