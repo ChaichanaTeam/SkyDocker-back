@@ -1,0 +1,62 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.012, 52.229] },
+      "properties": {
+        "external_id": "PANSA-2026-0001",
+        "pilot_email": "testuser_kdlfeg@localhost.me",
+        "drone_serial": "DEMO-B8B7D4F8A8",
+        "flying_privilege": "a1",
+        "status": "accepted",
+        "height": 60,
+        "range": 200,
+        "starts_at": "2026-11-24T00:00:00Z",
+        "ends_at": "2027-06-30T21:00:00Z",
+        "duration": 30,
+        "flight_goal": "photography",
+        "description": "Photos of the Palace of Culture and Science, RPA zones of Warsaw need a mission above 30 m",
+        "spotter_first_name": "Jan",
+        "spotter_last_name": "Kowalski",
+        "spotter_phone": "+48600100200"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.0, 53.5] },
+      "properties": {
+        "external_id": "PANSA-2026-0002",
+        "pilot_email": "testuser_kdlfeg@localhost.me",
+        "drone_serial": "DEMO-B8B7D4F8A8",
+        "flying_privilege": "sts01",
+        "status": "pending",
+        "height": 100,
+        "range": 400,
+        "starts_at": "2026-12-15T08:00:00Z",
+        "ends_at": "2026-12-15T16:00:00Z",
+        "duration": 120,
+        "flight_goal": "inspection",
+        "description": "Inspection of a power line, waits for the PANSA decision"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [20.97, 52.165] },
+      "properties": {
+        "external_id": "PANSA-2026-0003",
+        "pilot_email": "testuser_kdlfeg@localhost.me",
+        "drone_serial": "DEMO-B8B7D4F8A8",
+        "flying_privilege": "sts02",
+        "status": "rejected",
+        "decision_reason": "The flight crosses the approach path of Warsaw Chopin Airport",
+        "height": 120,
+        "range": 2000,
+        "starts_at": "2026-12-20T10:00:00Z",
+        "ends_at": "2026-12-20T12:00:00Z",
+        "duration": 60,
+        "flight_goal": "survey"
+      }
+    }
+  ]
+}
