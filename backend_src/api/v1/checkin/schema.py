@@ -18,7 +18,7 @@ class CheckinPreviewRequest(BaseModel):
     """What the pilot plans: either a mission to take the flight properties from, or the properties themselves."""
 
     country_tag: CountryAlpha2 = Field(description="Country whose rules the flight follows, ISO 3166-1 alpha-2")
-    home_point: Coordinate
+    home_point: Optional[Coordinate] = Field(None, description="Take-off point. Flight property. Excludes mission_id")
     drone_id: int
     mission_id: Optional[int] = Field(None, description="Takes the flight properties from the mission. Excludes them")
     category: Optional[FlyingPrivileges] = Field(None, description="Flight property. Excludes mission_id")
@@ -32,11 +32,11 @@ class CheckinPreviewRequest(BaseModel):
 
     @property
     def has_properties(self) -> bool:
-        return all(value is not None for value in (self.category, self.height, self.range, self.duration))
+        return all(value is not None for value in (self.category, self.home_point, self.height, self.range, self.duration))
 
     @property
     def has_any_property(self) -> bool:
-        return any(value is not None for value in (self.category, self.height, self.range, self.duration))
+        return any(value is not None for value in (self.category, self.home_point, self.height, self.range, self.duration))
 
     @field_validator("category")
     @classmethod
@@ -50,10 +50,10 @@ class CheckinPreviewRequest(BaseModel):
     @model_validator(mode="after")
     def validate_exclusions(self):
         if self.is_mission_related and self.has_any_property:
-            raise ValueError("mission_id excludes category, height, range and duration")
+            raise ValueError("mission_id excludes home_point, category, height, range and duration")
 
         if not self.is_mission_related and not self.has_properties:
-            raise ValueError("Pass either mission_id or all of category, height, range and duration")
+            raise ValueError("Pass either mission_id or all of home_point, category, height, range and duration")
 
         return self
 

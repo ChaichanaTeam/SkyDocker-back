@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 import httpx
 
@@ -9,10 +9,10 @@ from backend_src.api.v1.geozone.constants import FEET_PER_METRE
 from backend_src.api.v1.geozone.elevation import ground_elevation
 from backend_src.api.v1.geozone.schema import ActivityWindow
 from backend_src.db import Queries, AsyncDBSession
-from backend_src.db.queries.checkin import TERMINAL_STATUSES
 from backend_src.dronepark import take_off_mass
 from backend_src.integrations.pansa import height_rule
-from backend_src.models import ActivityTime, Country, Drone, FlyingPrivileges, GeoZone
+from backend_src.api.shared_schemas import Coordinate
+from backend_src.models import ActivityTime, Country, Drone, FlyingPrivileges, GeoZone, MissionStatus
 from .schema import CheckinPlan, CheckinPreviewRequest
 
 
@@ -32,13 +32,13 @@ def _plan_field(data: CheckinPreviewRequest, field: str) -> str:
     return "mission_id" if data.is_mission_related else field
 
 
-async def check_jurisdiction(data: CheckinPreviewRequest, db: AsyncDBSession) -> Country:
-    country = await Queries.Country.get_by_tag(data.country_tag, db)
+async def check_jurisdiction(plan: CheckinPlan, db: AsyncDBSession) -> Country:
+    country = await Queries.Country.get_by_tag(plan.country_tag, db)
     if country is None or not await Queries.Country.is_supported(country.id, db):
         raise APIExceptions.not_found("Cannot verify fly zone. Unsupported country")
 
     # a flight from outside the country cannot follow its rules
-    point = data.home_point
+    point = plan.home_point
     if not await Queries.Country.border_covers_point(country.id, point.lon, point.lat, db):
         raise APIExceptions.not_found(f"Cannot verify fly zone. Home point is outside {country.name}")
 
@@ -51,7 +51,7 @@ async def resolve_plan(
     if not data.is_mission_related:
         return CheckinPlan(
             country_tag=data.country_tag,
-            home_point=data.home_point,
+            home_point=data.home_point,  # type: ignore[arg-type]
             drone_id=data.drone_id,
             mission_id=None,
             category=data.category,  # type: ignore[arg-type]
@@ -65,21 +65,36 @@ async def resolve_plan(
         return None, [_checkin_error("mission_id", "No mission of the pilot found", "mission_not_found", data.mission_id)]
 
     errors: list[CheckinError] = []
-    if mission.status in TERMINAL_STATUSES:
+    if mission.status is MissionStatus.PENDING:
+        errors.append(_checkin_error("mission_id", "PANSA has not decided on the mission yet", "mission_pending", data.mission_id))
+    elif mission.status is MissionStatus.REJECTED:
+        errors.append(_checkin_error(
+            "mission_id", f"PANSA rejected the mission: {mission.decision_reason}", "mission_rejected", data.mission_id,
+        ))
+    elif mission.status is not MissionStatus.ACCEPTED:
         errors.append(_checkin_error("mission_id", f"Mission is already {mission.status}", "mission_closed", data.mission_id))
+
+    now = datetime.now(timezone.utc)
+    if not mission.starts_at <= now < mission.ends_at:
+        errors.append(_checkin_error(
+            "mission_id", f"The mission allows flights from {mission.starts_at:%Y-%m-%d %H:%M} to {mission.ends_at:%Y-%m-%d %H:%M} UTC",
+            "mission_outside_window", data.mission_id,
+        ))
 
     if mission.drone_id != data.drone_id:
         errors.append(_checkin_error("drone_id", "Drone differs from the mission drone", "drone_mismatch", data.drone_id))
 
+    # the flight keeps to the window PANSA agreed to
+    minutes_left = max(1, math.floor((mission.ends_at - now).total_seconds() / 60))
     plan = CheckinPlan(
         country_tag=data.country_tag,
-        home_point=data.home_point,
+        home_point=Coordinate(lon=mission.home_point.x, lat=mission.home_point.y),
         drone_id=data.drone_id,
         mission_id=mission.id,
         category=mission.flying_privilege,
         height=mission.height,
         range=mission.range,
-        duration=math.ceil(mission.time / 60),
+        duration=min(math.ceil(mission.time / 60), minutes_left),
     )
     return plan, errors
 

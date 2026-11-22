@@ -66,7 +66,7 @@ def test_foreign_drone(
 
 def test_missing_mission(client: Client, pilot: PilotInfo, get_endpoint_link: EndpointCreator):
     plan = functional.checkin_plan(
-        CLEAN, pilot["drone_id"], mission_id=2**62, category=None, height=None, range=None, duration=None
+        CLEAN, pilot["drone_id"], mission_id=2**62, home_point=None, category=None, height=None, range=None, duration=None
     )
 
     r = checkin_preview(client, pilot, get_endpoint_link, plan)
