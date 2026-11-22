@@ -1,39 +1,78 @@
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import UploadFile
 from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
+from pydantic import ValidationError
 from shapely.geometry import Point, mapping
-from sqlalchemy import delete, select, update
+from sqlalchemy import select
 
-from backend_src.api.exceptions import APIExceptions
-from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson, normalize_email
-from backend_src.db import AsyncDBSession
-from backend_src.models import (
-    Checkin, Country, Drone, Mission, Model, Pilot,
-    FlyingPrivileges, OperationalCategory, MissionFlightGoal, MissionStatus,
-)
-from .schema import MissionProperties
-from .constants import (
-    DEFAULT_WINDOW_HOURS,
-    DEMO_COUNTRY_NAME,
-    DEMO_COUNTRY_TAG,
-    IMPORT_DRONE_SERIAL,
-    IMPORT_MODEL_MANUFACTURER,
-    IMPORT_MODEL_MAX_HEIGHT,
-    IMPORT_MODEL_MAX_RANGE,
-    IMPORT_MODEL_NAME,
-    IMPORT_MODEL_SPEED,
-    IMPORT_MODEL_WEIGHT,
-    IMPORT_PILOT_EMAIL,
-    IMPORT_PILOT_FIRST_NAME,
-    IMPORT_PILOT_LAST_NAME,
-    IMPORT_PILOT_PHONE,
-)
+from backend_src.api.exceptions import APIExceptions, EntityError
+from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
+from backend_src.db import AsyncDBSession, Queries
+from backend_src.models import Mission, FlyingPrivileges, OperationalCategory, MissionStatus
+from .schema import ImportedMission, MissionImportFeature, MissionImportReport, MissionProperties
 
 
-def _load_features(raw: bytes) -> list[dict[str, Any]]:
+# Statuses check-ins give a mission, PANSA cannot change such a mission any more
+_FLOWN_STATUSES = frozenset({
+    MissionStatus.ACTIVE, MissionStatus.LATE, MissionStatus.LOSS_OF_CONTROL, MissionStatus.ENDED_INTIME, MissionStatus.LATE_END,
+})
+
+_OPEN_PRIVILEGES = frozenset({FlyingPrivileges.A1, FlyingPrivileges.A2, FlyingPrivileges.A3})
+
+
+async def import_missions(db: AsyncDBSession, file: UploadFile) -> MissionImportReport:
+    """Stores the missions of the file as PANSA decided them, all of them or none when one is wrong."""
+    features = _load_features(await file.read())
+
+    errors: list[EntityError] = []
+    parsed: list[tuple[str, MissionImportFeature]] = []
+    for index, feature in enumerate(features):
+        label = _label(feature, index)
+        try:
+            parsed.append((label, MissionImportFeature.model_validate(feature)))
+        except ValidationError as exc:
+            errors += [_error(label, list(error["loc"]), error["msg"], error["type"], error.get("input")) for error in exc.errors()]
+
+    seen: set[str] = set()
+    for label, feature in parsed:
+        external_id = feature.properties.external_id
+        if external_id in seen:
+            errors.append(_error(label, ["properties", "external_id"], "external_id repeats in the file", "duplicate", external_id))
+        seen.add(external_id)
+
+    stored = await Queries.Mission.get_by_external_ids(list(seen), db)
+    values: list[tuple[Optional[Mission], dict[str, Any]]] = []
+    for label, feature in parsed:
+        mission = stored.get(feature.properties.external_id)
+        row, row_errors = await _mission_values(label, feature, mission, db)
+        errors += row_errors
+        values.append((mission, row))
+
+    if errors:
+        raise APIExceptions.unprocessable(errors)
+
+    created = 0
+    missions: list[Mission] = []
+    for mission, row in values:
+        if mission is None:
+            mission = Mission(**row)
+            db.add(mission)
+            created += 1
+        else:
+            for field, value in row.items():
+                setattr(mission, field, value)
+        missions.append(mission)
+
+    await db.flush()
+    imported = [ImportedMission(external_id=m.external_id, id=m.id, status=m.status) for m in missions] # type: ignore[arg-type]
+    await db.commit()
+
+    return MissionImportReport(created=created, updated=len(missions) - created, missions=imported)
+
+
+def _load_features(raw: bytes) -> list[Any]:
     try:
         payload = json.loads(raw)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
@@ -49,136 +88,78 @@ def _load_features(raw: bytes) -> list[dict[str, Any]]:
     return features
 
 
-def _parse_dt(value: Any) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+def _label(feature: Any, index: int) -> str:
+    """external_id of the feature when it has one, so an error points to the mission, otherwise its position."""
+    properties = feature.get("properties") if isinstance(feature, dict) else None
+    external_id = properties.get("external_id") if isinstance(properties, dict) else None
+
+    return external_id.strip() if isinstance(external_id, str) and external_id.strip() else f"#{index}"
 
 
-def _mission_from_feature(
-    feature: dict[str, Any],
-    now: datetime,
-    pilot_id: int,
-    drone_id: int,
-    country_id: int,
-) -> Mission:
-    geometry = feature.get("geometry") or {}
-    if geometry.get("type") != "Point":
-        raise ValueError(f"unsupported geometry type: {geometry.get('type')}")
-
-    coords = geometry.get("coordinates") or []
-    if len(coords) < 2:
-        raise ValueError("point has no coordinates")
-    lon, lat = float(coords[0]), float(coords[1])
-
-    props = feature.get("properties") or {}
-
-    starts_at = _parse_dt(props.get("starts_at")) or now
-    ends_at = _parse_dt(props.get("ends_at")) or (
-        starts_at + timedelta(hours=DEFAULT_WINDOW_HOURS)
-    )
-
-    return Mission(
-        pilot_id=pilot_id,
-        drone_id=drone_id,
-        country_id=country_id,
-        category=OperationalCategory(props["category"]),
-        flight_goal=(
-            MissionFlightGoal(props["flight_goal"]) if props.get("flight_goal") else None
-        ),
-        flying_privilege=FlyingPrivileges(props["flying_privilege"]),
-        description=props.get("description"),
-        home_point=Point(lon, lat),
-        height=int(props["height"]),
-        range=int(props["range"]),
-        starts_at=starts_at,
-        ends_at=ends_at,
-        time=int(props.get("time") or 0),
-        status=MissionStatus.created,
-        spotter_first_name=props.get("spotter_first_name"),
-        spotter_last_name=props.get("spotter_last_name"),
-        spotter_phone=props.get("spotter_phone"),
-    )
+def _error(label: str, loc: list[Any], msg: str, type: str, input: Any) -> EntityError:
+    return {
+        "type": f"mission.{type}",
+        "loc": ["file", label, *loc],
+        "msg": msg,
+        "input": input,
+    }
 
 
-async def _resolve_country(db: AsyncDBSession, name: str, tag: str) -> Country:
-    country = (
-        await db.execute(select(Country).where(Country.country_tag == tag))
-    ).scalar_one_or_none()
+async def _mission_values(
+    label: str, feature: MissionImportFeature, mission: Optional[Mission], db: AsyncDBSession,
+) -> tuple[dict[str, Any], list[EntityError]]:
+    """Columns of the mission from the feature, with the errors that keep it from being stored."""
+    props = feature.properties
+    errors: list[EntityError] = []
 
-    if country is None:
-        country = Country(name=name, country_tag=tag)
-        db.add(country)
-        await db.flush()
+    if mission is not None and (mission.status in _FLOWN_STATUSES or await Queries.Mission.has_checkin(mission.id, db)):
+        errors.append(_error(label, ["properties", "external_id"], "The mission was flown, it cannot be changed", "flown", props.external_id))
 
-    return country
-
-
-async def _resolve_import_model(db: AsyncDBSession) -> Model:
-    model = (
-        await db.execute(
-            select(Model).where(
-                Model.manufacturer == IMPORT_MODEL_MANUFACTURER,
-                Model.model_name == IMPORT_MODEL_NAME,
-            )
-        )
-    ).scalar_one_or_none()
-
-    if model is None:
-        model = Model(
-            manufacturer=IMPORT_MODEL_MANUFACTURER,
-            model_name=IMPORT_MODEL_NAME,
-            speed=IMPORT_MODEL_SPEED,
-            weight=IMPORT_MODEL_WEIGHT,
-            max_height=IMPORT_MODEL_MAX_HEIGHT,
-            max_range=IMPORT_MODEL_MAX_RANGE,
-        )
-        db.add(model)
-        await db.flush()
-
-    return model
-
-
-async def _resolve_import_pilot(db: AsyncDBSession, country_id: int) -> Pilot:
-    pilot = (
-        await db.execute(select(Pilot).where(Pilot.email == IMPORT_PILOT_EMAIL))
-    ).scalar_one_or_none()
-
+    drone_id = None
+    pilot = await Queries.Pilot.get_by_email(props.pilot_email, db)
     if pilot is None:
-        pilot = Pilot(
-            first_name=IMPORT_PILOT_FIRST_NAME,
-            last_name=IMPORT_PILOT_LAST_NAME,
-            email=IMPORT_PILOT_EMAIL,
-            normalized_email=normalize_email(IMPORT_PILOT_EMAIL),
-            phone_number=IMPORT_PILOT_PHONE,
-            password_hash="x",
-            country_id=country_id,
-        )
-        db.add(pilot)
-        await db.flush()
+        errors.append(_error(label, ["properties", "pilot_email"], "No pilot with this email", "pilot_not_found", props.pilot_email))
+    else:
+        drone = await Queries.Drone.get_pilot_drone_by_serial(props.drone_serial, pilot.id, db)
+        if drone is None:
+            errors.append(_error(
+                label, ["properties", "drone_serial"], "The pilot has no drone with this serial number", "drone_not_found", props.drone_serial,
+            ))
+        else:
+            drone_id = drone.id
 
-    return pilot
+    point = feature.geometry.coordinate
+    country = await Queries.Country.get_by_coordinates(point.lon, point.lat, db)
+    if country is None:
+        errors.append(_error(
+            label, ["geometry", "coordinates"], "The home point is outside every synced country border", "outside_borders",
+            feature.geometry.coordinates,
+        ))
 
+    if errors:
+        return {}, errors
 
-async def _resolve_import_drone(db: AsyncDBSession, pilot_id: int, model_id: int) -> Drone:
-    drone = (
-        await db.execute(
-            select(Drone).where(Drone.serial_number == IMPORT_DRONE_SERIAL)
-        )
-    ).scalar_one_or_none()
-
-    if drone is None:
-        drone = Drone(
-            pilot_id=pilot_id,
-            model_id=model_id,
-            serial_number=IMPORT_DRONE_SERIAL,
-        )
-        db.add(drone)
-        await db.flush()
-
-    return drone
+    return {
+        "external_id": props.external_id,
+        "pilot_id": pilot.id, # type: ignore[union-attr]
+        "drone_id": drone_id,
+        "country_id": country.id, # type: ignore[union-attr]
+        "flying_privilege": props.flying_privilege,
+        "category": OperationalCategory.OPEN if props.flying_privilege in _OPEN_PRIVILEGES else OperationalCategory.SPECIFIC,
+        "status": MissionStatus(props.status),
+        "decision_reason": props.decision_reason,
+        "home_point": Point(point.lon, point.lat),
+        "height": props.height,
+        "range": props.range,
+        "starts_at": props.starts_at,
+        "ends_at": props.ends_at,
+        "time": props.duration * 60,
+        "flight_goal": props.flight_goal,
+        "description": props.description,
+        "spotter_first_name": props.spotter_first_name,
+        "spotter_last_name": props.spotter_last_name,
+        "spotter_phone": props.spotter_phone,
+    }, []
 
 
 def _serialize(mission: Mission) -> dict[str, Any]:
@@ -198,53 +179,6 @@ def _serialize(mission: Mission) -> dict[str, Any]:
         "pilot_id": mission.pilot_id,
         "drone_id": mission.drone_id,
         "country_id": mission.country_id,
-    }
-
-
-async def import_missions(db: AsyncDBSession, file: UploadFile, reset: bool) -> dict[str, Any]:
-    features = _load_features(await file.read())
-
-    country = await _resolve_country(db, DEMO_COUNTRY_NAME, DEMO_COUNTRY_TAG)
-    model = await _resolve_import_model(db)
-    pilot = await _resolve_import_pilot(db, country.id)
-    drone = await _resolve_import_drone(db, pilot.id, model.id)
-
-    country_id = country.id
-    pilot_id = pilot.id
-    drone_id = drone.id
-
-    if reset:
-        await db.execute(
-            update(Checkin).values(mission_id=None).where(Checkin.mission_id.is_not(None))
-        )
-        await db.execute(delete(Mission))
-
-    now = datetime.now(timezone.utc)
-    missions: list[Mission] = []
-    errors: list[str] = []
-
-    for index, feature in enumerate(features):
-        try:
-            missions.append(
-                _mission_from_feature(feature, now, pilot_id, drone_id, country_id)
-            )
-        except (KeyError, ValueError, TypeError) as exc:
-            errors.append(f"feature {index}: {exc}")
-
-    if not missions:
-        raise APIExceptions.bad_request("No valid missions to import")
-
-    db.add_all(missions)
-    await db.flush()
-    imported = len(missions)
-    await db.commit()
-
-    return {
-        "message": f"Imported {imported} mission(s)",
-        "imported": imported,
-        "skipped": len(errors),
-        "errors": errors[:20],
-        "reset": reset,
     }
 
 

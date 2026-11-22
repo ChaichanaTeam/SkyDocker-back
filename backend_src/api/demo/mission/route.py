@@ -9,12 +9,8 @@ router = APIRouter(prefix="/mission", tags=["mission"])
 
 
 @router.post("/", **docs.IMPORT_MISSIONS)
-async def import_missions(
-    db: AsyncDBDep,
-    file: UploadFile = File(...),
-    reset: bool = False,
-):
-    return await service.import_missions(db, file, reset)
+async def import_missions(db: AsyncDBDep, file: UploadFile = File(...)):
+    return await service.import_missions(db, file)
 
 
 @router.get("/", **docs.LIST_MISSIONS)

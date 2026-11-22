@@ -118,3 +118,15 @@ class MissionImportFeature(BaseModel):
     type: Literal["Feature"]
     geometry: MissionPoint
     properties: MissionImportProperties
+
+
+class ImportedMission(BaseModel):
+    external_id: str
+    id: int
+    status: MissionStatus
+
+
+class MissionImportReport(BaseModel):
+    created: int
+    updated: int = Field(description="Missions of the file that were imported before, by external_id")
+    missions: list[ImportedMission]
