@@ -334,7 +334,7 @@ class Mission(Base):
     category: Mapped[OperationalCategory]                   = mapped_column(
         EnumWithUnknown(
             OperationalCategory,
-            name="mission_category",
+            name="operational_category",
             unknown_value=OperationalCategory.UNKNOWN,
             values_callable=lambda enum_cls: [member.value for member in enum_cls]
         ),
@@ -371,6 +371,9 @@ class Mission(Base):
     spotter_first_name: Mapped[Optional[str]]               = mapped_column(VARCHAR(255))   
     spotter_last_name: Mapped[Optional[str]]                = mapped_column(VARCHAR(255))   
     spotter_phone: Mapped[Optional[str]]                    = mapped_column(VARCHAR(15))
+
+    external_id: Mapped[Optional[str]]                      = mapped_column(VARCHAR(255), unique=True)
+    decision_reason: Mapped[Optional[str]]                  = mapped_column(TEXT)
 
     status: Mapped[MissionStatus]                           = mapped_column(
         EnumWithUnknown(

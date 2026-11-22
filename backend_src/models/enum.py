@@ -101,3 +101,4 @@ class MissionStatus(StrEnum):
     LOSS_OF_CONTROL = 'loss_of_control'
     ENDED_INTIME = 'ended_intime'
     LATE_END = 'late_end'
+    REJECTED = 'rejected'
