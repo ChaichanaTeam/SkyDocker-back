@@ -2,16 +2,14 @@ import json
 from typing import Any, Optional
 
 from fastapi import UploadFile
-from geoalchemy2.functions import ST_Intersects, ST_MakeEnvelope
 from pydantic import ValidationError
-from shapely.geometry import Point, mapping
+from shapely.geometry import Point
 from sqlalchemy import select
 
 from backend_src.api.exceptions import APIExceptions, EntityError
-from backend_src.api.shared_schemas import BoundingBox, GeoFeature, GeoJson
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import Mission, FlyingPrivileges, OperationalCategory, MissionStatus
-from .schema import ImportedMission, MissionImportFeature, MissionImportReport, MissionProperties
+from .schema import ImportedMission, MissionImportFeature, MissionImportReport
 
 
 # Statuses check-ins give a mission, PANSA cannot change such a mission any more
@@ -165,54 +163,29 @@ async def _mission_values(
 def _serialize(mission: Mission) -> dict[str, Any]:
     return {
         "id": mission.id,
+        "external_id": mission.external_id,
+        "status": mission.status,
+        "decision_reason": mission.decision_reason,
         "category": mission.category,
         "flight_goal": mission.flight_goal,
         "flying_privilege": mission.flying_privilege,
-        "status": mission.status,
         "point": [mission.home_point.x, mission.home_point.y],
         "height": mission.height,
         "range": mission.range,
         "starts_at": mission.starts_at,
         "ends_at": mission.ends_at,
         "time": mission.time,
-        "h3_index": mission.h3_index,
         "pilot_id": mission.pilot_id,
         "drone_id": mission.drone_id,
         "country_id": mission.country_id,
     }
 
 
-async def list_missions(db: AsyncDBSession, limit: int, offset: int) -> dict[str, Any]:
-    missions = (
-        await db.execute(
-            select(Mission).order_by(Mission.id).limit(limit).offset(offset)
-        )
-    ).scalars().all()
+async def list_missions(db: AsyncDBSession, status: Optional[MissionStatus], limit: int, offset: int) -> dict[str, Any]:
+    statement = select(Mission).order_by(Mission.id).limit(limit).offset(offset)
+    if status is not None:
+        statement = statement.where(Mission.status == status)
+
+    missions = (await db.execute(statement)).scalars().all()
 
     return {"count": len(missions), "missions": [_serialize(m) for m in missions]}
-
-
-async def missions_in_bbox(bbox: BoundingBox, db: AsyncDBSession) -> GeoJson:
-    x1, y1, x2, y2 = bbox.unpack()
-
-    missions = (
-        await db.execute(
-            select(Mission)
-            .where(
-                ST_Intersects(
-                    Mission.home_point, ST_MakeEnvelope(x1, y1, x2, y2, 4326)
-                )
-            )
-            .order_by(Mission.id)
-        )
-    ).scalars().all()
-
-    features = [
-        GeoFeature(
-            geometry=mapping(m.home_point),
-            properties=MissionProperties.from_mission(m),
-        )
-        for m in missions
-    ]
-
-    return GeoJson(features=features)

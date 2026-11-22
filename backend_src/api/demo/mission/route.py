@@ -1,6 +1,9 @@
+from typing import Optional
+
 from fastapi import APIRouter, File, Query, UploadFile
 
-from backend_src.api.dependencies import AsyncDBDep, BoundingBoxQuery
+from backend_src.api.dependencies import AsyncDBDep
+from backend_src.models import MissionStatus
 from . import docs
 from . import service
 
@@ -16,12 +19,9 @@ async def import_missions(db: AsyncDBDep, file: UploadFile = File(...)):
 @router.get("/", **docs.LIST_MISSIONS)
 async def list_missions(
     db: AsyncDBDep,
+    status: Optional[MissionStatus] = None,
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
 ):
-    return await service.list_missions(db, limit, offset)
+    return await service.list_missions(db, status, limit, offset)
 
-
-@router.get("/bbox", **docs.MISSION_BBOX)
-async def missions_in_bbox(bbox: BoundingBoxQuery, db: AsyncDBDep):
-    return await service.missions_in_bbox(bbox, db)

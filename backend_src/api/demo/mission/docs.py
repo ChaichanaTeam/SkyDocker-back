@@ -2,7 +2,6 @@
 # https://geojson.io/
 # https://clupasq.github.io/h3-viewer/
 
-from backend_src.api.shared_schemas import GeoJson
 from .schema import MissionImportReport
 
 
@@ -32,21 +31,10 @@ IMPORT_MISSIONS = {
 
 LIST_MISSIONS = {
     "summary": "List missions",
-    "description": "Returns imported missions ordered by id, paginated with `limit` and `offset`.",
+    "description": "Moderator simulation. All imported missions ordered by id, with their PANSA number and decision, "
+                    "paginated with `limit` and `offset`. Filter by `?status=`, e.g. pending or accepted.",
     "response_description": "Missions count and list",
     "responses": {
         200: { "description": "Missions returned" }
-    }
-}
-
-MISSION_BBOX = {
-    "name": "Get Mission from Bounding Box",
-    "summary": "Get Mission from Bounding Box",
-    "description": "Fetches all missions whose home point is within the bounding box.\n\n"
-                    "The body is just the bounding box - no user_pos needed.\n\n"
-                    "The response is a GeoJSON collection of missions.",
-    "response_model": GeoJson,
-    "responses": {
-        200: { "description": "GeoJSON collection of missions in the bounding box, empty if none" }
     }
 }
