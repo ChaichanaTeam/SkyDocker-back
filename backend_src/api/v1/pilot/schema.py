@@ -199,6 +199,8 @@ class FlightProperties(FeatureProperties):
 
 
 class PilotMissionProperties(FlightProperties):
+    external_id: Optional[str] = Field(description="Number of the mission at PANSA")
+    decision_reason: Optional[str] = Field(description="Why PANSA rejected the mission, null unless rejected")
     category: OperationalCategory
     spotter_first_name: Optional[str]
     spotter_last_name: Optional[str]
@@ -208,6 +210,8 @@ class PilotMissionProperties(FlightProperties):
     def from_mission(cls, mission: Mission) -> PilotMissionProperties:
         return cls(
             **cls.common_fields(mission),
+            external_id=mission.external_id,
+            decision_reason=mission.decision_reason,
             category=mission.category,
             spotter_first_name=mission.spotter_first_name,
             spotter_last_name=mission.spotter_last_name,
