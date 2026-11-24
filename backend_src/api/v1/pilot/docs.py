@@ -74,6 +74,64 @@ GET_DRONES = {
 }
 
 
+ADD_DRONE = {
+    "summary": "Add a drone to own drone park",
+    "description": "The model is either chosen from GET /drone-models by `model_id`, or typed in as `custom_model` "
+                    "with every value from its official specification when it is not listed. "
+                    "Such a model is unchecked (`is_model_verified` false) until a moderator approves it "
+                    "or replaces it with a catalog model; the drone can fly meanwhile.\n\n"
+                    "The class mark must fit the take-off mass (C0 below 250 g, C1 below 900 g, C2 below 4 kg, "
+                    "C3 and C4 below 25 kg): `mtom_override` of a modified drone, otherwise the model's `mtom`.\n\n"
+                    "Authorization header REQUIRED!",
+    "response_description": "Added drone with its model",
+    "response_model": DroneRead,
+    "responses": {
+        201: { "description": "Drone added" },
+        404: { "description": "`model_id` is not in the catalog" },
+        409: { "description": "The serial number is already registered, or `custom_model` is in the catalog: "
+                              "`detail.model_id` is the model to choose" },
+        422: { "description": "Invalid request, or the class does not fit the mass: `drone.class_mass_mismatch`" },
+    }
+}
+
+
+UPDATE_DRONE = {
+    "summary": "Update own drone",
+    "description": "Changes only the passed fields with the same checks as adding a drone. "
+                    "A new model is chosen by `model_id` or typed in as `custom_model`; "
+                    "switching `is_drone_modified` off clears `mtom_override`.\n\n"
+                    "A drone with an unfinished check-in or a pending, accepted or active mission that has not ended "
+                    "cannot be changed, so a flight keeps the drone it was planned with.\n\n"
+                    "Authorization header REQUIRED!",
+    "response_description": "Updated drone with its model",
+    "response_model": DroneRead,
+    "responses": {
+        200: { "description": "Drone updated" },
+        404: { "description": "Drone does not exist, was deleted or belongs to another pilot, or `model_id` is not in the catalog" },
+        409: { "description": "The drone is in use by a check-in or mission, the serial number is already registered, "
+                              "or `custom_model` is in the catalog: `detail.model_id` is the model to choose" },
+        422: { "description": "Invalid request, the class does not fit the mass (`drone.class_mass_mismatch`), "
+                              "or a modified drone without `mtom_override` (`drone.mass_required`)" },
+    }
+}
+
+
+DELETE_DRONE = {
+    "summary": "Delete own drone",
+    "description": "Removes the drone from the drone park: it is no longer listed and cannot be used for a check-in. "
+                    "Check-ins and missions flown with it keep referring to it, "
+                    "and its serial number can be registered again.\n\n"
+                    "A drone with an unfinished check-in or a pending, accepted or active mission that has not ended "
+                    "cannot be deleted.\n\n"
+                    "Authorization header REQUIRED!",
+    "responses": {
+        204: { "description": "Drone deleted" },
+        404: { "description": "Drone does not exist, was already deleted or belongs to another pilot" },
+        409: { "description": "The drone is in use by a check-in or mission" },
+    }
+}
+
+
 GET_DRONE = {
     "summary": "Get own drone",
     "description": "Authorization header REQUIRED!",

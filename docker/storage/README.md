@@ -43,6 +43,8 @@ Which prefix a user may touch (`requests/{id}` for the assigned moderator, `pilo
 - Downloads are presigned GET URLs with lifetime up to 5 minutes
 - `GET /pilots/me/documents` lists the pilot's `organizer/` files with such URLs, the prefix comes from the access token
 - URLs are signed for `STORAGE_PUBLIC_URL`, the backend itself talks to `STORAGE_URL`
+- Dev, client on another device: set `STORAGE_BIND_HOST=0.0.0.0` and `STORAGE_PUBLIC_URL=http://<host LAN IP>:8333`, then `docker compose up -d storage app`.
+  The client must use exactly this address, the host is part of the signature
 
 ## Secrets
 
