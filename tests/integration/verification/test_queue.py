@@ -1,12 +1,11 @@
 from httpx import Client
 
 from tests.types import EndpointCreator, UserInfo
-from tests.utils.behavioural.verification_behaviour import list_requests, release_review, review_request
+from tests.utils.behavioural.verification_behaviour import find_in_queue, list_requests, release_review, review_request
 
 
 def _queued(client: Client, moderator: str, get_endpoint_link: EndpointCreator, request_id: int) -> dict:
-    items = list_requests(client, moderator, get_endpoint_link, status="pending", limit=200).json()
-    item = next((item for item in items if item["id"] == request_id), None)
+    item = find_in_queue(client, moderator, get_endpoint_link, request_id, "pending")
     assert item is not None, f"Pending request {request_id} must be in the queue"
     return item
 

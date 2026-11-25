@@ -5,7 +5,7 @@ from httpx import Client
 from tests.types import EndpointCreator, UserInfo
 from tests.utils import functional
 from tests.utils.behavioural.verification_behaviour import (
-    approve_request, list_requests, reject_request, release_review, review_request,
+    approve_request, find_in_queue, reject_request, release_review, review_request,
 )
 
 
@@ -13,8 +13,9 @@ A1_EXPIRY = {"a1": (date.today() + timedelta(days=365)).isoformat()}
 
 
 def _queued(client: Client, moderator: str, get_endpoint_link: EndpointCreator, request_id: int, status: str) -> dict:
-    items = list_requests(client, moderator, get_endpoint_link, status=status, limit=200).json()
-    return next(item for item in items if item["id"] == request_id)
+    item = find_in_queue(client, moderator, get_endpoint_link, request_id, status)
+    assert item is not None, f"Request {request_id} is not in the {status} queue"
+    return item
 
 
 def test_approve_without_opening(client: Client, moderator: str, pending_request: dict, get_endpoint_link: EndpointCreator):

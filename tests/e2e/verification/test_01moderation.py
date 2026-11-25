@@ -7,7 +7,7 @@ from tests.utils import functional
 from tests.utils.behavioural.pilot_behaviour import pilot_get
 from tests.utils.behavioural.registration_behaviour import registration_flow
 from tests.utils.behavioural.verification_behaviour import (
-    PNG, approve_request, list_requests, pdf, review_request, submit_request,
+    PNG, approve_request, find_in_queue, pdf, review_request, submit_request,
 )
 
 
@@ -26,9 +26,8 @@ def test_request_from_pilot_to_privilege(client: Client, moderator: str, get_end
     request_id = r.json()["id"]
 
     # the moderator finds it free in the queue and opens it
-    queue = list_requests(client, moderator, get_endpoint_link, status="pending", limit=200).json()
-    queued = next(item for item in queue if item["id"] == request_id)
-    assert queued["review"] is None, f"A new request must be free to open: {queued}"
+    queued = find_in_queue(client, moderator, get_endpoint_link, request_id, "pending")
+    assert queued is not None and queued["review"] is None, f"A new request must be free to open: {queued}"
 
     r = review_request(client, moderator, get_endpoint_link, request_id)
     assert r.status_code == 200 and all(document["url"] for document in r.json()["documents"]), \

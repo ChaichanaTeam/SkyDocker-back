@@ -100,6 +100,20 @@ def list_requests(client: Client, token: Optional[str], get_endpoint_link: Endpo
     return client.get(get_endpoint_link("live", "verification-requests/"), headers=_moderator_auth(token), params=params)
 
 
+def find_in_queue(
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int, status: str,
+) -> Optional[dict[str, Any]]:
+    """The request in the moderator queue, paged through: earlier test runs leave many older requests before it."""
+    offset = 0
+    while items := list_requests(client, token, get_endpoint_link, status=status, limit=200, offset=offset).json():
+        for item in items:
+            if item["id"] == request_id:
+                return item
+        offset += len(items)
+
+    return None
+
+
 def review_request(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int) -> Response:
     return client.get(get_endpoint_link("live", f"verification-requests/{request_id}"), headers=_moderator_auth(token))
 
