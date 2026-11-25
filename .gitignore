@@ -17,6 +17,8 @@ logs/
 output/
 data/geozones/
 data/pansa/
+data/seed/*
+!data/seed/*.example.json
 
 # Block .vscode from editing
 .vscode

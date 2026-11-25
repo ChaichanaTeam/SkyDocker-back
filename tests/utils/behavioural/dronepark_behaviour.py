@@ -73,25 +73,40 @@ def seed_models(client: Client, get_endpoint_link: EndpointCreator) -> Response:
     return client.post(get_endpoint_link("demo", "drone-park/models/seed"))
 
 
-def unverified_models(client: Client, get_endpoint_link: EndpointCreator) -> Response:
-    return client.get(get_endpoint_link("demo", "drone-models/unverified"))
+def _moderator_auth(token: Optional[str]) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"} if token is not None else {}
+
+
+def unverified_models(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator) -> Response:
+    return client.get(get_endpoint_link("live", "drone-models/unverified"), headers=_moderator_auth(token))
 
 
 def approve_model(
-    client: Client, get_endpoint_link: EndpointCreator, model_id: int, correction: dict[str, Any]
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, model_id: int, correction: dict[str, Any]
 ) -> Response:
-    return client.post(get_endpoint_link("demo", f"drone-models/{model_id}/approve"), json=correction)
+    return client.post(
+        get_endpoint_link("live", f"drone-models/{model_id}/approve"), headers=_moderator_auth(token), json=correction
+    )
 
 
-def replace_model(client: Client, get_endpoint_link: EndpointCreator, model_id: int, by_model_id: int) -> Response:
-    return client.post(get_endpoint_link("demo", f"drone-models/{model_id}/replace"), json={"model_id": by_model_id})
+def replace_model(
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, model_id: int, by_model_id: int
+) -> Response:
+    return client.post(
+        get_endpoint_link("live", f"drone-models/{model_id}/replace"),
+        headers=_moderator_auth(token),
+        json={"model_id": by_model_id},
+    )
 
 
-def delete_model(client: Client, get_endpoint_link: EndpointCreator, model_id: int) -> Response:
-    return client.delete(get_endpoint_link("demo", f"drone-models/{model_id}"))
+def delete_model(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, model_id: int) -> Response:
+    return client.delete(get_endpoint_link("live", f"drone-models/{model_id}"), headers=_moderator_auth(token))
 
 
-def remove_custom_drone(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator, drone: dict[str, Any]) -> None:
-    """Cleanup: deletes the drone and its typed-in model, so test models do not pile up."""
+def remove_custom_drone(
+    client: Client, user: UserInfo, get_endpoint_link: EndpointCreator, drone: dict[str, Any], moderator_token: Optional[str]
+) -> None:
+    """Cleanup: deletes the drone and, when a moderator is logged in, its typed-in model, so test models do not pile up."""
     delete_drone(client, user, get_endpoint_link, drone["id"])
-    delete_model(client, get_endpoint_link, drone["model"]["id"])
+    if moderator_token is not None:
+        delete_model(client, moderator_token, get_endpoint_link, drone["model"]["id"])

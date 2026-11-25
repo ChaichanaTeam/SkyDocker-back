@@ -1,5 +1,6 @@
 from backend_src.models import VerificationDocumentType
-from .schema import VerificationRequestRead, VerificationTokenResponse
+from backend_src.api.v1.moderator.docs import MODERATOR_AUTH, MODERATOR_401
+from .schema import VerificationApprovalResult, VerificationQueueItem, VerificationRequestRead, VerificationReviewRead, VerificationTokenResponse
 
 
 ROUTER = {
@@ -91,5 +92,95 @@ WITHDRAW_REQUEST = {
         200: { "description": "Request withdrawn, documents deleted" },
         404: { "description": "Request not found or belongs to another pilot" },
         409: { "description": "Request is not pending" }
+    }
+}
+
+LIST_REQUESTS = {
+    "summary": "List verification requests",
+    "description": "The moderator queue, the oldest request first, paginated with `limit` and `offset`. "
+                    "Filter by `?status=`, e.g. pending; without it every status is listed.\n\n"
+                    "`review` of a pending request tells which moderator reviews it now and for how long, "
+                    "null means it is free to open. Document links come only with GET /verification-requests/{request_id}.\n\n"
+                    + MODERATOR_AUTH,
+    "response_description": "Verification requests",
+    "response_model": list[VerificationQueueItem],
+    "responses": {
+        200: { "description": "Requests listed" },
+        401: MODERATOR_401,
+    }
+}
+
+
+GET_REQUEST = {
+    "summary": "Open a request for review",
+    "description": "The request with presigned download links to its documents, the links expire in 5 minutes.\n\n"
+                    "Opening a pending request locks it to the moderator for the same 5 minutes, so another moderator "
+                    "cannot open it meanwhile. Opening it again extends the lock and gives fresh links. "
+                    "`review_expires_in` tells how long the lock lasts. "
+                    "DELETE /verification-requests/{request_id}/review releases it earlier.\n\n" + MODERATOR_AUTH,
+    "response_description": "Request with document links",
+    "response_model": VerificationReviewRead,
+    "responses": {
+        200: { "description": "Request opened, pending request locked to the moderator" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "Another moderator reviews the request: `detail.moderator` is who, "
+                              "`detail.expires_in` is seconds until the lock runs out" }
+    }
+}
+
+APPROVE_REQUEST = {
+    "summary": "Approve a request",
+    "description": "Grants the privileges of the submitted `privilege_*` certificates and writes `pilot_number` "
+                    "and `phone_number` to the pilot, names only if the profile has none.\n\n"
+                    "`privilege_expiry` holds the last valid day of every submitted certificate, read from the document, "
+                    "for example `{\"a1\": \"2031-05-01\"}`; a request with only `operator_number` passes `{}`. "
+                    "An existing privilege gets the new date, a daily job removes privileges after their last valid day.\n\n"
+                    "With `keep_documents` the documents are copied to the organizer, `kept_documents` lists their keys. "
+                    "The originals are deleted either way.\n\n"
+                    "The decision takes the review lock like opening the request, so it does not need the request opened first. "
+                    "It fails while another moderator reviews the request, and a wrong date keeps the lock for a fixed retry. "
+                    "The moderator is stored as the one who verified the request and the lock is released.\n\n" + MODERATOR_AUTH,
+    "response_description": "Approved request and the pilot's privileges",
+    "response_model": VerificationApprovalResult,
+    "responses": {
+        200: { "description": "Request approved" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "The request is decided already, or another moderator reviews it: "
+                              "`detail.moderator` is who, `detail.expires_in` is seconds until the lock runs out" },
+        422: { "description": "Expiry date is missing, unexpected or in the past, see detail" }
+    }
+}
+
+
+REJECT_REQUEST = {
+    "summary": "Reject a request",
+    "description": "Stores `reason`, shown to the pilot, and deletes the documents. The pilot can submit a new request.\n\n"
+                    "Like the approval it takes the review lock itself, fails while another moderator reviews the request, "
+                    "stores the moderator and releases the lock.\n\n" + MODERATOR_AUTH,
+    "response_description": "Rejected request",
+    "response_model": VerificationRequestRead,
+    "responses": {
+        200: { "description": "Request rejected" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "The request is decided already, or another moderator reviews it: "
+                              "`detail.moderator` is who, `detail.expires_in` is seconds until the lock runs out" },
+        422: { "description": "`reason` is missing or empty" }
+    }
+}
+
+
+RELEASE_REVIEW = {
+    "summary": "Release a request",
+    "description": "Releases the moderator's lock on the request before it runs out, so another moderator can open it. "
+                    "Releasing a request that is not locked succeeds.\n\n" + MODERATOR_AUTH,
+    "response_description": "Release confirmation message",
+    "responses": {
+        200: { "description": "Lock released" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "Another moderator reviews the request" }
     }
 }

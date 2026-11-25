@@ -79,6 +79,9 @@ class Model(Base):
 
 class AfdModerator(Base):
     __tablename__ = "afd_moderator"
+    __table_args__ = (
+        Index("afd_moderator_email_lower_key", text("lower(email)"), unique=True),
+    )
 
     id: Mapped[int]                     = mapped_column(Integer, primary_key=True, autoincrement=True)
 

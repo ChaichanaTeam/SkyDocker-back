@@ -1,0 +1,10 @@
+{
+    "moderators": [
+        {
+            "email": "moderator@example.com",
+            "first_name": "Jan",
+            "last_name": "Kowalski",
+            "password": "change-me-please"
+        }
+    ]
+}

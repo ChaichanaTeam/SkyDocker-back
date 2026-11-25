@@ -10,3 +10,7 @@ class RateLimits:
         PREVIEW_REQUEST = (10, 60)
         CREATE_REQUEST = (3, 60)
         WITHDRAW_REQUEST = (10, 60)
+
+
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 200

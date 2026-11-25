@@ -21,6 +21,8 @@ class TokenType(str, Enum):
     REGISTER = "register"
     CHECKIN = "checkin"
     VERIFICATION_REQUEST = "verification_request"
+    MODERATOR_ACCESS = "moderator_access"
+    MODERATOR_REFRESH = "moderator_refresh"
 
 
 class TokenPayload(BaseModel):
@@ -107,6 +109,24 @@ def create_refresh_token(subject: str, gen: int) -> IssuedToken:
         subject=subject,
         expires_delta=timedelta(days=Settings.REFRESH_TOKEN_EXPIRE_DAYS),
         token_type=TokenType.REFRESH,
+        gen=gen,
+    )
+
+
+def create_moderator_access_token(subject: str, gen: int) -> IssuedToken:
+    return _create_token(
+        subject=subject,
+        expires_delta=timedelta(minutes=Settings.MODERATOR_ACCESS_TOKEN_EXPIRE_MINUTES),
+        token_type=TokenType.MODERATOR_ACCESS,
+        gen=gen,
+    )
+
+
+def create_moderator_refresh_token(subject: str, gen: int) -> IssuedToken:
+    return _create_token(
+        subject=subject,
+        expires_delta=timedelta(minutes=Settings.MODERATOR_REFRESH_TOKEN_EXPIRE_MINUTES),
+        token_type=TokenType.MODERATOR_REFRESH,
         gen=gen,
     )
 

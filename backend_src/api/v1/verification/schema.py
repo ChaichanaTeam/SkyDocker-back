@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Literal, Optional
 
 from fastapi import Header
@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend_src.api.shared_schemas import E164PhoneNumber
 from backend_src.core.security import TokenPayload, TokenType
-from backend_src.models import VerificationDocumentType, VerificationRequestStatus
+from backend_src.models import FlyingPrivileges, VerificationDocumentType, VerificationRequestStatus
 from backend_src.storage import MAX_DOCUMENTS
 
 
@@ -81,3 +81,52 @@ class VerificationRequestRead(BaseModel):
     created_at: datetime
 
     documents: list[VerificationDocumentRead] = Field(validation_alias="verification_document")
+
+
+class VerificationReviewRead(VerificationRequestRead):
+    review_expires_in: Optional[int] = Field(
+        None, description="Seconds the request stays locked to this moderator, null when the request is not pending"
+    )
+
+
+class ReviewHolder(BaseModel):
+    """Moderator who reviews the request now."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    first_name: str
+    last_name: str
+
+
+class ReviewState(BaseModel):
+    moderator: Optional[ReviewHolder] = Field(description="Null when the moderator account is gone")
+    expires_in: int = Field(description="Seconds until the lock runs out")
+
+
+class VerificationQueueItem(VerificationRequestRead):
+    verified_by: Optional[int] = Field(None, description="Moderator who approved or rejected the request")
+    review: Optional[ReviewState] = Field(
+        None, description="Moderator who reviews the pending request now, null when it is free to open"
+    )
+
+
+class VerificationApproval(BaseModel):
+    privilege_expiry: dict[FlyingPrivileges, date] = Field(
+        default_factory=dict,
+        description="Last valid day of every privilege in the request, read by the moderator from the certificate",
+    )
+
+
+class VerificationApprovalResult(BaseModel):
+    request: VerificationRequestRead
+    granted: list[FlyingPrivileges] = Field(description="Privileges the pilot did not have")
+    renewed: list[FlyingPrivileges] = Field(description="Privileges the pilot had, with the new last valid day")
+    privileges: list[FlyingPrivileges] = Field(description="Every privilege the pilot holds now")
+    kept_documents: list[str] = Field(description="Organizer keys of the documents kept with the pilot's consent")
+
+
+class VerificationRejection(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    reason: str = Field(min_length=1, max_length=1000, description="Why the request is rejected, shown to the pilot")

@@ -1,3 +1,4 @@
+from typing import Optional
 from httpx import Client
 
 from tests.types import EndpointCreator, UserInfo
@@ -14,7 +15,9 @@ def test_catalog_is_sorted(client: Client, drone_owner: UserInfo, drone_catalog:
     assert order == sorted(order), f"Catalog must be sorted by manufacturer and model: {order}"
 
 
-def test_typed_in_model_is_not_listed(client: Client, drone_owner: UserInfo, drone_catalog: dict, get_endpoint_link: EndpointCreator):
+def test_typed_in_model_is_not_listed(client: Client, drone_owner: UserInfo, drone_catalog: dict, get_endpoint_link: EndpointCreator,
+    moderator_token: Optional[str],
+):
     r = add_drone(client, drone_owner, get_endpoint_link, drone_body())
     assert r.status_code == 201, f"Drone with its own model was not added: {r.text}"
     drone = r.json()
@@ -23,7 +26,7 @@ def test_typed_in_model_is_not_listed(client: Client, drone_owner: UserInfo, dro
         listed = {model["id"] for model in drone_models(client, drone_owner, get_endpoint_link).json()}
         assert drone["model"]["id"] not in listed, "A model a pilot typed in must not be in the catalog before a moderator checks it"
     finally:
-        remove_custom_drone(client, drone_owner, get_endpoint_link, drone)
+        remove_custom_drone(client, drone_owner, get_endpoint_link, drone, moderator_token)
 
 
 def test_without_token(client: Client, get_endpoint_link: EndpointCreator):

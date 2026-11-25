@@ -1,18 +1,21 @@
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from fastapi import Request, UploadFile
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from starlette.datastructures import FormData, UploadFile as StarletteUploadFile
 
 from backend_src.api.exceptions import APIExceptions, EntityError
 from backend_src.cache import (
-    AsyncRedisSession, claim_verification_token, is_verification_token_used, release_verification_token
+    AsyncRedisSession, REVIEW_LOCK_TTL_SECONDS, acquire_review_lock, claim_verification_token, get_review_holds,
+    is_verification_token_used, release_review_lock, release_verification_token
 )
 from backend_src.core import security
 from backend_src.core.config import Settings
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import (
-    Pilot, VerificationDocument, VerificationRequest,
+    AfdModerator, FlyingPrivileges, Pilot, PilotToFlyingPrivileges, VerificationDocument, VerificationRequest,
     VerificationDocumentType, VerificationRequestStatus
 )
 from backend_src.storage import (
@@ -21,9 +24,14 @@ from backend_src.storage import (
     check_document_size, detect_document_format, organizer_key, verification_key
 )
 from .schema import (
-    VerificationPlan, VerificationPreviewRequest, VerificationRequestRead,
+    ReviewHolder, ReviewState, VerificationApprovalResult, VerificationPlan, VerificationPreviewRequest, VerificationQueueItem,
+    VerificationRequestRead, VerificationReviewRead,
     VerificationTokenPayload, VerificationTokenResponse
 )
+
+
+_REVIEW_LOCK_KIND = "verification"
+_PRIVILEGE_PREFIX = "privilege_"
 
 
 def verification_error(field: str, msg: str, type: str, input: Any) -> EntityError:
@@ -230,5 +238,180 @@ async def withdraw_request(request_id: int, pilot: Pilot, db: AsyncDBSession, st
     await db.commit()
 
     await storage.delete_objects(VERIFICATION_BUCKET, keys)
+
+    return VerificationRequestRead.model_validate(await get_request(request_id, db))
+
+
+async def _held_by_another(holder_id: int, expires_in: int, db: AsyncDBSession):
+    holder = await Queries.Moderator.get_by_id(holder_id, db)
+
+    return APIExceptions.conflict({
+        "msg": "The request is being reviewed by another moderator",
+        "moderator": ReviewHolder.model_validate(holder).model_dump() if holder is not None else None,
+        "expires_in": expires_in,
+    })
+
+
+async def open_for_review(
+    request_id: int, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage
+) -> VerificationReviewRead:
+    request = await get_request(request_id, db)
+    result = VerificationReviewRead.model_validate(request)
+
+    # Only a pending request is reviewed, the documents of the others are deleted already
+    if request.status == VerificationRequestStatus.PENDING:
+        lock = await acquire_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator.id, REVIEW_LOCK_TTL_SECONDS)
+        if not lock.taken:
+            raise await _held_by_another(lock.holder_id, lock.expires_in, db)
+        result.review_expires_in = lock.expires_in
+
+    paths = {document.id: document.document_path for document in request.verification_document}
+    for document in result.documents:
+        document.url = await storage.presigned_get(VERIFICATION_BUCKET, paths[document.id])
+
+    return result
+
+
+async def release_review(request_id: int, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession) -> dict[str, str]:
+    await get_request(request_id, db)
+
+    if not await release_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator.id):
+        raise APIExceptions.conflict("The request is being reviewed by another moderator")
+
+    return {"message": f"Review of request {request_id} released"}
+
+
+async def list_requests(
+    status: Optional[VerificationRequestStatus], limit: int, offset: int, db: AsyncDBSession, redis: AsyncRedisSession,
+) -> list[VerificationQueueItem]:
+    requests = await Queries.Verification.get_page(status, limit, offset, db)
+    pending = [request.id for request in requests if request.status == VerificationRequestStatus.PENDING]
+    holds = await get_review_holds(redis, _REVIEW_LOCK_KIND, pending)
+    moderators = {
+        moderator.id: moderator
+        for moderator in await Queries.Moderator.get_by_ids({hold.holder_id for hold in holds.values()}, db)
+    }
+
+    items = []
+    for request in requests:
+        item = VerificationQueueItem.model_validate(request)
+        if (hold := holds.get(request.id)) is not None:
+            holder = moderators.get(hold.holder_id)
+            item.review = ReviewState(
+                moderator=ReviewHolder.model_validate(holder) if holder is not None else None,
+                expires_in=hold.expires_in,
+            )
+        items.append(item)
+
+    return items
+
+
+async def _decided_by(request_id: int, moderator_id: int, db: AsyncDBSession, redis: AsyncRedisSession) -> VerificationRequest:
+    """The pending request locked to the moderator for the decision, as when opening it."""
+    request = await get_request(request_id, db)
+    if request.status != VerificationRequestStatus.PENDING:
+        raise APIExceptions.conflict(f"The request is decided already, it is {request.status}")
+
+    lock = await acquire_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator_id, REVIEW_LOCK_TTL_SECONDS)
+    if not lock.taken:
+        raise await _held_by_another(lock.holder_id, lock.expires_in, db)
+
+    return request
+
+
+def _check_expiry(privileges: set[FlyingPrivileges], expiry: dict[FlyingPrivileges, date]) -> None:
+    today = datetime.now(timezone.utc).date()
+    errors: list[EntityError] = []
+
+    for privilege in sorted(privileges - expiry.keys()):
+        errors.append(verification_error("privilege_expiry", f"Expiry date of {privilege} is required", "expiry_missing", privilege))
+    for privilege in sorted(expiry.keys() - privileges):
+        errors.append(verification_error("privilege_expiry", f"Request has no {privilege} certificate", "expiry_unexpected", privilege))
+    for privilege, expires_at in expiry.items():
+        if expires_at < today:
+            errors.append(verification_error("privilege_expiry", f"Certificate {privilege} has already expired", "expiry_in_past", expires_at.isoformat()))
+
+    if errors:
+        raise APIExceptions.unprocessable(errors)
+
+
+async def approve_request(
+    request_id: int, expiry: dict[FlyingPrivileges, date], moderator: AfdModerator,
+    db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage,
+) -> VerificationApprovalResult:
+    moderator_id = moderator.id
+    request = await _decided_by(request_id, moderator_id, db, redis)
+
+    privileges = {
+        FlyingPrivileges(document.document_type.removeprefix(_PRIVILEGE_PREFIX))
+        for document in request.verification_document
+        if document.document_type.startswith(_PRIVILEGE_PREFIX)
+    }
+    # a wrong date keeps the lock, the moderator fixes it and approves again
+    _check_expiry(privileges, expiry)
+
+    existing = {
+        row.flying_privilege: row
+        for row in (
+            await db.execute(select(PilotToFlyingPrivileges).where(PilotToFlyingPrivileges.pilot_id == request.pilot_id))
+        ).scalars().all()
+    }
+    granted = sorted(privileges - existing.keys())
+    renewed = sorted(privileges & existing.keys())
+    held = sorted(privileges | existing.keys())
+
+    kept = await keep_documents_in_organizer(request, storage) if request.keep_documents else []
+
+    try:
+        for privilege in renewed:
+            existing[privilege].expires_at = expiry[privilege]
+        db.add_all(
+            PilotToFlyingPrivileges(pilot_id=request.pilot_id, flying_privilege=privilege, expires_at=expiry[privilege])
+            for privilege in granted
+        )
+
+        pilot = await Queries.Pilot.get_by_id(request.pilot_id, db)
+        pilot.pilot_number = request.pilot_number # type: ignore
+        pilot.phone_number = request.phone_number # type: ignore
+        pilot.first_name = pilot.first_name or request.first_name # type: ignore
+        pilot.last_name = pilot.last_name or request.last_name # type: ignore
+
+        keys = detach_documents(request)
+        request.status = VerificationRequestStatus.APPROVED
+        request.verified_by = moderator_id
+        request.verified_at = datetime.now(timezone.utc)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        await storage.delete_objects(ORGANIZER_BUCKET, kept)
+        raise
+
+    await storage.delete_objects(VERIFICATION_BUCKET, keys)
+    await release_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator_id)
+
+    return VerificationApprovalResult(
+        request=VerificationRequestRead.model_validate(await get_request(request_id, db)),
+        granted=granted,
+        renewed=renewed,
+        privileges=held,
+        kept_documents=kept,
+    )
+
+
+async def reject_request(
+    request_id: int, reason: str, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage,
+) -> VerificationRequestRead:
+    moderator_id = moderator.id
+    request = await _decided_by(request_id, moderator_id, db, redis)
+
+    keys = detach_documents(request)
+    request.status = VerificationRequestStatus.REJECTED
+    request.reason = reason
+    request.verified_by = moderator_id
+    request.verified_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    await storage.delete_objects(VERIFICATION_BUCKET, keys)
+    await release_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator_id)
 
     return VerificationRequestRead.model_validate(await get_request(request_id, db))
