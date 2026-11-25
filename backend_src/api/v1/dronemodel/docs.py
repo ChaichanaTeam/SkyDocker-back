@@ -43,7 +43,8 @@ APPROVE = {
         200: { "description": "Model added to the catalog" },
         401: MODERATOR_401,
         404: { "description": "Drone model not found" },
-        409: { "description": "The model is in the catalog already, or after the fix it matches a catalog model: "
+        409: { "description": "Another moderator decides on the model right now (`detail.moderator`), "
+                              "the model is in the catalog already, or after the fix it matches a catalog model: "
                               "`detail.model_id` is the model to replace it with" },
         422: { "description": "Invalid values" }
     }
@@ -60,7 +61,7 @@ REPLACE = {
         200: { "description": "Drones moved to the catalog model" },
         401: MODERATOR_401,
         404: { "description": "Typed-in model or catalog model not found" },
-        409: { "description": "The model to replace is in the catalog already" },
+        409: { "description": "Another moderator decides on the model right now (`detail.moderator`), or The model to replace is in the catalog already" },
         422: { "description": "Invalid request" }
     }
 }

@@ -1,7 +1,12 @@
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
 from backend_src.api.exceptions import APIExceptions
+from backend_src.api.v1.verification.schema import ReviewHolder
+from backend_src.cache import AsyncRedisSession, REVIEW_LOCK_TTL_SECONDS, acquire_review_lock, release_review_lock
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.dronepark import class_mass_conflict, model_key, take_off_mass
-from backend_src.models import Drone, Model
+from backend_src.models import AfdModerator, Drone, Model
 from .schema import ClassConflict, ModelCorrection, ModelDroneRead, ModelReplacement, ModelReview, UnverifiedModelRead
 
 
@@ -22,7 +27,36 @@ async def list_unverified(db: AsyncDBSession) -> list[UnverifiedModelRead]:
     ]
 
 
-async def approve(model_id: int, correction: ModelCorrection, db: AsyncDBSession) -> ModelReview:
+_REVIEW_LOCK_KIND = "drone_model"
+
+
+@asynccontextmanager
+async def _deciding(model_id: int, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession) -> AsyncIterator[None]:
+    """Holds the model for the moderator while the decision runs, so two moderators never decide on it at once."""
+    moderator_id = moderator.id
+    lock = await acquire_review_lock(redis, _REVIEW_LOCK_KIND, model_id, moderator_id, REVIEW_LOCK_TTL_SECONDS)
+    if not lock.taken:
+        holder = await Queries.Moderator.get_by_id(lock.holder_id, db)
+        raise APIExceptions.conflict({
+            "msg": "Another moderator decides on the drone model",
+            "moderator": ReviewHolder.model_validate(holder).model_dump() if holder is not None else None,
+            "expires_in": lock.expires_in,
+        })
+
+    try:
+        yield
+    finally:
+        await release_review_lock(redis, _REVIEW_LOCK_KIND, model_id, moderator_id)
+
+
+async def approve(
+    model_id: int, correction: ModelCorrection, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession,
+) -> ModelReview:
+    async with _deciding(model_id, moderator, db, redis):
+        return await _approve(model_id, correction, db)
+
+
+async def _approve(model_id: int, correction: ModelCorrection, db: AsyncDBSession) -> ModelReview:
     model = await _unverified_model(model_id, db)
 
     for field, value in correction.model_dump(exclude_unset=True).items():
@@ -42,7 +76,14 @@ async def approve(model_id: int, correction: ModelCorrection, db: AsyncDBSession
     return await _review(model_id, db)
 
 
-async def replace(model_id: int, replacement: ModelReplacement, db: AsyncDBSession) -> ModelReview:
+async def replace(
+    model_id: int, replacement: ModelReplacement, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession,
+) -> ModelReview:
+    async with _deciding(model_id, moderator, db, redis):
+        return await _replace(model_id, replacement, db)
+
+
+async def _replace(model_id: int, replacement: ModelReplacement, db: AsyncDBSession) -> ModelReview:
     await _unverified_model(model_id, db)
 
     if await Queries.Model.get_verified_by_id(replacement.model_id, db) is None:

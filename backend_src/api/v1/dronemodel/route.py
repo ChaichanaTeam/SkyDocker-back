@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from redis_fastapi import AsyncRedisDep
 
 from backend_src.api.dependencies import AsyncDBDep, CurrentModerator, CurrentPilot
 from .schema import ModelCorrection, ModelReplacement
@@ -20,13 +21,13 @@ async def list_unverified(moderator: CurrentModerator, db: AsyncDBDep):
 
 
 @router.post("/{model_id}/approve", **docs.APPROVE)
-async def approve(model_id: int, correction: ModelCorrection, moderator: CurrentModerator, db: AsyncDBDep):
-    return await service.approve(model_id, correction, db)
+async def approve(model_id: int, correction: ModelCorrection, moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.approve(model_id, correction, moderator, db, redis)
 
 
 @router.post("/{model_id}/replace", **docs.REPLACE)
-async def replace(model_id: int, replacement: ModelReplacement, moderator: CurrentModerator, db: AsyncDBDep):
-    return await service.replace(model_id, replacement, db)
+async def replace(model_id: int, replacement: ModelReplacement, moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.replace(model_id, replacement, moderator, db, redis)
 
 
 @router.delete("/{model_id}", **docs.DELETE)
