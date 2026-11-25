@@ -1,11 +1,6 @@
+from backend_src.api.v1.moderator.docs import MODERATOR_AUTH, MODERATOR_401
 from backend_src.api.v1.pilot.schema import DroneModelRead
 from .schema import ModelReview, UnverifiedModelRead
-
-
-MODERATOR_AUTH = "Moderator only: the access token from POST /moderator/auth/login or /moderator/auth/refresh " \
-                 "goes in the `Authorization: Bearer` header, the refresh cookie is not accepted here."
-
-MODERATOR_401 = { "description": "Invalid, expired or non-moderator access token" }
 
 
 ROUTER = {

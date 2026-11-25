@@ -1,6 +1,13 @@
 from .schema import ModeratorAccessToken, ModeratorProfile
 
 
+# Shared by the endpoints only a moderator calls
+MODERATOR_AUTH = "Moderator only: the access token from POST /moderator/auth/login or /moderator/auth/refresh " \
+                 "goes in the `Authorization: Bearer` header, the refresh cookie is not accepted here."
+
+MODERATOR_401 = { "description": "Invalid, expired or non-moderator access token" }
+
+
 ROUTER = {
     "tags": ["moderator"],
     "responses": {
