@@ -32,8 +32,10 @@ RUN apt-get update && \
 apt-get clean && \
 rm -rf /var/lib/apt/lists/*
 
+# data/ exists in the image, so a bind mount below it (data/seed) keeps it owned by app,
+# otherwise Docker creates it as root and the PANSA snapshots (data/pansa) cannot be written
 RUN useradd -l -m -u 1000 app && \
-    mkdir /app && chown app:app /app
+    mkdir -p /app/data && chown -R app:app /app
 
 WORKDIR /app
 USER app

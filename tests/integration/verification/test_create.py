@@ -39,10 +39,10 @@ def pilot(client: Client, new_user: UserInfo, get_endpoint_link: EndpointCreator
 
 
 @pytest.fixture
-def numbered_pilot(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator) -> UserInfo:
+def numbered_pilot(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator) -> UserInfo:
     r = submit_request(client, pilot, get_endpoint_link, {"operator_number": pdf()}, request_fields())
     assert r.status_code == 201, f"Request was not created: {r.text}"
-    r = approve_request(client, get_endpoint_link, r.json()["id"])
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"])
     assert r.status_code == 200, f"Approve failed: {r.text}"
     return pilot
 
@@ -227,7 +227,7 @@ def test_cannot_withdraw_foreign_request(client: Client, pilot: UserInfo, get_en
     assert r.status_code == 404, f"Foreign request must look missing: {r.text}"
 
 
-def test_approve_keeps_documents_when_asked(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_approve_keeps_documents_when_asked(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     documents = {"operator_number": pdf(), "privilege_a1": ("a1.png", PNG, "image/png")}
 
     r = submit_request(client, pilot, get_endpoint_link, documents, request_fields(keep_documents=True))
@@ -235,7 +235,7 @@ def test_approve_keeps_documents_when_asked(client: Client, pilot: UserInfo, get
     assert r.json()["keep_documents"] is True
     pilot_id = r.json()["pilot_id"]
 
-    r = approve_request(client, get_endpoint_link, r.json()["id"], A1_EXPIRY)
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"], A1_EXPIRY)
     assert r.status_code == 200, f"Approve failed: {r.text}"
 
     body = r.json()
@@ -247,31 +247,31 @@ def test_approve_keeps_documents_when_asked(client: Client, pilot: UserInfo, get
     assert any(key.endswith(".png") for key in kept), f"Extension must survive the copy: {kept}"
 
 
-def test_approve_deletes_documents_without_consent(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_approve_deletes_documents_without_consent(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     r = submit_request(client, pilot, get_endpoint_link, {"operator_number": pdf()}, request_fields(keep_documents=False))
     assert r.status_code == 201, f"Request was not created: {r.text}"
 
-    r = approve_request(client, get_endpoint_link, r.json()["id"])
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"])
     assert r.status_code == 200, f"Approve failed: {r.text}"
     assert r.json()["kept_documents"] == [], "Pilot did not agree to keep documents"
     assert r.json()["request"]["documents"] == []
 
 
-def test_reject_never_keeps_documents(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_reject_never_keeps_documents(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     r = submit_request(client, pilot, get_endpoint_link, {"operator_number": pdf()}, request_fields(keep_documents=True))
     assert r.status_code == 201, f"Request was not created: {r.text}"
 
-    r = reject_request(client, get_endpoint_link, r.json()["id"])
+    r = reject_request(client, moderator, get_endpoint_link, r.json()["id"])
     assert r.status_code == 200, f"Reject failed: {r.text}"
     assert r.json()["status"] == "rejected"
     assert r.json()["documents"] == []
 
 
-def test_approve_fills_profile_and_replaces_phone(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_approve_fills_profile_and_replaces_phone(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     first = request_fields()
     r = submit_request(client, pilot, get_endpoint_link, {"operator_number": pdf()}, first)
     assert r.status_code == 201, f"Request was not created: {r.text}"
-    r = approve_request(client, get_endpoint_link, r.json()["id"])
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"])
     assert r.status_code == 200, f"Approve failed: {r.text}"
 
     profile = pilot_profile(client, pilot, get_endpoint_link).json()
@@ -282,7 +282,7 @@ def test_approve_fills_profile_and_replaces_phone(client: Client, pilot: UserInf
     del second["pilot_number"]
     r = submit_request(client, pilot, get_endpoint_link, {"privilege_a1": pdf()}, second)
     assert r.status_code == 201, f"Request was not created: {r.text}"
-    r = approve_request(client, get_endpoint_link, r.json()["id"], A1_EXPIRY)
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"], A1_EXPIRY)
     assert r.status_code == 200, f"Approve failed: {r.text}"
 
     profile = pilot_profile(client, pilot, get_endpoint_link).json()
@@ -290,48 +290,48 @@ def test_approve_fills_profile_and_replaces_phone(client: Client, pilot: UserInf
     assert profile["phone_number"] == second["phone_number"], "Phone must follow the approved request"
 
 
-def test_approve_requires_expiry_of_every_privilege(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_approve_requires_expiry_of_every_privilege(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     documents = {"operator_number": pdf(), "privilege_a1": pdf()}
     r = submit_request(client, pilot, get_endpoint_link, documents, request_fields())
     assert r.status_code == 201, f"Request was not created: {r.text}"
     request_id = r.json()["id"]
 
-    r = approve_request(client, get_endpoint_link, request_id)
+    r = approve_request(client, moderator, get_endpoint_link, request_id)
     assert r.status_code == 422, f"Privilege without a date must be rejected: {r.text}"
     assert error_types(r.json()) == {"verification.expiry_missing"}
 
-    r = approve_request(client, get_endpoint_link, request_id, A1_EXPIRY)
+    r = approve_request(client, moderator, get_endpoint_link, request_id, A1_EXPIRY)
     assert r.status_code == 200, f"Request must stay pending after a failed approve: {r.text}"
     assert r.json()["granted"] == ["a1"]
 
 
-def test_approve_rejects_wrong_expiry(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_approve_rejects_wrong_expiry(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     documents = {"operator_number": pdf(), "privilege_a1": pdf()}
     r = submit_request(client, pilot, get_endpoint_link, documents, request_fields())
     assert r.status_code == 201, f"Request was not created: {r.text}"
     request_id = r.json()["id"]
 
-    r = approve_request(client, get_endpoint_link, request_id, {**A1_EXPIRY, "a2": A1_EXPIRY["a1"]})
+    r = approve_request(client, moderator, get_endpoint_link, request_id, {**A1_EXPIRY, "a2": A1_EXPIRY["a1"]})
     assert r.status_code == 422, f"Date for a missing certificate must be rejected: {r.text}"
     assert error_types(r.json()) == {"verification.expiry_unexpected"}
 
     yesterday = (date.today() - timedelta(days=2)).isoformat()
-    r = approve_request(client, get_endpoint_link, request_id, {"a1": yesterday})
+    r = approve_request(client, moderator, get_endpoint_link, request_id, {"a1": yesterday})
     assert r.status_code == 422, f"Expired certificate must be rejected: {r.text}"
     assert error_types(r.json()) == {"verification.expiry_in_past"}
 
 
-def test_approve_renews_existing_privilege(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_approve_renews_existing_privilege(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     documents = {"operator_number": pdf(), "privilege_a1": pdf()}
     r = submit_request(client, pilot, get_endpoint_link, documents, request_fields())
     assert r.status_code == 201, f"Request was not created: {r.text}"
-    r = approve_request(client, get_endpoint_link, r.json()["id"], A1_EXPIRY)
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"], A1_EXPIRY)
     assert (r.json()["granted"], r.json()["renewed"]) == (["a1"], [])
 
     fields = request_fields()
     del fields["pilot_number"]
     r = submit_request(client, pilot, get_endpoint_link, {"privilege_a1": pdf()}, fields)
     assert r.status_code == 201, f"Request was not created: {r.text}"
-    r = approve_request(client, get_endpoint_link, r.json()["id"], A1_EXPIRY)
+    r = approve_request(client, moderator, get_endpoint_link, r.json()["id"], A1_EXPIRY)
     assert r.status_code == 200, f"Approve failed: {r.text}"
     assert (r.json()["granted"], r.json()["renewed"], r.json()["privileges"]) == ([], ["a1"], ["a1"])

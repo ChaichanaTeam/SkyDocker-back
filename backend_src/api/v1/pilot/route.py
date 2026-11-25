@@ -83,6 +83,11 @@ async def get_documents(pilot: CurrentPilot, storage: StorageDep):
     return await service.get_documents(pilot, storage)
 
 
+@router.get("/me/verification-requests", **docs.GET_VERIFICATION_REQUESTS)
+async def get_verification_requests(pilot: CurrentPilot, db: AsyncDBDep):
+    return await service.get_verification_requests(pilot, db)
+
+
 @router.get("/{pilot_id}", **docs.GET_PUBLIC)
 async def get_public(pilot_id: EntityId, pilot: CurrentPilot, db: AsyncDBDep):
     return await service.get_public(pilot_id, pilot, db)

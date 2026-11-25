@@ -1,3 +1,4 @@
+from typing import Optional
 import pytest
 from httpx import Client
 
@@ -23,13 +24,15 @@ def test_add_catalog_drone(client: Client, drone_owner: UserInfo, drone_catalog:
     delete_drone(client, drone_owner, get_endpoint_link, drone["id"])
 
 
-def test_add_custom_drone(client: Client, drone_owner: UserInfo, drone_catalog: dict, get_endpoint_link: EndpointCreator):
+def test_add_custom_drone(client: Client, drone_owner: UserInfo, drone_catalog: dict, get_endpoint_link: EndpointCreator,
+    moderator_token: Optional[str],
+):
     model = custom_model(mtom=480)
     r = add_drone(client, drone_owner, get_endpoint_link, drone_body(custom_model=model))
     assert r.status_code == 201, f"Drone with its own model was not added: {r.text}"
 
     drone = r.json()
-    remove_custom_drone(client, drone_owner, get_endpoint_link, drone)
+    remove_custom_drone(client, drone_owner, get_endpoint_link, drone, moderator_token)
     assert not drone["model"]["is_model_verified"], f"A typed-in model waits for a moderator: {r.text}"
     assert drone["model"]["category"] == "open", f"A typed-in model is in the open category: {r.text}"
     assert drone["model"]["mtom"] == 480, f"The typed-in values must be kept: {r.text}"

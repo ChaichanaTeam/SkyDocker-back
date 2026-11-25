@@ -69,20 +69,57 @@ def withdraw_request(client: Client, user: UserInfo, get_endpoint_link: Endpoint
 
 
 def approve_request(
-    client: Client, get_endpoint_link: EndpointCreator, request_id: int, privilege_expiry: Optional[dict[str, str]] = None,
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int,
+    privilege_expiry: Optional[dict[str, str]] = None,
 ) -> Response:
     r = client.post(
-        get_endpoint_link("demo", f"verification-requests/{request_id}/approve"),
+        get_endpoint_link("live", f"verification-requests/{request_id}/approve"),
+        headers=_moderator_auth(token),
         json={"privilege_expiry": privilege_expiry or {}},
     )
 
     return r
 
 
-def reject_request(client: Client, get_endpoint_link: EndpointCreator, request_id: int) -> Response:
-    r = client.post(get_endpoint_link("demo", f"verification-requests/{request_id}/reject"), params={"reason": "Unreadable scan"})
+def reject_request(
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int, reason: Optional[str] = "Unreadable scan",
+) -> Response:
+    body = {"reason": reason} if reason is not None else {}
+    r = client.post(
+        get_endpoint_link("live", f"verification-requests/{request_id}/reject"), headers=_moderator_auth(token), json=body,
+    )
 
     return r
+
+
+def _moderator_auth(token: Optional[str]) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"} if token is not None else {}
+
+
+def list_requests(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, **params) -> Response:
+    return client.get(get_endpoint_link("live", "verification-requests/"), headers=_moderator_auth(token), params=params)
+
+
+def find_in_queue(
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int, status: str,
+) -> Optional[dict[str, Any]]:
+    """The request in the moderator queue, paged through: earlier test runs leave many older requests before it."""
+    offset = 0
+    while items := list_requests(client, token, get_endpoint_link, status=status, limit=200, offset=offset).json():
+        for item in items:
+            if item["id"] == request_id:
+                return item
+        offset += len(items)
+
+    return None
+
+
+def review_request(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int) -> Response:
+    return client.get(get_endpoint_link("live", f"verification-requests/{request_id}"), headers=_moderator_auth(token))
+
+
+def release_review(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int) -> Response:
+    return client.delete(get_endpoint_link("live", f"verification-requests/{request_id}/review"), headers=_moderator_auth(token))
 
 
 def pilot_profile(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator) -> Response:

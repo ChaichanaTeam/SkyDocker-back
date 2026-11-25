@@ -7,7 +7,9 @@ from backend_src.api.shared_schemas import FeatureProperties, GeoFeature, GeoJso
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import Checkin, Drone, Mission, Pilot, PilotToFlyingPrivileges, VerificationDocumentType
 from backend_src.storage import ORGANIZER_BUCKET, Storage, organizer_prefix
-from .schema import OrganizerDocumentRead, PilotCheckinProperties, PilotMissionProperties, PilotUpdate
+from .schema import (
+    OrganizerDocumentRead, PilotCheckinProperties, PilotMissionProperties, PilotUpdate, PilotVerificationRequestRead,
+)
 
 
 def _feature(flight: Union[Mission, Checkin], properties: FeatureProperties) -> GeoFeature:
@@ -100,3 +102,9 @@ async def get_active_checkin(pilot: Pilot, db: AsyncDBSession) -> GeoFeature:
         raise APIExceptions.not_found("No check-in in progress")
 
     return _checkin_feature(checkin)
+
+
+async def get_verification_requests(pilot: Pilot, db: AsyncDBSession) -> list[PilotVerificationRequestRead]:
+    requests = await Queries.Verification.get_by_pilot(pilot.id, db)
+
+    return [PilotVerificationRequestRead.from_request(request) for request in requests]

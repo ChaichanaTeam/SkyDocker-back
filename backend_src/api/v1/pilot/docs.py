@@ -1,5 +1,5 @@
 from backend_src.api.shared_schemas import GeoFeature, GeoJson
-from .schema import DroneRead, OrganizerDocumentRead, PilotPublicRead, PilotRead, PrivilegeRead
+from .schema import DroneRead, OrganizerDocumentRead, PilotPublicRead, PilotRead, PilotVerificationRequestRead, PrivilegeRead
 
 
 ROUTER = {
@@ -62,6 +62,16 @@ GET_DOCUMENTS = {
                     "Authorization header REQUIRED!",
     "response_description": "Documents of the pilot with download links",
     "response_model": list[OrganizerDocumentRead],
+}
+
+
+GET_VERIFICATION_REQUESTS = {
+    "summary": "List own verification requests",
+    "description": "The pilot's requests, the newest first, with the moderator's decision: `status` "
+                    "(pending, approved, rejected, withdrawn), `reason` of a rejection and `verified_at`.\n\n"
+                    "Authorization header REQUIRED!",
+    "response_description": "Verification requests of the pilot",
+    "response_model": list[PilotVerificationRequestRead],
 }
 
 

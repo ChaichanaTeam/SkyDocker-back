@@ -38,3 +38,6 @@ class WorkerSettings:
 
     # Sync what the database lacks when the worker starts, e.g. a new database
     RUN_ON_START                    = os.getenv("SYNC_RUN_ON_START", "1").strip().lower() in ("1", "true", "yes")
+
+    # Moderator profiles for `python -m backend_src.worker seed moderators`, relative to the working directory
+    SEED_MODERATORS_FILE            = os.getenv("SEED_MODERATORS_FILE") or "data/seed/moderators.json"

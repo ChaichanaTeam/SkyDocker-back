@@ -13,6 +13,11 @@ OTP_CODE = os.getenv("OTP_CODE")
 RATE_LIMIT_THRESHOLD = int(os.getenv("RATE_LIMIT_THRESHOLD", 5))
 # Optional, admin endpoint tests are skipped without it
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
+# Optional, a seeded moderator; drone model moderation tests are skipped without it
+MODERATOR_EMAIL = os.getenv("TEST_MODERATOR_EMAIL")
+MODERATOR_PASSWORD = os.getenv("TEST_MODERATOR_PASSWORD")
+OTHER_MODERATOR_EMAIL = os.getenv("TEST_OTHER_MODERATOR_EMAIL")
+OTHER_MODERATOR_PASSWORD = os.getenv("TEST_OTHER_MODERATOR_PASSWORD")
 
 # Check-in points, (lon, lat), they depend on the PANSA zone catalog
 CHECKIN_CLEAN_POINT = (17.0, 53.5)          # no restrictions for a1, 50 m, 200 m

@@ -20,6 +20,10 @@ services:
       SYNC_RETRY_DELAYS_MINUTES: ${SYNC_RETRY_DELAYS_MINUTES-5,15,45}
       SYNC_ACTIVITY_RETRY_DELAYS_MINUTES: ${SYNC_ACTIVITY_RETRY_DELAYS_MINUTES-15}
       SYNC_RUN_ON_START: ${SYNC_RUN_ON_START:-1}
+      SEED_MODERATORS_FILE: ${SEED_MODERATORS_FILE:-}
+    volumes:
+      # seed files, e.g. data/seed/moderators.json for `seed moderators`
+      - ../../data/seed:/app/data/seed:ro
     deploy:
       resources:
         limits:

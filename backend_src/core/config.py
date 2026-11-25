@@ -4,9 +4,33 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+_DEBUG = os.getenv("DEBUG", "").strip().lower() in ("1", "true", "yes")
+
+
+def _cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ORIGINS")
+    if raw is None:
+        return ["http://localhost:3000"] if _DEBUG else []
+
+    origins = [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+    # Browsers refuse a wildcard origin on credentialed requests (refresh cookie)
+    if "*" in origins:
+        raise ValueError("CORS_ORIGINS must list explicit origins, '*' is not allowed")
+
+    return origins
+
+
+def _cookie_samesite() -> str:
+    value = os.getenv("MODERATOR_COOKIE_SAMESITE", "strict").strip().lower()
+    if value not in ("strict", "lax", "none"):
+        raise ValueError("MODERATOR_COOKIE_SAMESITE must be one of: strict, lax, none")
+
+    return value
+
 @dataclass(frozen=True)
 class Settings:
-    DEBUG                           = os.getenv("DEBUG", "").strip().lower() in ("1", "true", "yes")
+    DEBUG                           = _DEBUG
 
     DATABASE_URL                    = os.getenv("DATABASE_URL")
     REDIS_URL                       = os.getenv("REDIS_URL")
@@ -24,6 +48,11 @@ class Settings:
 
     ADMIN_API_KEY                   = os.getenv("ADMIN_API_KEY")
 
+    MODERATOR_ACCESS_TOKEN_EXPIRE_MINUTES     = int(os.getenv("MODERATOR_ACCESS_TOKEN_EXPIRE_MINUTES", "10"))
+    MODERATOR_REFRESH_TOKEN_EXPIRE_MINUTES    = int(os.getenv("MODERATOR_REFRESH_TOKEN_EXPIRE_MINUTES", "30"))
+    MODERATOR_COOKIE_SAMESITE                 = _cookie_samesite()
+    MODERATOR_COOKIE_SECURE                   = not _DEBUG
+
     PANSA_API_URL                  = os.getenv("PANSA_API_URL") or "https://api.dronemap.pansa.pl"
     PANSA_API_KEY                   = os.getenv("PANSA_API_KEY")
     PANSA_USER_AGENT                = os.getenv("PANSA_USER_AGENT") or "SkyDocker (university thesis project)"
@@ -33,4 +62,4 @@ class Settings:
     STORAGE_APP_KEY                 = os.getenv("STORAGE_APP_KEY")
     STORAGE_APP_SECRET              = os.getenv("STORAGE_APP_SECRET")
 
-    ORIGINS                         = ["http://localhost:3000"]
+    CORS_ORIGINS                    = _cors_origins()

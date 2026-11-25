@@ -1,19 +1,23 @@
-def refresh_key(pilot_id: str, jti: str) -> str:
-    return f"refresh:{pilot_id}:{jti}"
+def refresh_key(subject: str, jti: str, prefix: str = "") -> str:
+    return f"{prefix}refresh:{subject}:{jti}"
 
 
 def otp_key(purpose: str, subject: str) -> str:
     return f"otp:{purpose}:{subject}"
 
 
-def session_gen_key(pilot_id: str) -> str:
-    return f"session_gen:{pilot_id}"
+def session_gen_key(subject: str, prefix: str = "") -> str:
+    return f"{prefix}session_gen:{subject}"
 
 
 def verification_token_key(jti: str) -> str:
     return f"verification_token_used:{jti}"
   
  
+def review_lock_key(kind: str, item_id: int) -> str:
+    return f"review:lock:{kind}:{item_id}"
+
+
 def sync_lock_key(name: str) -> str:
     return f"sync:lock:{name}"
 
