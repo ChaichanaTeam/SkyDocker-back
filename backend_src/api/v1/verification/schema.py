@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Literal, Optional
 
 from fastapi import Header
@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend_src.api.shared_schemas import E164PhoneNumber
 from backend_src.core.security import TokenPayload, TokenType
-from backend_src.models import VerificationDocumentType, VerificationRequestStatus
+from backend_src.models import FlyingPrivileges, VerificationDocumentType, VerificationRequestStatus
 from backend_src.storage import MAX_DOCUMENTS
 
 
@@ -105,6 +105,22 @@ class ReviewState(BaseModel):
 
 
 class VerificationQueueItem(VerificationRequestRead):
+    verified_by: Optional[int] = Field(None, description="Moderator who approved or rejected the request")
     review: Optional[ReviewState] = Field(
         None, description="Moderator who reviews the pending request now, null when it is free to open"
     )
+
+
+class VerificationApproval(BaseModel):
+    privilege_expiry: dict[FlyingPrivileges, date] = Field(
+        default_factory=dict,
+        description="Last valid day of every privilege in the request, read by the moderator from the certificate",
+    )
+
+
+class VerificationApprovalResult(BaseModel):
+    request: VerificationRequestRead
+    granted: list[FlyingPrivileges] = Field(description="Privileges the pilot did not have")
+    renewed: list[FlyingPrivileges] = Field(description="Privileges the pilot had, with the new last valid day")
+    privileges: list[FlyingPrivileges] = Field(description="Every privilege the pilot holds now")
+    kept_documents: list[str] = Field(description="Organizer keys of the documents kept with the pilot's consent")

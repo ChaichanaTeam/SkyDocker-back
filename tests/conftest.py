@@ -129,6 +129,19 @@ def moderator(moderator_token: Optional[str]) -> str:
     return moderator_token
 
 
+@pytest.fixture(scope="session")
+def other_moderator(get_endpoint_link: EndpointCreator) -> str:
+    """Access token of a second seeded moderator, for a request someone else reviews."""
+    if not constants.OTHER_MODERATOR_EMAIL or not constants.OTHER_MODERATOR_PASSWORD:
+        pytest.skip("Set TEST_OTHER_MODERATOR_EMAIL and TEST_OTHER_MODERATOR_PASSWORD of a second seeded moderator")
+
+    with Client() as session:
+        r = moderator_login(session, constants.OTHER_MODERATOR_EMAIL, constants.OTHER_MODERATOR_PASSWORD, get_endpoint_link)
+    assert r.status_code == 200, f"Second test moderator login failed: {r.text}"
+
+    return r.json()["access_token"]
+
+
 def check_backend() -> None:
     try:
         r = get(constants.LIVE_API_LINK.join("health"))

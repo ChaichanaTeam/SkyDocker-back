@@ -1,6 +1,6 @@
 from backend_src.models import VerificationDocumentType
 from backend_src.api.v1.moderator.docs import MODERATOR_AUTH, MODERATOR_401
-from .schema import VerificationQueueItem, VerificationRequestRead, VerificationReviewRead, VerificationTokenResponse
+from .schema import VerificationApprovalResult, VerificationQueueItem, VerificationRequestRead, VerificationReviewRead, VerificationTokenResponse
 
 
 ROUTER = {
@@ -128,6 +128,31 @@ GET_REQUEST = {
                               "`detail.expires_in` is seconds until the lock runs out" }
     }
 }
+
+APPROVE_REQUEST = {
+    "summary": "Approve a request",
+    "description": "Grants the privileges of the submitted `privilege_*` certificates and writes `pilot_number` "
+                    "and `phone_number` to the pilot, names only if the profile has none.\n\n"
+                    "`privilege_expiry` holds the last valid day of every submitted certificate, read from the document, "
+                    "for example `{\"a1\": \"2031-05-01\"}`; a request with only `operator_number` passes `{}`. "
+                    "An existing privilege gets the new date, a daily job removes privileges after their last valid day.\n\n"
+                    "With `keep_documents` the documents are copied to the organizer, `kept_documents` lists their keys. "
+                    "The originals are deleted either way.\n\n"
+                    "The decision takes the review lock like opening the request, so it does not need the request opened first. "
+                    "It fails while another moderator reviews the request, and a wrong date keeps the lock for a fixed retry. "
+                    "The moderator is stored as the one who verified the request and the lock is released.\n\n" + MODERATOR_AUTH,
+    "response_description": "Approved request and the pilot's privileges",
+    "response_model": VerificationApprovalResult,
+    "responses": {
+        200: { "description": "Request approved" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "The request is decided already, or another moderator reviews it: "
+                              "`detail.moderator` is who, `detail.expires_in` is seconds until the lock runs out" },
+        422: { "description": "Expiry date is missing, unexpected or in the past, see detail" }
+    }
+}
+
 
 RELEASE_REVIEW = {
     "summary": "Release a request",
