@@ -81,3 +81,19 @@ class VerificationRequestRead(BaseModel):
     created_at: datetime
 
     documents: list[VerificationDocumentRead] = Field(validation_alias="verification_document")
+
+
+class VerificationReviewRead(VerificationRequestRead):
+    review_expires_in: Optional[int] = Field(
+        None, description="Seconds the request stays locked to this moderator, null when the request is not pending"
+    )
+
+
+class ReviewHolder(BaseModel):
+    """Moderator who reviews the request now."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    first_name: str
+    last_name: str

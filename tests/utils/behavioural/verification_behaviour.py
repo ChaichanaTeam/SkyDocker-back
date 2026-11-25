@@ -85,6 +85,18 @@ def reject_request(client: Client, get_endpoint_link: EndpointCreator, request_i
     return r
 
 
+def _moderator_auth(token: Optional[str]) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"} if token is not None else {}
+
+
+def review_request(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int) -> Response:
+    return client.get(get_endpoint_link("live", f"verification-requests/{request_id}"), headers=_moderator_auth(token))
+
+
+def release_review(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int) -> Response:
+    return client.delete(get_endpoint_link("live", f"verification-requests/{request_id}/review"), headers=_moderator_auth(token))
+
+
 def pilot_profile(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator) -> Response:
     # The grant endpoint returns the profile contact, there is no live profile endpoint yet
     r = client.post(

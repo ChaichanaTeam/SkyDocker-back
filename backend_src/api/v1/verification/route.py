@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from redis_fastapi import AsyncRedisDep
 
-from backend_src.api.dependencies import AsyncDBDep, CurrentPilot, StorageDep
+from backend_src.api.dependencies import AsyncDBDep, CurrentModerator, CurrentPilot, StorageDep
 from backend_src.cache import rate_limit
 from . import docs
 from . import service
@@ -29,3 +29,13 @@ async def create_request(
 @router.post("/{request_id}/withdraw", dependencies=[Depends(rate_limit(RateLimits.WITHDRAW_REQUEST))], **docs.WITHDRAW_REQUEST)
 async def withdraw_request(request_id: int, pilot: CurrentPilot, db: AsyncDBDep, storage: StorageDep):
     return await service.withdraw_request(request_id, pilot, db, storage)
+
+
+@router.get("/{request_id}", **docs.GET_REQUEST)
+async def open_for_review(request_id: int, moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep, storage: StorageDep):
+    return await service.open_for_review(request_id, moderator, db, redis, storage)
+
+
+@router.delete("/{request_id}/review", **docs.RELEASE_REVIEW)
+async def release_review(request_id: int, moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep):
+    return await service.release_review(request_id, moderator, db, redis)

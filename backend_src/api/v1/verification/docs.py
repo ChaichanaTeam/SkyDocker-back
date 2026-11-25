@@ -1,5 +1,6 @@
 from backend_src.models import VerificationDocumentType
-from .schema import VerificationRequestRead, VerificationTokenResponse
+from backend_src.api.v1.moderator.docs import MODERATOR_AUTH, MODERATOR_401
+from .schema import VerificationRequestRead, VerificationReviewRead, VerificationTokenResponse
 
 
 ROUTER = {
@@ -91,5 +92,36 @@ WITHDRAW_REQUEST = {
         200: { "description": "Request withdrawn, documents deleted" },
         404: { "description": "Request not found or belongs to another pilot" },
         409: { "description": "Request is not pending" }
+    }
+}
+
+GET_REQUEST = {
+    "summary": "Open a request for review",
+    "description": "The request with presigned download links to its documents, the links expire in 5 minutes.\n\n"
+                    "Opening a pending request locks it to the moderator for the same 5 minutes, so another moderator "
+                    "cannot open it meanwhile. Opening it again extends the lock and gives fresh links. "
+                    "`review_expires_in` tells how long the lock lasts. "
+                    "DELETE /verification-requests/{request_id}/review releases it earlier.\n\n" + MODERATOR_AUTH,
+    "response_description": "Request with document links",
+    "response_model": VerificationReviewRead,
+    "responses": {
+        200: { "description": "Request opened, pending request locked to the moderator" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "Another moderator reviews the request: `detail.moderator` is who, "
+                              "`detail.expires_in` is seconds until the lock runs out" }
+    }
+}
+
+RELEASE_REVIEW = {
+    "summary": "Release a request",
+    "description": "Releases the moderator's lock on the request before it runs out, so another moderator can open it. "
+                    "Releasing a request that is not locked succeeds.\n\n" + MODERATOR_AUTH,
+    "response_description": "Release confirmation message",
+    "responses": {
+        200: { "description": "Lock released" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "Another moderator reviews the request" }
     }
 }

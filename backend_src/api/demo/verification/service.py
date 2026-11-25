@@ -77,17 +77,6 @@ async def list_requests(status: Optional[VerificationRequestStatus], db: AsyncDB
     return [VerificationRequestRead.model_validate(request) for request in requests]
 
 
-async def get_request(request_id: int, db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
-    request = await live.get_request(request_id, db)
-    result = VerificationRequestRead.model_validate(request)
-
-    paths = {document.id: document.document_path for document in request.verification_document}
-    for document in result.documents:
-        document.url = await storage.presigned_get(VERIFICATION_BUCKET, paths[document.id])
-
-    return result
-
-
 def _check_expiry(privileges: set[FlyingPrivileges], expiry: dict[FlyingPrivileges, date]) -> None:
     today = datetime.now(timezone.utc).date()
     errors: list[EntityError] = []

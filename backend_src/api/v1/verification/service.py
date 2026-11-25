@@ -6,13 +6,14 @@ from starlette.datastructures import FormData, UploadFile as StarletteUploadFile
 
 from backend_src.api.exceptions import APIExceptions, EntityError
 from backend_src.cache import (
-    AsyncRedisSession, claim_verification_token, is_verification_token_used, release_verification_token
+    AsyncRedisSession, REVIEW_LOCK_TTL_SECONDS, acquire_review_lock, claim_verification_token,
+    is_verification_token_used, release_review_lock, release_verification_token
 )
 from backend_src.core import security
 from backend_src.core.config import Settings
 from backend_src.db import AsyncDBSession, Queries
 from backend_src.models import (
-    Pilot, VerificationDocument, VerificationRequest,
+    AfdModerator, Pilot, VerificationDocument, VerificationRequest,
     VerificationDocumentType, VerificationRequestStatus
 )
 from backend_src.storage import (
@@ -21,9 +22,12 @@ from backend_src.storage import (
     check_document_size, detect_document_format, organizer_key, verification_key
 )
 from .schema import (
-    VerificationPlan, VerificationPreviewRequest, VerificationRequestRead,
+    ReviewHolder, VerificationPlan, VerificationPreviewRequest, VerificationRequestRead, VerificationReviewRead,
     VerificationTokenPayload, VerificationTokenResponse
 )
+
+
+_REVIEW_LOCK_KIND = "verification"
 
 
 def verification_error(field: str, msg: str, type: str, input: Any) -> EntityError:
@@ -232,3 +236,42 @@ async def withdraw_request(request_id: int, pilot: Pilot, db: AsyncDBSession, st
     await storage.delete_objects(VERIFICATION_BUCKET, keys)
 
     return VerificationRequestRead.model_validate(await get_request(request_id, db))
+
+
+async def _held_by_another(holder_id: int, expires_in: int, db: AsyncDBSession):
+    holder = await Queries.Moderator.get_by_id(holder_id, db)
+
+    return APIExceptions.conflict({
+        "msg": "The request is being reviewed by another moderator",
+        "moderator": ReviewHolder.model_validate(holder).model_dump() if holder is not None else None,
+        "expires_in": expires_in,
+    })
+
+
+async def open_for_review(
+    request_id: int, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage
+) -> VerificationReviewRead:
+    request = await get_request(request_id, db)
+    result = VerificationReviewRead.model_validate(request)
+
+    # Only a pending request is reviewed, the documents of the others are deleted already
+    if request.status == VerificationRequestStatus.PENDING:
+        lock = await acquire_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator.id, REVIEW_LOCK_TTL_SECONDS)
+        if not lock.taken:
+            raise await _held_by_another(lock.holder_id, lock.expires_in, db)
+        result.review_expires_in = lock.expires_in
+
+    paths = {document.id: document.document_path for document in request.verification_document}
+    for document in result.documents:
+        document.url = await storage.presigned_get(VERIFICATION_BUCKET, paths[document.id])
+
+    return result
+
+
+async def release_review(request_id: int, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession) -> dict[str, str]:
+    await get_request(request_id, db)
+
+    if not await release_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator.id):
+        raise APIExceptions.conflict("The request is being reviewed by another moderator")
+
+    return {"message": f"Review of request {request_id} released"}
