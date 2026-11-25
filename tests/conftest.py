@@ -108,12 +108,14 @@ def drone_catalog(client: Client, get_endpoint_link: EndpointCreator, drone_owne
 
 
 @pytest.fixture(scope="session")
-def moderator_token(client: Client, get_endpoint_link: EndpointCreator) -> Optional[str]:
+def moderator_token(get_endpoint_link: EndpointCreator) -> Optional[str]:
     """Access token of the seeded test moderator, None when TEST_MODERATOR_EMAIL/PASSWORD are not set."""
     if not constants.MODERATOR_EMAIL or not constants.MODERATOR_PASSWORD:
         return None
 
-    r = moderator_login(client, constants.MODERATOR_EMAIL, constants.MODERATOR_PASSWORD, get_endpoint_link)
+    # Own client: the shared one would keep the refresh cookie and send it in the moderator auth tests
+    with Client() as session:
+        r = moderator_login(session, constants.MODERATOR_EMAIL, constants.MODERATOR_PASSWORD, get_endpoint_link)
     assert r.status_code == 200, f"Test moderator login failed: {r.text}"
 
     return r.json()["access_token"]
