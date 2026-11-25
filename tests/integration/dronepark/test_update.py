@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Optional
 
 import pytest
 from httpx import Client
@@ -51,7 +51,9 @@ def test_modified_drone_mass(client: Client, drone_owner: UserInfo, drone: dict,
     assert r.json()["mtom_override"] is None, f"Switching modified off must clear the mass: {r.text}"
 
 
-def test_switch_to_custom_model(client: Client, drone_owner: UserInfo, drone: dict, get_endpoint_link: EndpointCreator):
+def test_switch_to_custom_model(
+    client: Client, drone_owner: UserInfo, drone: dict, get_endpoint_link: EndpointCreator, moderator_token: Optional[str]
+):
     r = update_drone(client, drone_owner, get_endpoint_link, drone["id"], {"custom_model": custom_model(mtom=500)})
     assert r.status_code == 200, f"Drone did not get its own model: {r.text}"
 
@@ -60,8 +62,10 @@ def test_switch_to_custom_model(client: Client, drone_owner: UserInfo, drone: di
 
     r = update_drone(client, drone_owner, get_endpoint_link, drone["id"], {"model_id": drone["model"]["id"]})
     assert r.status_code == 200, f"Drone did not get the catalog model back: {r.text}"
-    # no drone uses the typed-in model any more, it was removed with the change
-    assert delete_model(client, get_endpoint_link, model["id"]).status_code == 404, "An unused typed-in model must be removed"
+    # no drone uses the typed-in model any more, it was removed with the change; only a moderator can look it up
+    if moderator_token is not None:
+        assert delete_model(client, moderator_token, get_endpoint_link, model["id"]).status_code == 404, \
+            "An unused typed-in model must be removed"
 
 
 def test_foreign_drone(client: Client, drone: dict, get_endpoint_link: EndpointCreator):

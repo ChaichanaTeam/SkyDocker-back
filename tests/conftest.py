@@ -11,6 +11,7 @@ from tests.utils.behavioural.registration_behaviour import registration_flow
 from tests.utils.behavioural.checkin_behaviour import pilot_lifetime
 from tests.utils.behavioural.geozone_behaviour import country_at_point
 from tests.utils.behavioural.dronepark_behaviour import drone_models, seed_models
+from tests.utils.behavioural.moderator_behaviour import moderator_login
 from tests.config import Config
 
 
@@ -104,6 +105,26 @@ def drone_catalog(client: Client, get_endpoint_link: EndpointCreator, drone_owne
 
     r = drone_models(client, drone_owner, get_endpoint_link)
     return {f"{model['manufacturer']} {model['model_name']}": model for model in r.json()}
+
+
+@pytest.fixture(scope="session")
+def moderator_token(client: Client, get_endpoint_link: EndpointCreator) -> Optional[str]:
+    """Access token of the seeded test moderator, None when TEST_MODERATOR_EMAIL/PASSWORD are not set."""
+    if not constants.MODERATOR_EMAIL or not constants.MODERATOR_PASSWORD:
+        return None
+
+    r = moderator_login(client, constants.MODERATOR_EMAIL, constants.MODERATOR_PASSWORD, get_endpoint_link)
+    assert r.status_code == 200, f"Test moderator login failed: {r.text}"
+
+    return r.json()["access_token"]
+
+
+@pytest.fixture(scope="session")
+def moderator(moderator_token: Optional[str]) -> str:
+    if moderator_token is None:
+        pytest.skip("Moderation tests need a seeded moderator, set TEST_MODERATOR_EMAIL and TEST_MODERATOR_PASSWORD")
+
+    return moderator_token
 
 
 def check_backend() -> None:
