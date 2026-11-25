@@ -379,6 +379,7 @@ async def approve_request(
         keys = detach_documents(request)
         request.status = VerificationRequestStatus.APPROVED
         request.verified_by = moderator_id
+        request.verified_at = datetime.now(timezone.utc)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -407,6 +408,7 @@ async def reject_request(
     request.status = VerificationRequestStatus.REJECTED
     request.reason = reason
     request.verified_by = moderator_id
+    request.verified_at = datetime.now(timezone.utc)
     await db.commit()
 
     await storage.delete_objects(VERIFICATION_BUCKET, keys)

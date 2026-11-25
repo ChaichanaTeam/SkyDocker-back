@@ -5,9 +5,9 @@ from datetime import date, datetime
 
 from backend_src.models.enum import (
     DroneCategory, FlyingPrivileges, MissionFlightGoal, MissionStatus, OperationalCategory, UserActivity,
-    VerificationDocumentType
+    VerificationDocumentType, VerificationRequestStatus
 )
-from backend_src.models.model import Checkin, Mission
+from backend_src.models.model import Checkin, Mission, VerificationRequest
 from backend_src.api.shared_schemas import FeatureProperties, StoredPhoneNumber
 from backend_src.dronepark import MAX_TAKE_OFF_MASS_G
 
@@ -221,3 +221,25 @@ class PilotCheckinProperties(FlightProperties):
     @classmethod
     def from_checkin(cls, checkin: Checkin) -> PilotCheckinProperties:
         return cls(**cls.common_fields(checkin), mission_id=checkin.mission_id)
+
+
+class PilotVerificationRequestRead(BaseModel):
+    id: int
+    status: VerificationRequestStatus
+    document_types: list[VerificationDocumentType] = Field(
+        description="Documents waiting for the moderator, empty once the request is decided and they are deleted"
+    )
+    reason: Optional[str] = Field(description="Why the moderator rejected the request")
+    created_at: datetime
+    verified_at: Optional[datetime] = Field(description="When the moderator approved or rejected the request")
+
+    @classmethod
+    def from_request(cls, request: VerificationRequest) -> PilotVerificationRequestRead:
+        return cls(
+            id=request.id,
+            status=request.status,
+            document_types=[document.document_type for document in request.verification_document],
+            reason=request.reason,
+            created_at=request.created_at,
+            verified_at=request.verified_at,
+        )

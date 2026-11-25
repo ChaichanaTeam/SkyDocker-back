@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from httpx import Client
 
-from tests.types import EndpointCreator
+from tests.types import EndpointCreator, UserInfo
 from tests.utils import functional
 from tests.utils.behavioural.verification_behaviour import (
     approve_request, list_requests, reject_request, release_review, review_request,
@@ -114,3 +114,28 @@ def test_reject_request_of_another_reviewer(
 def test_demo_reject_is_gone(client: Client, get_endpoint_link: EndpointCreator):
     r = client.post(get_endpoint_link("demo", "verification-requests/1/reject"), params={"reason": "x"})
     assert r.status_code in (404, 405), f"Requests are rejected only by moderators now: {r.text}"
+
+
+def _own_requests(client: Client, user: UserInfo, get_endpoint_link: EndpointCreator) -> list[dict]:
+    headers = {"Authorization": f"Bearer {user['tokens']['access_token']}"}
+    r = client.get(get_endpoint_link("live", "pilots/me/verification-requests"), headers=headers)
+    assert r.status_code == 200, f"Own requests were not listed: {r.text}"
+    return r.json()
+
+
+def test_pilot_sees_decision(
+    client: Client, moderator: str, new_user: UserInfo, pending_request: dict, get_endpoint_link: EndpointCreator,
+):
+    request_id = pending_request["id"]
+    pending = next(item for item in _own_requests(client, new_user, get_endpoint_link) if item["id"] == request_id)
+    assert pending["status"] == "pending" and pending["document_types"] == ["operator_number"], \
+        f"A pending request must show its documents: {pending}"
+    assert "verified_by" not in pending, f"The pilot must not see which moderator decides: {pending}"
+
+    reject_request(client, moderator, get_endpoint_link, request_id, "The pilot number is not readable")
+
+    rejected = _own_requests(client, new_user, get_endpoint_link)[0]
+    assert rejected["id"] == request_id, "The newest request must come first"
+    assert rejected["status"] == "rejected", f"The pilot must see the rejection: {rejected}"
+    assert rejected["reason"] == "The pilot number is not readable", f"The pilot must see why: {rejected}"
+    assert rejected["verified_at"] is not None, f"The pilot must see when it was decided: {rejected}"

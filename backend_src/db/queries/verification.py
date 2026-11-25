@@ -49,3 +49,13 @@ async def get_page(
 
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def get_by_pilot(pilot_id: int, db: AsyncDBSession) -> list[VerificationRequest]:
+    """Requests of the pilot, the newest first."""
+    result = await db.execute(
+        _with_documents()
+        .where(VerificationRequest.pilot_id == pilot_id)
+        .order_by(VerificationRequest.created_at.desc(), VerificationRequest.id.desc())
+    )
+    return list(result.scalars().all())
