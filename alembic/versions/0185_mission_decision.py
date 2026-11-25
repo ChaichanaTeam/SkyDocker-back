@@ -1,7 +1,7 @@
 """mission: add external id, rejected status and decision reason
 
 Revision ID: 0185_mission_decision
-Revises: 0165_drone_soft_delete
+Revises: 0145_moderator_email_unique
 Create Date: 2026-11-22 12:00:00.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '0185_mission_decision'
-down_revision: Union[str, Sequence[str], None] = '0165_drone_soft_delete'
+down_revision: Union[str, Sequence[str], None] = '0145_moderator_email_unique'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
