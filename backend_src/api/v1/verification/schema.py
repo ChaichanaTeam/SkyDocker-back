@@ -124,3 +124,9 @@ class VerificationApprovalResult(BaseModel):
     renewed: list[FlyingPrivileges] = Field(description="Privileges the pilot had, with the new last valid day")
     privileges: list[FlyingPrivileges] = Field(description="Every privilege the pilot holds now")
     kept_documents: list[str] = Field(description="Organizer keys of the documents kept with the pilot's consent")
+
+
+class VerificationRejection(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    reason: str = Field(min_length=1, max_length=1000, description="Why the request is rejected, shown to the pilot")

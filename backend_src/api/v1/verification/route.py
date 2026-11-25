@@ -9,7 +9,7 @@ from . import docs
 from . import service
 from backend_src.models import VerificationRequestStatus
 from .constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, RateLimits
-from .schema import VerificationApproval, VerificationPreviewRequest, VerificationToken
+from .schema import VerificationApproval, VerificationPreviewRequest, VerificationRejection, VerificationToken
 
 
 router = APIRouter(prefix="/verification-requests", **docs.ROUTER)
@@ -57,6 +57,14 @@ async def approve_request(
     moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep, storage: StorageDep,
 ):
     return await service.approve_request(request_id, data.privilege_expiry, moderator, db, redis, storage)
+
+
+@router.post("/{request_id}/reject", **docs.REJECT_REQUEST)
+async def reject_request(
+    request_id: int, data: VerificationRejection,
+    moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep, storage: StorageDep,
+):
+    return await service.reject_request(request_id, data.reason, moderator, db, redis, storage)
 
 
 @router.delete("/{request_id}/review", **docs.RELEASE_REVIEW)

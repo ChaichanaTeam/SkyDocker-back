@@ -10,7 +10,7 @@ from backend_src.api.v1.verification.schema import (
 )
 from backend_src.cache import AsyncRedisSession
 from backend_src.db import AsyncDBSession, Queries
-from backend_src.models import Pilot, VerificationRequest, VerificationRequestStatus
+from backend_src.models import Pilot, VerificationRequest
 from backend_src.storage import Storage, VERIFICATION_BUCKET
 from backend_src.api.demo.checkin.constants import (
     DEMO_PILOT_EMAIL,
@@ -47,14 +47,6 @@ async def _resolve_pilot(db: AsyncDBSession, email: Optional[str]) -> Pilot:
     return pilot
 
 
-async def _pending_request(request_id: int, db: AsyncDBSession) -> VerificationRequest:
-    request = await live.get_request(request_id, db)
-    if request.status != VerificationRequestStatus.PENDING:
-        raise APIExceptions.conflict(f"Only a pending request can be reviewed, this one is {request.status}")
-
-    return request
-
-
 async def preview_request(data: VerificationPreviewRequest, email: Optional[str], db: AsyncDBSession) -> VerificationTokenResponse:
     pilot = await _resolve_pilot(db, email)
     return await live.preview_request(data, pilot, db)
@@ -65,19 +57,6 @@ async def create_request(
 ) -> VerificationRequestRead:
     pilot = await _resolve_pilot(db, email)
     return await live.create_request(request, token, pilot, db, redis, storage)
-
-
-async def reject_request(request_id: int, reason: str, db: AsyncDBSession, storage: Storage) -> VerificationRequestRead:
-    request = await _pending_request(request_id, db)
-
-    keys = live.detach_documents(request)
-    request.status = VerificationRequestStatus.REJECTED
-    request.reason = reason
-    await db.commit()
-
-    await storage.delete_objects(VERIFICATION_BUCKET, keys)
-
-    return VerificationRequestRead.model_validate(await live.get_request(request_id, db))
 
 
 async def _delete(request: VerificationRequest, db: AsyncDBSession) -> list[str]:

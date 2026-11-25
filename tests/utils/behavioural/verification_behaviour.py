@@ -81,8 +81,13 @@ def approve_request(
     return r
 
 
-def reject_request(client: Client, get_endpoint_link: EndpointCreator, request_id: int) -> Response:
-    r = client.post(get_endpoint_link("demo", f"verification-requests/{request_id}/reject"), params={"reason": "Unreadable scan"})
+def reject_request(
+    client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int, reason: Optional[str] = "Unreadable scan",
+) -> Response:
+    body = {"reason": reason} if reason is not None else {}
+    r = client.post(
+        get_endpoint_link("live", f"verification-requests/{request_id}/reject"), headers=_moderator_auth(token), json=body,
+    )
 
     return r
 

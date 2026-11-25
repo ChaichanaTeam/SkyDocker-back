@@ -29,16 +29,6 @@ CREATE_REQUEST = {
     }
 }
 
-REJECT_REQUEST = {
-    "summary": "Reject a request",
-    "description": "Moderator simulation. Stores the reason and deletes the documents",
-    "response_model": VerificationRequestRead,
-    "responses": {
-        404: { "description": "Request not found" },
-        409: { "description": "Request is not pending" }
-    }
-}
-
 DELETE_REQUEST = {
     "summary": "Delete a request",
     "description": "Deletes the request in any status together with its files in storage",

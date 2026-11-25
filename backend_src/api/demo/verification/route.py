@@ -30,14 +30,6 @@ async def create_request(
     return await service.create_request(request, token, email, db, redis, storage)
 
 
-@router.post("/{request_id}/reject", **docs.REJECT_REQUEST)
-async def reject_request(
-    request_id: int, db: AsyncDBDep, storage: StorageDep,
-    reason: str = Query(min_length=1, description="Shown to the pilot"),
-):
-    return await service.reject_request(request_id, reason, db, storage)
-
-
 @router.delete("/{request_id}", **docs.DELETE_REQUEST)
 async def delete_request(request_id: int, db: AsyncDBDep, storage: StorageDep):
     return await service.delete_request(request_id, db, storage)

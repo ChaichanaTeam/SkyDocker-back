@@ -395,3 +395,21 @@ async def approve_request(
         privileges=held,
         kept_documents=kept,
     )
+
+
+async def reject_request(
+    request_id: int, reason: str, moderator: AfdModerator, db: AsyncDBSession, redis: AsyncRedisSession, storage: Storage,
+) -> VerificationRequestRead:
+    moderator_id = moderator.id
+    request = await _decided_by(request_id, moderator_id, db, redis)
+
+    keys = detach_documents(request)
+    request.status = VerificationRequestStatus.REJECTED
+    request.reason = reason
+    request.verified_by = moderator_id
+    await db.commit()
+
+    await storage.delete_objects(VERIFICATION_BUCKET, keys)
+    await release_review_lock(redis, _REVIEW_LOCK_KIND, request_id, moderator_id)
+
+    return VerificationRequestRead.model_validate(await get_request(request_id, db))

@@ -154,6 +154,24 @@ APPROVE_REQUEST = {
 }
 
 
+REJECT_REQUEST = {
+    "summary": "Reject a request",
+    "description": "Stores `reason`, shown to the pilot, and deletes the documents. The pilot can submit a new request.\n\n"
+                    "Like the approval it takes the review lock itself, fails while another moderator reviews the request, "
+                    "stores the moderator and releases the lock.\n\n" + MODERATOR_AUTH,
+    "response_description": "Rejected request",
+    "response_model": VerificationRequestRead,
+    "responses": {
+        200: { "description": "Request rejected" },
+        401: MODERATOR_401,
+        404: { "description": "Request not found" },
+        409: { "description": "The request is decided already, or another moderator reviews it: "
+                              "`detail.moderator` is who, `detail.expires_in` is seconds until the lock runs out" },
+        422: { "description": "`reason` is missing or empty" }
+    }
+}
+
+
 RELEASE_REVIEW = {
     "summary": "Release a request",
     "description": "Releases the moderator's lock on the request before it runs out, so another moderator can open it. "

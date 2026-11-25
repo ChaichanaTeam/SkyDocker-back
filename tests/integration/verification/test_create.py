@@ -257,11 +257,11 @@ def test_approve_deletes_documents_without_consent(client: Client, moderator: st
     assert r.json()["request"]["documents"] == []
 
 
-def test_reject_never_keeps_documents(client: Client, pilot: UserInfo, get_endpoint_link: EndpointCreator):
+def test_reject_never_keeps_documents(client: Client, moderator: str, pilot: UserInfo, get_endpoint_link: EndpointCreator):
     r = submit_request(client, pilot, get_endpoint_link, {"operator_number": pdf()}, request_fields(keep_documents=True))
     assert r.status_code == 201, f"Request was not created: {r.text}"
 
-    r = reject_request(client, get_endpoint_link, r.json()["id"])
+    r = reject_request(client, moderator, get_endpoint_link, r.json()["id"])
     assert r.status_code == 200, f"Reject failed: {r.text}"
     assert r.json()["status"] == "rejected"
     assert r.json()["documents"] == []

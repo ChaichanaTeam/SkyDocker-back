@@ -5,7 +5,7 @@ from httpx import Client
 from tests.types import EndpointCreator
 from tests.utils import functional
 from tests.utils.behavioural.verification_behaviour import (
-    approve_request, list_requests, release_review, review_request,
+    approve_request, list_requests, reject_request, release_review, review_request,
 )
 
 
@@ -74,3 +74,43 @@ def test_approve_with_pilot_token(client: Client, pending_request: dict, registe
 def test_demo_approve_is_gone(client: Client, get_endpoint_link: EndpointCreator):
     r = client.post(get_endpoint_link("demo", "verification-requests/1/approve"), json={"privilege_expiry": {}})
     assert r.status_code in (404, 405), f"Requests are approved only by moderators now: {r.text}"
+
+
+def test_reject_with_reason(client: Client, moderator: str, pending_request: dict, get_endpoint_link: EndpointCreator):
+    request_id = pending_request["id"]
+    r = reject_request(client, moderator, get_endpoint_link, request_id, "  The scan is unreadable  ")
+    assert r.status_code == 200, f"The request was not rejected: {r.text}"
+
+    body = r.json()
+    assert body["status"] == "rejected", f"The request must be rejected: {r.text}"
+    assert body["reason"] == "The scan is unreadable", f"The reason must be stored without edge spaces: {r.text}"
+    assert body["documents"] == [], f"The documents of a rejected request must be deleted: {r.text}"
+    assert _queued(client, moderator, get_endpoint_link, request_id, "rejected")["verified_by"] is not None, \
+        "The moderator who rejected must be stored"
+
+    r = reject_request(client, moderator, get_endpoint_link, request_id)
+    assert r.status_code == 409, f"A decided request must not be decided again: {r.text}"
+
+
+def test_reject_needs_reason(client: Client, moderator: str, pending_request: dict, get_endpoint_link: EndpointCreator):
+    for reason in (None, "   "):
+        r = reject_request(client, moderator, get_endpoint_link, pending_request["id"], reason)
+        assert r.status_code == 422, f"A rejection needs a reason ({reason!r}): {r.text}"
+
+
+def test_reject_request_of_another_reviewer(
+    client: Client, moderator: str, other_moderator: str, pending_request: dict, get_endpoint_link: EndpointCreator,
+):
+    request_id = pending_request["id"]
+    assert review_request(client, other_moderator, get_endpoint_link, request_id).status_code == 200, "Request was not opened"
+
+    try:
+        r = reject_request(client, moderator, get_endpoint_link, request_id)
+        assert r.status_code == 409, f"A request another moderator reviews must not be rejected: {r.text}"
+    finally:
+        release_review(client, other_moderator, get_endpoint_link, request_id)
+
+
+def test_demo_reject_is_gone(client: Client, get_endpoint_link: EndpointCreator):
+    r = client.post(get_endpoint_link("demo", "verification-requests/1/reject"), params={"reason": "x"})
+    assert r.status_code in (404, 405), f"Requests are rejected only by moderators now: {r.text}"
