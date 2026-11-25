@@ -48,3 +48,21 @@ async def release_review_lock(redis: AsyncRedisSession, kind: str, item_id: int,
     released = await redis.eval(_RELEASE_SCRIPT, 1, review_lock_key(kind, item_id), str(moderator_id)) # type: ignore[misc]
 
     return bool(released)
+
+
+async def get_review_holds(redis: AsyncRedisSession, kind: str, item_ids: list[int]) -> dict[int, ReviewLock]:
+    """Locks of the items held by a moderator right now, a free item is left out."""
+    if not item_ids:
+        return {}
+
+    async with redis.pipeline(transaction=False) as pipe:
+        for item_id in item_ids:
+            pipe.get(review_lock_key(kind, item_id))
+            pipe.ttl(review_lock_key(kind, item_id))
+        values = await pipe.execute()
+
+    return {
+        item_id: ReviewLock(taken=True, holder_id=int(holder), expires_in=int(ttl))
+        for item_id, holder, ttl in zip(item_ids, values[0::2], values[1::2])
+        if holder is not None and ttl > 0
+    }

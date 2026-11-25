@@ -29,12 +29,6 @@ CREATE_REQUEST = {
     }
 }
 
-LIST_REQUESTS = {
-    "summary": "List verification requests",
-    "description": "All requests, newest first. Filter by `?status=`. Document links are not included, a moderator opens a request with live `GET /verification-requests/{request_id}`",
-    "response_model": list[VerificationRequestRead],
-}
-
 APPROVE_REQUEST = {
     "summary": "Approve a request",
     "description": "Moderator simulation. Grants the privileges of the submitted `privilege_*` certificates "

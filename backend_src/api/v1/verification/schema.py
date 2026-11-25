@@ -97,3 +97,14 @@ class ReviewHolder(BaseModel):
     id: int
     first_name: str
     last_name: str
+
+
+class ReviewState(BaseModel):
+    moderator: Optional[ReviewHolder] = Field(description="Null when the moderator account is gone")
+    expires_in: int = Field(description="Seconds until the lock runs out")
+
+
+class VerificationQueueItem(VerificationRequestRead):
+    review: Optional[ReviewState] = Field(
+        None, description="Moderator who reviews the pending request now, null when it is free to open"
+    )

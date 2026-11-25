@@ -1,6 +1,6 @@
 from backend_src.models import VerificationDocumentType
 from backend_src.api.v1.moderator.docs import MODERATOR_AUTH, MODERATOR_401
-from .schema import VerificationRequestRead, VerificationReviewRead, VerificationTokenResponse
+from .schema import VerificationQueueItem, VerificationRequestRead, VerificationReviewRead, VerificationTokenResponse
 
 
 ROUTER = {
@@ -94,6 +94,22 @@ WITHDRAW_REQUEST = {
         409: { "description": "Request is not pending" }
     }
 }
+
+LIST_REQUESTS = {
+    "summary": "List verification requests",
+    "description": "The moderator queue, the oldest request first, paginated with `limit` and `offset`. "
+                    "Filter by `?status=`, e.g. pending; without it every status is listed.\n\n"
+                    "`review` of a pending request tells which moderator reviews it now and for how long, "
+                    "null means it is free to open. Document links come only with GET /verification-requests/{request_id}.\n\n"
+                    + MODERATOR_AUTH,
+    "response_description": "Verification requests",
+    "response_model": list[VerificationQueueItem],
+    "responses": {
+        200: { "description": "Requests listed" },
+        401: MODERATOR_401,
+    }
+}
+
 
 GET_REQUEST = {
     "summary": "Open a request for review",

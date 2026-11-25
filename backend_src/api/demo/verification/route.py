@@ -6,7 +6,6 @@ from redis_fastapi import AsyncRedisDep
 from backend_src.api.dependencies import AsyncDBDep, StorageDep
 from backend_src.api.shared_schemas import NormalizedEmailStr
 from backend_src.api.v1.verification.schema import VerificationPreviewRequest, VerificationToken
-from backend_src.models import VerificationRequestStatus
 from .schema import VerificationApproval
 from . import docs
 from . import service
@@ -30,11 +29,6 @@ async def create_request(
     email: Optional[NormalizedEmailStr] = _PILOT_EMAIL,
 ):
     return await service.create_request(request, token, email, db, redis, storage)
-
-
-@router.get("/", **docs.LIST_REQUESTS)
-async def list_requests(db: AsyncDBDep, status: Optional[VerificationRequestStatus] = None):
-    return await service.list_requests(status, db)
 
 
 @router.post("/{request_id}/approve", **docs.APPROVE_REQUEST)

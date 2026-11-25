@@ -89,6 +89,10 @@ def _moderator_auth(token: Optional[str]) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"} if token is not None else {}
 
 
+def list_requests(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, **params) -> Response:
+    return client.get(get_endpoint_link("live", "verification-requests/"), headers=_moderator_auth(token), params=params)
+
+
 def review_request(client: Client, token: Optional[str], get_endpoint_link: EndpointCreator, request_id: int) -> Response:
     return client.get(get_endpoint_link("live", f"verification-requests/{request_id}"), headers=_moderator_auth(token))
 

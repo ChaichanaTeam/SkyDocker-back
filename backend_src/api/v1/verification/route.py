@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, Request
+from typing import Annotated, Optional
+
+from fastapi import APIRouter, Depends, Query, Request
 from redis_fastapi import AsyncRedisDep
 
 from backend_src.api.dependencies import AsyncDBDep, CurrentModerator, CurrentPilot, StorageDep
 from backend_src.cache import rate_limit
 from . import docs
 from . import service
-from .constants import RateLimits
+from backend_src.models import VerificationRequestStatus
+from .constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, RateLimits
 from .schema import VerificationPreviewRequest, VerificationToken
 
 
@@ -29,6 +32,18 @@ async def create_request(
 @router.post("/{request_id}/withdraw", dependencies=[Depends(rate_limit(RateLimits.WITHDRAW_REQUEST))], **docs.WITHDRAW_REQUEST)
 async def withdraw_request(request_id: int, pilot: CurrentPilot, db: AsyncDBDep, storage: StorageDep):
     return await service.withdraw_request(request_id, pilot, db, storage)
+
+
+Limit = Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)]
+Offset = Annotated[int, Query(ge=0)]
+
+
+@router.get("/", **docs.LIST_REQUESTS)
+async def list_requests(
+    moderator: CurrentModerator, db: AsyncDBDep, redis: AsyncRedisDep,
+    status: Optional[VerificationRequestStatus] = None, limit: Limit = DEFAULT_PAGE_SIZE, offset: Offset = 0,
+):
+    return await service.list_requests(status, limit, offset, db, redis)
 
 
 @router.get("/{request_id}", **docs.GET_REQUEST)

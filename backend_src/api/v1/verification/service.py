@@ -6,7 +6,7 @@ from starlette.datastructures import FormData, UploadFile as StarletteUploadFile
 
 from backend_src.api.exceptions import APIExceptions, EntityError
 from backend_src.cache import (
-    AsyncRedisSession, REVIEW_LOCK_TTL_SECONDS, acquire_review_lock, claim_verification_token,
+    AsyncRedisSession, REVIEW_LOCK_TTL_SECONDS, acquire_review_lock, claim_verification_token, get_review_holds,
     is_verification_token_used, release_review_lock, release_verification_token
 )
 from backend_src.core import security
@@ -22,7 +22,8 @@ from backend_src.storage import (
     check_document_size, detect_document_format, organizer_key, verification_key
 )
 from .schema import (
-    ReviewHolder, VerificationPlan, VerificationPreviewRequest, VerificationRequestRead, VerificationReviewRead,
+    ReviewHolder, ReviewState, VerificationPlan, VerificationPreviewRequest, VerificationQueueItem, VerificationRequestRead,
+    VerificationReviewRead,
     VerificationTokenPayload, VerificationTokenResponse
 )
 
@@ -275,3 +276,28 @@ async def release_review(request_id: int, moderator: AfdModerator, db: AsyncDBSe
         raise APIExceptions.conflict("The request is being reviewed by another moderator")
 
     return {"message": f"Review of request {request_id} released"}
+
+
+async def list_requests(
+    status: Optional[VerificationRequestStatus], limit: int, offset: int, db: AsyncDBSession, redis: AsyncRedisSession,
+) -> list[VerificationQueueItem]:
+    requests = await Queries.Verification.get_page(status, limit, offset, db)
+    pending = [request.id for request in requests if request.status == VerificationRequestStatus.PENDING]
+    holds = await get_review_holds(redis, _REVIEW_LOCK_KIND, pending)
+    moderators = {
+        moderator.id: moderator
+        for moderator in await Queries.Moderator.get_by_ids({hold.holder_id for hold in holds.values()}, db)
+    }
+
+    items = []
+    for request in requests:
+        item = VerificationQueueItem.model_validate(request)
+        if (hold := holds.get(request.id)) is not None:
+            holder = moderators.get(hold.holder_id)
+            item.review = ReviewState(
+                moderator=ReviewHolder.model_validate(holder) if holder is not None else None,
+                expires_in=hold.expires_in,
+            )
+        items.append(item)
+
+    return items

@@ -72,11 +72,6 @@ async def create_request(
     return await live.create_request(request, token, pilot, db, redis, storage)
 
 
-async def list_requests(status: Optional[VerificationRequestStatus], db: AsyncDBSession) -> list[VerificationRequestRead]:
-    requests = await Queries.Verification.get_all(status, db)
-    return [VerificationRequestRead.model_validate(request) for request in requests]
-
-
 def _check_expiry(privileges: set[FlyingPrivileges], expiry: dict[FlyingPrivileges, date]) -> None:
     today = datetime.now(timezone.utc).date()
     errors: list[EntityError] = []

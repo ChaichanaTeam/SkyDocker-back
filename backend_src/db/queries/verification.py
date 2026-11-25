@@ -32,3 +32,20 @@ async def get_all(status: Optional[VerificationRequestStatus], db: AsyncDBSessio
 
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def get_page(
+    status: Optional[VerificationRequestStatus], limit: int, offset: int, db: AsyncDBSession,
+) -> list[VerificationRequest]:
+    """Requests of the moderator queue, the oldest first."""
+    query = (
+        _with_documents()
+        .order_by(VerificationRequest.created_at, VerificationRequest.id)
+        .limit(limit)
+        .offset(offset)
+    )
+    if status is not None:
+        query = query.where(VerificationRequest.status == status)
+
+    result = await db.execute(query)
+    return list(result.scalars().all())
