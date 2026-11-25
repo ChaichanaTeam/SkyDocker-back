@@ -158,6 +158,9 @@ GET_MISSIONS = {
     "summary": "List own missions",
     "description": "GeoJSON collection of the pilot's missions, the latest start first. "
                     "`properties.id` is the `mission_id` of POST /check-in/preview.\n\n"
+                    "Missions come from PANSA: `external_id` is its number of the mission and `status` its decision, "
+                    "pending, accepted or rejected with `decision_reason`. Only an accepted mission can be flown, "
+                    "within `starts_at` and `ends_at`; its check-in then moves it to active and ended.\n\n"
                     "Authorization header REQUIRED!",
     "response_description": "GeoJSON collection of missions",
     "response_model": GeoJson,

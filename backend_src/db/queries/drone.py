@@ -59,3 +59,17 @@ async def is_busy(drone_id: int, db: AsyncDBSession) -> bool:
     result = await db.execute(select(unfinished_checkin | planned_mission))
 
     return bool(result.scalar())
+
+
+async def get_pilot_drone_by_serial(serial_number: str, pilot_id: int, db: AsyncDBSession) -> Optional[Drone]:
+    """The pilot's drone in the drone park with the serial number, compared without case and edge spaces."""
+    result = await db.execute(
+        select(Drone)
+        .where(
+            Drone.pilot_id == pilot_id,
+            Drone.is_deleted.is_(False),
+            func.lower(func.btrim(Drone.serial_number)) == serial_number.strip().lower(),
+        )
+    )
+
+    return result.scalar_one_or_none()

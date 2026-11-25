@@ -38,11 +38,13 @@ async def checkin_bbox(bbox: BoundingBox, country: Country, db: AsyncDBSession):
 async def checkin_preview(data: CheckinPreviewRequest, pilot: Pilot, db: AsyncDBSession) -> CheckinTokenResponse:
     pilot_id = pilot.id
     await _ensure_no_active(pilot_id, db)
-    country_id = (await verification.check_jurisdiction(data, db)).id
 
     plan, errors = await verification.resolve_plan(data, pilot_id, db)
     if plan is None:
         raise APIExceptions.unprocessable(errors)
+
+    # a mission flies from its own point, so the plan tells where the flight is
+    country_id = (await verification.check_jurisdiction(plan, db)).id
 
     drone, drone_errors = await verification.check_drone(plan.drone_id, pilot_id, db)
     errors += drone_errors

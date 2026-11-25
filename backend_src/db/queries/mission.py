@@ -1,10 +1,10 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import joinedload
 
 from backend_src.db import AsyncDBSession
-from backend_src.models import Mission
+from backend_src.models import Checkin, Mission
 
 
 async def get_pilot_missions(pilot_id: int, limit: int, offset: int, db: AsyncDBSession) -> list[Mission]:
@@ -28,3 +28,15 @@ async def get_pilot_mission(mission_id: int, pilot_id: int, db: AsyncDBSession) 
     )
 
     return result.scalar_one_or_none()
+
+
+async def get_by_external_ids(external_ids: list[str], db: AsyncDBSession) -> dict[str, Mission]:
+    result = await db.execute(select(Mission).where(Mission.external_id.in_(external_ids)))
+
+    return {mission.external_id: mission for mission in result.scalars().all()} # type: ignore[misc]
+
+
+async def has_checkin(mission_id: int, db: AsyncDBSession) -> bool:
+    result = await db.execute(select(exists().where(Checkin.mission_id == mission_id)))
+
+    return bool(result.scalar())
