@@ -14,6 +14,10 @@ def verification_token_key(jti: str) -> str:
     return f"verification_token_used:{jti}"
   
  
+def review_lock_key(kind: str, item_id: int) -> str:
+    return f"review:lock:{kind}:{item_id}"
+
+
 def sync_lock_key(name: str) -> str:
     return f"sync:lock:{name}"
 
